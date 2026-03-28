@@ -47,13 +47,13 @@ body {
     background-color: rgba(0, 0, 0, 0.25);
 }
 
-/* ===== Input Focus States (Design System: glow, no border thicken) ===== */
+/* ===== Input Focus States ===== */
 .v-field--focused {
-    box-shadow: 0 0 0 2px rgba(53, 58, 175, 0.15) !important;
+    box-shadow: 0 0 0 2px rgba(53, 58, 175, 0.25) !important;
 }
 
 .v-field--focused .v-field__outline {
-    --v-field-border-opacity: 0;
+    --v-field-border-opacity: 1;
 }
 
 /* ===== Data Table ===== */

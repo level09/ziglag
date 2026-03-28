@@ -11,29 +11,19 @@ const config = {
     vuetifyConfig: {
         defaults: {
             VTextField: {
-                variant: 'solo-filled',
-                flat: true,
-                bgColor: 'surface-container-highest'
+                variant: 'outlined'
             },
             VSelect: {
-                variant: 'solo-filled',
-                flat: true,
-                bgColor: 'surface-container-highest'
+                variant: 'outlined'
             },
             VTextarea: {
-                variant: 'solo-filled',
-                flat: true,
-                bgColor: 'surface-container-highest'
+                variant: 'outlined'
             },
             VCombobox: {
-                variant: 'solo-filled',
-                flat: true,
-                bgColor: 'surface-container-highest'
+                variant: 'outlined'
             },
             VAutocomplete: {
-                variant: 'solo-filled',
-                flat: true,
-                bgColor: 'surface-container-highest'
+                variant: 'outlined'
             },
             VChip: {
                 size: 'small'

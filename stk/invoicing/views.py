@@ -178,7 +178,9 @@ async def api_client_create():
     g.db_session.add(client)
     try:
         await g.db_session.flush()
-        await Activity.register(current_user.id, "Client Create", client.to_dict())
+        await Activity.register(
+            current_user.id, "Client Create", {"id": client.id, "name": client.name}
+        )
         await g.db_session.commit()
         return {"message": "Client created", "id": client.id}
     except Exception:

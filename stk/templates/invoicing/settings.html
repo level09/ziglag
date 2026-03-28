@@ -16,8 +16,9 @@
 
             <div class="mb-4">
                 <div class="text-body-2 mb-2">Logo</div>
-                <div v-if="s.logo_path" class="mb-2">
+                <div v-if="s.logo_path" class="mb-2 d-flex align-center ga-3">
                     <img :src="'/static/' + s.logo_path" style="max-height: 80px;" />
+                    <v-btn size="x-small" variant="tonal" color="error" @click="removeLogo"><i class="ti ti-trash mr-1"></i> Remove</v-btn>
                 </div>
                 <v-file-input
                     label="Upload Logo"
@@ -181,6 +182,14 @@
                             this.showSnack(res.data?.message);
                         })
                         .catch(err => this.showSnack('Upload failed'));
+                },
+                removeLogo() {
+                    axios.post('/api/settings/logo/remove')
+                        .then(res => {
+                            this.s.logo_path = null;
+                            this.showSnack(res.data?.message);
+                        })
+                        .catch(err => this.showSnack('Error'));
                 }
             }
         });

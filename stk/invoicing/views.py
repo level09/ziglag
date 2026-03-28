@@ -129,6 +129,18 @@ async def api_settings_logo():
     return {"message": "Logo uploaded", "logo_path": settings.logo_path}
 
 
+@invoicing.post("/api/settings/logo/remove")
+async def api_settings_logo_remove():
+    settings = await BusinessSettings.get_or_create(current_user.id)
+    if settings.logo_path:
+        filepath = os.path.join(current_app.static_folder, settings.logo_path)
+        if os.path.exists(filepath):
+            os.remove(filepath)
+        settings.logo_path = None
+        await g.db_session.commit()
+    return {"message": "Logo removed"}
+
+
 # ── Client API ──
 
 

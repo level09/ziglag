@@ -1,151 +1,118 @@
-# stk
+<p align="center">
+  <img src="stk/static/img/ziglag.svg" alt="ZigLag" height="80">
+</p>
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+<h1 align="center">ZigLag</h1>
 
-**[Live Demo](https://demo.stk.dev)** · **[Docs](https://docs.stk.dev)** · **[Tutorials](https://github.com/level09/stk/wiki)**
+<p align="center">
+  Self-hosted invoicing for freelancers and small businesses.<br>
+  Built on <a href="https://github.com/level09/stk">stk</a>. Open source. No subscriptions.
+</p>
 
-A full-stack async Python framework. Auth, 2FA, WebSockets, admin dashboard, Vue 3 frontend. No build step, no third-party auth services, no JS toolchain. One codebase, you own everything.
+<p align="center">
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="MIT License"></a>
+  <a href="https://github.com/level09/stk"><img src="https://img.shields.io/badge/Built%20on-stk-353aaf" alt="Built on stk"></a>
+</p>
+
+## Quick Start
 
 ```bash
-git clone git@github.com:level09/stk.git && cd stk
-./setup.sh                    # deps + secure .env
-uv run quart create-db        # database via Alembic
-uv run quart install          # admin user
-uv run quart run              # localhost:5000
+git clone git@github.com:level09/ziglag.git && cd ziglag
+./setup.sh
+uv run quart create-db
+uv run quart run --port 5001
 ```
 
-https://github.com/user-attachments/assets/a87bfad2-45dc-4d94-bdf1-0448dfea8084
+Open `http://localhost:5001`. First visit shows a setup page to create your admin account.
 
-## Why stk
+## Features
 
-Most frameworks give you routing and leave the rest as homework. Auth alone eats weeks. Then you bolt on Clerk or Auth0, hand your users' credentials to a third party, and pay per-MAU for the privilege.
+**Invoicing**
+- Create invoices with line items, tax (VAT/GST), discounts
+- Client autocomplete from saved contacts
+- Invoice status flow: Draft, Sent, Paid
+- Record payments, mark paid in one click
+- PDF generation (pure Python, no system deps)
+- Shareable public invoice links
+- Configurable invoice numbering, currency, labels
 
-stk ships what actually matters:
+**Clients**
+- Client database with contact details
+- Total billed tracking per client
+- Search and autocomplete on invoice creation
 
-**You own your auth.** Registration, login, password recovery, session management, TOTP 2FA (Google Authenticator, Authy, 1Password), WebAuthn passkeys (Touch ID, YubiKey), recovery codes, OAuth (Google, GitHub). Production code, not a tutorial. Your users' data stays on your server.
+**Reports**
+- Monthly revenue breakdown by tax year
+- Client count, invoice count, paid totals
+- Year-over-year comparison
 
-**Async all the way down.** Quart + async SQLAlchemy + aiosmtplib + native WebSockets. Not async bolted onto a sync framework. Real concurrency without threads, workers, or callback hell.
+**Business Settings**
+- Business name, address, logo upload
+- Tax configuration (rate, label, type, inclusive/exclusive)
+- Invoice number prefix and auto-increment
+- Currency and date format
+- Default notes and payment instructions
 
-**No JS build step.** Vue 3 + Vuetify 3 loaded directly in the browser. No webpack, no vite, no node_modules, no npm. Delete your frontend toolchain. Still get a polished admin dashboard with data tables, dark mode, collapsible sidebar, 5000+ icons.
-
-**SQLite by default.** Deploy anywhere. No managed database required. PostgreSQL when you need it, not when the framework demands it.
-
-**No Celery, no Redis (unless you want them).** Background tasks run on asyncio. Session store works with cookies or Redis. Complexity is opt-in.
-
-> **Want payments?** [ReadyKit](https://readykit.dev) adds Stripe, multi-tenancy, and teams on top of stk.
-
-## What's included
-
-### Auth & Security
-- Login, registration, password recovery, password change
-- TOTP 2FA with QR code setup (authenticator apps)
-- WebAuthn/passkeys as first factor or second factor
-- Multi-factor recovery codes
-- Google and GitHub OAuth with account linking
-- Server-side session tracking (IP, browser, device, expiration)
-- Single-session mode (optional)
-- Rate limiting on auth endpoints (sliding window, no Redis)
-- PBKDF2-SHA512 password hashing
-
-### Real-time
-- Authenticated WebSocket endpoint with per-user message queues
-- Broadcast to one user or all connected users
-- Activity events pushed live to the dashboard
-- Auto-reconnect on the frontend
-
-### Admin Dashboard
-- User management (CRUD, role assignment, activation)
-- Role management with RBAC
-- Activity audit log (every admin action, login from new IP, 2FA changes)
-- Server-side paginated data tables
-- JSON API endpoints for all admin operations
-
-### Frontend
-- Vue 3 + Vuetify 3 (zero build step)
-- Dark/light theme with system preference detection
-- Collapsible sidebar navigation
-- Notification dropdown
-- Tabler Icons (5000+) and Material Design Icons
-- Custom `${ }` delimiters (no Jinja conflicts)
-
-### Infrastructure
-- Async email (aiosmtplib) with HTML + text templates
-- Fire-and-forget background tasks (no Celery)
-- CLI commands: create-db, db upgrade/downgrade/revision, install, create user, reset password, add role, cleanup sessions
-- Docker Compose: PostgreSQL, Redis, Nginx (one command)
-- VPS deploy script with auto-SSL via Caddy
-- Pre-commit hooks, ruff linting
-- Sanity checks (`uv run python checks.py`) instead of test theater
-
-### AI-native
-- Ships with Claude Code instructions (CLAUDE.md) and Cursor rules
-- Detailed agent patterns (AGENTS.md) for AI-assisted development
-- Your AI already knows the codebase conventions
+**Dashboard**
+- Invoice count, outstanding amount, total paid, client count
+- Recent invoices with status
+- Quick actions
 
 ## Stack
 
+Built on the [stk framework](https://github.com/level09/stk):
+
 | Layer | Tech |
 |-------|------|
-| Runtime | Python 3.11-3.13, [uv](https://docs.astral.sh/uv/) |
-| Web | Quart (async Flask) |
-| ORM | SQLAlchemy 2.0+ async |
+| Backend | Python 3.11+, Quart (async), SQLAlchemy 2.0+ |
+| Frontend | Vue 3, Vuetify 3 (no build step) |
 | Database | SQLite (default), PostgreSQL (optional) |
-| Auth | quart-security (2FA, WebAuthn, OAuth) |
-| Frontend | Vue 3, Vuetify 3, Axios |
-| WebSockets | Native Quart WebSocket support |
-| Email | aiosmtplib |
-| Server | Uvicorn (ASGI) |
-| Proxy | Nginx or Caddy |
+| Auth | Session auth, 2FA/TOTP, WebAuthn/Passkeys, OAuth |
+| PDF | fpdf2 (pure Python) |
+| Real-time | WebSocket with live invoice status updates |
+
+## Design System
+
+Neo-brutalist editorial aesthetic. Indigo-violet palette, Plus Jakarta Sans headlines, thick borders, offset shadows. See `design-system/` for the full spec.
 
 ## Configuration
 
-Environment variables (`.env`):
+Copy `.env-sample` to `.env`. Required variables:
 
 ```bash
 SECRET_KEY=your_secret_key
-QUART_APP=run.py
-QUART_DEBUG=1                    # 0 in production
-
-# PostgreSQL (optional)
-# SQLALCHEMY_DATABASE_URI=postgresql+asyncpg://user:pass@localhost/dbname
-
-# Redis sessions (optional)
-# REDIS_URL=redis://localhost:6379/1
-
-# OAuth (optional)
-# GOOGLE_AUTH_ENABLED=true
-# GOOGLE_OAUTH_CLIENT_ID=...
-# GOOGLE_OAUTH_CLIENT_SECRET=...
-# GITHUB_AUTH_ENABLED=true
-# GITHUB_OAUTH_CLIENT_ID=...
-# GITHUB_OAUTH_CLIENT_SECRET=...
+SECURITY_PASSWORD_SALT=your_salt
 ```
 
-Database migrations:
+Optional:
 
 ```bash
-uv run quart create-db                        # upgrade to head
-uv run quart db revision -m "add billing"    # generate a new revision
-uv run quart db upgrade                       # apply migrations
-uv run quart db downgrade -1                  # rollback one revision
-uv run quart db stamp head                    # adopt Alembic for an existing DB
+SQLALCHEMY_DATABASE_URI=postgresql+asyncpg://user:pass@localhost/ziglag
+REDIS_URL=redis://localhost:6379/1
+```
+
+## Database
+
+```bash
+uv run quart create-db                     # apply all migrations
+uv run quart db revision -m "description"  # generate new migration
+uv run quart db upgrade                    # apply pending migrations
+uv run quart db downgrade -1               # rollback one step
 ```
 
 ## Docker
 
 ```bash
-docker compose up --build   # Redis, PostgreSQL, Nginx
+docker compose up --build
 ```
 
-## VPS Deploy
-
-One command on any Ubuntu VPS:
+## Deploy
 
 ```bash
 curl -sSL https://raw.githubusercontent.com/level09/ignite/main/ignite.sh | sudo DOMAIN=your-domain.com bash
 ```
 
-Handles Caddy (auto SSL), Python 3.13, Redis, systemd services. See [Ignite](https://github.com/level09/ignite).
+Auto-SSL via Caddy. See [Ignite](https://github.com/level09/ignite).
 
 ## License
 

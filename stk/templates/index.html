@@ -45,7 +45,10 @@ tailwind.config = {
 <!-- Nav -->
 <nav class="sticky top-0 z-50 flex justify-between items-center w-full px-8 py-5 bg-background border-b-4 border-black">
     <div class="flex items-center gap-8">
-        <span class="text-3xl font-black tracking-tighter text-black uppercase font-headline">ZIGLAG</span>
+        <a href="/" class="flex items-center gap-2 no-underline">
+            <img src="/static/img/ziglag.svg" alt="ZigLag" style="height: 28px;">
+            <span class="text-3xl font-black tracking-tighter text-black uppercase font-headline">ZIGLAG</span>
+        </a>
         <div class="hidden md:flex gap-6">
             <a class="font-headline font-black tracking-tighter uppercase text-[#4e54c8] underline decoration-4 underline-offset-4 hover:-translate-y-1 hover:translate-x-1 transition-transform duration-200" href="#">Features</a>
             <a class="font-headline font-black tracking-tighter uppercase text-black hover:-translate-y-1 hover:translate-x-1 transition-transform duration-200" href="https://github.com/level09/ziglag" target="_blank">Source</a>
@@ -183,7 +186,10 @@ tailwind.config = {
 <!-- Footer -->
 <footer class="w-full py-16 px-8 md:px-12 flex flex-col items-start gap-10 md:flex-row md:justify-between bg-surface-container-highest border-t-8 border-black font-body font-bold text-lg">
     <div class="flex flex-col gap-4">
-        <span class="text-4xl md:text-5xl font-black italic text-black uppercase font-headline">ZIGLAG</span>
+        <div class="flex items-center gap-3">
+            <img src="/static/img/ziglag.svg" alt="ZigLag" style="height: 36px;">
+            <span class="text-4xl md:text-5xl font-black italic text-black uppercase font-headline">ZIGLAG</span>
+        </div>
         <p class="max-w-xs text-gray-600 font-normal text-sm">Self-hosted invoicing. Open source. Built on <a href="https://github.com/level09/stk" target="_blank" class="underline">stk</a>.</p>
     </div>
     <div class="flex flex-wrap gap-8 md:gap-16">

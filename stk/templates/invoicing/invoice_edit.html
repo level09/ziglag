@@ -242,11 +242,11 @@
 {% endblock %} {% block js %}
 
     <script type="application/json" id="invoice-data">
-    {{ (invoice.to_dict() if invoice is defined and invoice else '{}')|tojson|safe }}
+    {{ (invoice_data if invoice_data else '{}')|tojson|safe }}
     </script>
 
     <script type="application/json" id="settings-data">
-    {{ (settings.to_dict() if settings is defined and settings else '{}')|tojson|safe }}
+    {{ (settings_data if settings_data else '{}')|tojson|safe }}
     </script>
 
     <script>

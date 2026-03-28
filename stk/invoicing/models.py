@@ -389,12 +389,23 @@ class Invoice(Base):
             self.share_token = secrets.token_urlsafe(32)
         return self.share_token
 
+    def _client_dict(self):
+        c = self.client
+        return {
+            "id": c.id,
+            "name": c.name,
+            "email": c.email,
+            "address_line1": c.address_line1,
+            "address_line2": c.address_line2,
+            "phone": c.phone,
+        }
+
     def to_dict(self):
         return {
             "id": self.id,
             "client_id": self.client_id,
             "client_name": self.client.name if self.client else None,
-            "client": self.client.to_dict() if self.client else None,
+            "client": self._client_dict() if self.client else None,
             "invoice_number": self.invoice_number,
             "status": self.status,
             "date": self.date.isoformat() if self.date else None,

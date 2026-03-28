@@ -45,7 +45,11 @@ async def invoices():
 @invoicing.route("/invoices/new")
 async def invoice_new():
     settings = await BusinessSettings.get_or_create(current_user.id)
-    return await render_template("invoicing/invoice_edit.html", settings=settings)
+    return await render_template(
+        "invoicing/invoice_edit.html",
+        invoice_data=None,
+        settings_data=settings.to_dict(),
+    )
 
 
 @invoicing.route("/invoices/<int:id>")
@@ -55,7 +59,9 @@ async def invoice_detail(id):
         return {"message": "Not found"}, 404
     settings = await BusinessSettings.get_or_create(current_user.id)
     return await render_template(
-        "invoicing/invoice_edit.html", invoice=invoice, settings=settings
+        "invoicing/invoice_edit.html",
+        invoice_data=invoice.to_dict(),
+        settings_data=settings.to_dict(),
     )
 
 

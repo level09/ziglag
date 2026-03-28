@@ -92,7 +92,66 @@ async def health():
 async def index():
     if current_user.is_authenticated:
         return redirect("/dashboard/")
+    # Check if any users exist; if not, redirect to setup
+    from sqlalchemy import func
+
+    count = (
+        await g.db_session.execute(select(func.count()).select_from(User))
+    ).scalar()
+    if count == 0:
+        return redirect("/setup")
     return await render_template("index.html")
+
+
+@public.route("/setup", methods=["GET", "POST"])
+async def setup():
+    from sqlalchemy import func
+
+    count = (
+        await g.db_session.execute(select(func.count()).select_from(User))
+    ).scalar()
+    if count > 0:
+        return redirect("/login")
+
+    if request.method == "POST":
+        form = await request.form
+        email = form.get("email", "").strip()
+        password = form.get("password", "").strip()
+        name = form.get("name", "").strip()
+
+        if not email or not password or len(password) < 8:
+            await flash("Email and password (min 8 chars) are required.", "error")
+            return redirect("/setup")
+
+        from quart_security import hash_password
+
+        # Create admin role
+        from stk.user.models import Role
+
+        role = (
+            await g.db_session.execute(select(Role).where(Role.name == "admin"))
+        ).scalar_one_or_none()
+        if not role:
+            role = Role(name="admin", description="Administrator")
+            g.db_session.add(role)
+            await g.db_session.flush()
+
+        user = User(
+            email=email,
+            name=name or "Admin",
+            password=hash_password(password),
+            active=True,
+            confirmed_at=datetime.datetime.now(),
+        )
+        user.roles = [role]
+        g.db_session.add(user)
+        await g.db_session.commit()
+
+        # Log user in
+        await _security.login_user(user)
+        return redirect("/dashboard/")
+
+    return await render_template("setup.html")
 
 
 @public.route("/robots.txt")

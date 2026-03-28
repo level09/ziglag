@@ -9,7 +9,20 @@
         </v-toolbar>
         <v-card-text>
 
-            <v-table v-if="months.length">
+            <!-- Year selector -->
+            <div class="d-flex justify-center mb-6 ga-2">
+                <v-btn v-for="y in years" :key="y" :variant="y === year ? 'elevated' : 'outlined'" :color="y === year ? 'primary' : ''" size="small" @click="loadYear(y)">
+                    ${y}
+                </v-btn>
+            </div>
+
+            <!-- Loading -->
+            <div v-if="loading" class="text-center pa-8">
+                <v-progress-circular indeterminate color="primary" size="32"></v-progress-circular>
+            </div>
+
+            <!-- Data table -->
+            <v-table v-else-if="months.length" density="comfortable">
                 <thead>
                     <tr>
                         <th></th>
@@ -19,24 +32,29 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr class="font-weight-bold">
+                    <tr style="font-weight: 600;">
                         <td>Tax Year ${year}</td>
-                        <td class="text-right">-</td>
+                        <td class="text-right"></td>
                         <td class="text-right">${yearlyInvoices}</td>
-                        <td class="text-right">${currencySymbol}${yearlyTotal}</td>
+                        <td class="text-right" style="font-variant-numeric: tabular-nums;">${currencySymbol}${yearlyTotal}</td>
                     </tr>
                     <tr v-for="m in months" :key="m.month">
                         <td>${monthName(m.month)}</td>
-                        <td class="text-right">${m.clients}</td>
-                        <td class="text-right">${m.invoices}</td>
-                        <td class="text-right">${currencySymbol}${m.total}</td>
+                        <td class="text-right">${m.clients || 0}</td>
+                        <td class="text-right">${m.invoices || 0}</td>
+                        <td class="text-right" style="font-variant-numeric: tabular-nums;">${m.total !== '0' ? currencySymbol + m.total : '-'}</td>
                     </tr>
                 </tbody>
             </v-table>
 
-            <div class="d-flex justify-center mt-6 ga-2">
-                <v-btn v-for="y in years" :key="y" :variant="y === year ? 'elevated' : 'outlined'" :color="y === year ? 'primary' : ''" size="small" @click="loadYear(y)">
-                    ${y}
+            <!-- Empty state -->
+            <div v-else class="text-center pa-12">
+                <i class="ti ti-chart-bar" style="font-size: 48px; color: #c6c5d5;"></i>
+                <div class="text-h6 mt-4 mb-2">No paid invoices yet</div>
+                <div class="text-body-2 text-medium-emphasis mb-4">Reports appear once you have paid invoices.</div>
+                <v-btn href="/invoices/new" color="primary" variant="elevated" size="small">
+                    <template v-slot:prepend><i class="ti ti-plus"></i></template>
+                    Create Invoice
                 </v-btn>
             </div>
 
@@ -60,6 +78,7 @@
                     year: currentYear,
                     years: Array.from({length: 5}, (_, i) => currentYear - i),
                     months: [],
+                    loading: true,
                     currencySymbol: '$',
                     yearlyTotal: '0',
                     yearlyInvoices: 0
@@ -73,13 +92,15 @@
                 monthName(m) { return monthNames[m - 1]; },
                 loadYear(y) {
                     this.year = y;
+                    this.loading = true;
                     axios.get(`/api/reports/monthly?year=${y}`)
                         .then(res => {
                             this.months = res.data.months;
                             this.currencySymbol = res.data.currency_symbol || '$';
                             this.yearlyTotal = res.data.yearly_total;
                             this.yearlyInvoices = res.data.yearly_invoices;
-                        });
+                        })
+                        .finally(() => { this.loading = false; });
                 }
             }
         });

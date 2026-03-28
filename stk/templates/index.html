@@ -1,52 +1,209 @@
-{% extends 'layout.html' %}
-{% block body_class %}home{% endblock %}
-{% block content %}
-    <v-container fluid class="fill-height">
-        <v-row align="center" justify="center">
-            <v-col cols="12" sm="10" md="6" lg="4" class="text-center">
-                <img src="/static/img/stk.svg" alt="stk" style="width: 120px; height: 120px;" class="mb-6 logo-adaptive">
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZigLag - Self-Hosted Invoicing</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&family=Be+Vietnam+Pro:wght@400;500;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+    theme: {
+        extend: {
+            colors: {
+                "background": "#fbf9f8",
+                "primary-container": "#4e54c8",
+                "primary": "#353aaf",
+                "on-surface": "#1b1c1c",
+                "surface-container-low": "#f6f3f2",
+                "surface-container-highest": "#e4e2e1",
+                "surface-container": "#f0eded",
+            },
+            fontFamily: {
+                "headline": ["Plus Jakarta Sans"],
+                "body": ["Be Vietnam Pro"],
+                "label": ["Inter"]
+            },
+        },
+    },
+}
+</script>
+<style>
+@keyframes scroll {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+}
+.animate-scroll {
+    display: flex;
+    width: max-content;
+    animation: scroll 25s linear infinite;
+}
+</style>
+</head>
+<body class="bg-background text-on-surface font-body selection:bg-primary-container selection:text-white">
 
-                <h1 class="text-h4 font-weight-bold mb-3">Build faster with stk</h1>
-                <p class="text-body-1 text-medium-emphasis mb-8">
-                    A modern Flask framework for building web applications.
-                </p>
-
-                {% if current_user.is_authenticated %}
-                <v-btn color="primary" size="large" href="/dashboard">
-                    <template v-slot:prepend><i class="ti ti-layout-dashboard"></i></template>
-                    Go to Dashboard
-                </v-btn>
-                {% else %}
-                <v-btn color="primary" size="large" href="/register">
-                    Get Started
-                </v-btn>
-                <div class="mt-4 text-body-2 text-medium-emphasis">
-                    Already have an account? <a href="/login" class="text-primary">Sign in</a>
-                </div>
-                {% endif %}
-            </v-col>
-        </v-row>
-    </v-container>
-
-    <div style="position: fixed; bottom: 24px; left: 0; right: 0;" class="text-center text-caption text-medium-emphasis">
-        <a href="https://docs.stk.dev" target="_blank" rel="noopener" class="text-decoration-none">Documentation</a>
-        <span class="mx-2">•</span>
-        <a href="https://github.com/level09/stk" target="_blank" rel="noopener" class="text-decoration-none">GitHub</a>
+<!-- Nav -->
+<nav class="sticky top-0 z-50 flex justify-between items-center w-full px-8 py-5 bg-background border-b-4 border-black">
+    <div class="flex items-center gap-8">
+        <span class="text-3xl font-black tracking-tighter text-black uppercase font-headline">ZIGLAG</span>
+        <div class="hidden md:flex gap-6">
+            <a class="font-headline font-black tracking-tighter uppercase text-[#4e54c8] underline decoration-4 underline-offset-4 hover:-translate-y-1 hover:translate-x-1 transition-transform duration-200" href="#">Features</a>
+            <a class="font-headline font-black tracking-tighter uppercase text-black hover:-translate-y-1 hover:translate-x-1 transition-transform duration-200" href="https://github.com/level09/ziglag" target="_blank">Source</a>
+            <a class="font-headline font-black tracking-tighter uppercase text-black hover:-translate-y-1 hover:translate-x-1 transition-transform duration-200" href="https://github.com/level09/stk" target="_blank">stk</a>
+        </div>
     </div>
-{% endblock %}
+    <div class="flex items-center gap-4">
+        <a class="hidden md:block font-headline font-black tracking-tighter uppercase text-black hover:-translate-y-1 hover:translate-x-1 transition-transform duration-200" href="/login">Login</a>
+        <a href="/register" class="bg-primary-container text-white px-6 py-2 border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] font-headline font-black tracking-tighter uppercase hover:-translate-y-1 hover:translate-x-1 transition-transform duration-200 active:scale-95 active:shadow-none inline-block">
+            Get Started
+        </a>
+    </div>
+</nav>
 
-{% block js %}
-    <script>
-        const {createApp} = Vue;
-        const {createVuetify} = Vuetify;
-        const vuetify = createVuetify(config.vuetifyConfig);
+<!-- Hero -->
+<main class="relative overflow-hidden">
+    <div class="absolute inset-0 bg-background z-0"></div>
+    <div class="absolute top-0 right-0 w-2/3 h-full bg-surface-container-low -skew-x-12 translate-x-1/4 z-0"></div>
 
-        const app = createApp({
-            mixins: [layoutMixin],
-            delimiters: config.delimiters
-        });
+    <section class="relative z-10 px-8 pt-20 pb-32 max-w-7xl mx-auto flex flex-col items-center text-center">
+        <!-- Badge -->
+        <div class="mb-8 inline-block bg-black text-white px-4 py-1 font-headline font-extrabold uppercase tracking-widest text-sm -rotate-1 border-2 border-black">
+            SELF-HOSTED &middot; OPEN SOURCE
+        </div>
 
-        registerStkComponents(app);
-        app.use(vuetify).mount('#app');
-    </script>
-{% endblock %}
+        <!-- Headline -->
+        <h1 class="font-headline font-black text-6xl md:text-8xl lg:text-9xl leading-[0.85] tracking-tighter text-black uppercase mb-12 max-w-5xl">
+            INVOICING<br><span class="text-primary-container italic">WITHOUT</span><br>THE BLOAT
+        </h1>
+
+        <p class="max-w-2xl text-xl md:text-2xl font-medium text-on-surface mb-12 leading-tight">
+            Create, send, and track invoices from your own server. No subscriptions, no data harvesting, no limits. Built on <a href="https://github.com/level09/stk" target="_blank" class="text-primary-container underline decoration-2 underline-offset-2">stk</a>.
+        </p>
+
+        <!-- CTA -->
+        <div class="flex flex-col sm:flex-row gap-6 mb-24">
+            <a href="/register" class="bg-primary-container text-white text-xl sm:text-2xl px-10 sm:px-12 py-5 sm:py-6 border-4 border-black shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] font-headline font-black tracking-tighter uppercase hover:-translate-y-2 hover:translate-x-2 transition-all duration-200 active:scale-95 active:shadow-none inline-block text-center">
+                Start Invoicing
+            </a>
+            <a href="https://github.com/level09/ziglag" target="_blank" class="bg-white text-black text-xl sm:text-2xl px-10 sm:px-12 py-5 sm:py-6 border-4 border-black shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] font-headline font-black tracking-tighter uppercase hover:-translate-y-2 hover:translate-x-2 transition-all duration-200 active:scale-95 active:shadow-none inline-block text-center">
+                View Source
+            </a>
+        </div>
+
+        <!-- Dashboard preview -->
+        <div class="relative w-full max-w-5xl mx-auto group">
+            <div class="absolute -inset-4 bg-primary-container -rotate-1 z-0 shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] border-4 border-black"></div>
+            <div class="relative z-10 border-4 border-black bg-white overflow-hidden shadow-[16px_16px_0px_0px_rgba(0,0,0,1)]">
+                <!-- Fake dashboard UI -->
+                <div class="bg-surface-container-low p-8 min-h-[280px] md:min-h-[400px]">
+                    <div class="flex gap-4 mb-6">
+                        <div class="bg-white border-2 border-black p-4 flex-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                            <div class="font-headline font-black text-2xl md:text-3xl">$24,800</div>
+                            <div class="font-label text-xs uppercase tracking-widest text-gray-500 mt-1">Total Paid</div>
+                        </div>
+                        <div class="bg-white border-2 border-black p-4 flex-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                            <div class="font-headline font-black text-2xl md:text-3xl">12</div>
+                            <div class="font-label text-xs uppercase tracking-widest text-gray-500 mt-1">Invoices</div>
+                        </div>
+                        <div class="hidden sm:block bg-white border-2 border-black p-4 flex-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                            <div class="font-headline font-black text-2xl md:text-3xl">5</div>
+                            <div class="font-label text-xs uppercase tracking-widest text-gray-500 mt-1">Clients</div>
+                        </div>
+                    </div>
+                    <div class="bg-white border-2 border-black p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                        <div class="font-headline font-black text-sm uppercase tracking-tight mb-3">Recent Invoices</div>
+                        <div class="space-y-2 font-label text-sm">
+                            <div class="flex justify-between items-center py-1 border-b border-surface-container">
+                                <span class="font-medium">INV0012</span><span class="text-gray-500">Acme Corp</span><span class="text-gray-500">Mar 28</span><span class="font-bold">$4,200.00</span><span class="bg-green-100 text-green-800 text-xs px-2 py-0.5 font-semibold uppercase">Paid</span>
+                            </div>
+                            <div class="flex justify-between items-center py-1 border-b border-surface-container">
+                                <span class="font-medium">INV0011</span><span class="text-gray-500">Studio Noir</span><span class="text-gray-500">Mar 15</span><span class="font-bold">$1,800.00</span><span class="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 font-semibold uppercase">Sent</span>
+                            </div>
+                            <div class="flex justify-between items-center py-1">
+                                <span class="font-medium">INV0010</span><span class="text-gray-500">Level09</span><span class="text-gray-500">Mar 1</span><span class="font-bold">$6,500.00</span><span class="bg-green-100 text-green-800 text-xs px-2 py-0.5 font-semibold uppercase">Paid</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Scrolling Ticker -->
+    <div class="w-full bg-black py-6 overflow-hidden border-y-8 border-primary-container mt-12 mb-16">
+        <div class="animate-scroll whitespace-nowrap flex items-center gap-16">
+            <span class="text-white font-headline font-black text-4xl md:text-5xl uppercase italic tracking-tighter">SELF-HOSTED</span>
+            <span class="text-primary-container font-headline font-black text-4xl md:text-5xl tracking-tighter">&bull;</span>
+            <span class="text-white font-headline font-black text-4xl md:text-5xl uppercase italic tracking-tighter">OPEN SOURCE</span>
+            <span class="text-primary-container font-headline font-black text-4xl md:text-5xl tracking-tighter">&bull;</span>
+            <span class="text-white font-headline font-black text-4xl md:text-5xl uppercase italic tracking-tighter">PDF GENERATION</span>
+            <span class="text-primary-container font-headline font-black text-4xl md:text-5xl tracking-tighter">&bull;</span>
+            <span class="text-white font-headline font-black text-4xl md:text-5xl uppercase italic tracking-tighter">BUILT ON STK</span>
+            <span class="text-primary-container font-headline font-black text-4xl md:text-5xl tracking-tighter">&bull;</span>
+            <!-- Duplicate for loop -->
+            <span class="text-white font-headline font-black text-4xl md:text-5xl uppercase italic tracking-tighter">SELF-HOSTED</span>
+            <span class="text-primary-container font-headline font-black text-4xl md:text-5xl tracking-tighter">&bull;</span>
+            <span class="text-white font-headline font-black text-4xl md:text-5xl uppercase italic tracking-tighter">OPEN SOURCE</span>
+            <span class="text-primary-container font-headline font-black text-4xl md:text-5xl tracking-tighter">&bull;</span>
+            <span class="text-white font-headline font-black text-4xl md:text-5xl uppercase italic tracking-tighter">PDF GENERATION</span>
+            <span class="text-primary-container font-headline font-black text-4xl md:text-5xl tracking-tighter">&bull;</span>
+            <span class="text-white font-headline font-black text-4xl md:text-5xl uppercase italic tracking-tighter">BUILT ON STK</span>
+            <span class="text-primary-container font-headline font-black text-4xl md:text-5xl tracking-tighter">&bull;</span>
+        </div>
+    </div>
+</main>
+
+<!-- Bento Features -->
+<section class="px-8 py-20 max-w-7xl mx-auto">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+        <div class="md:col-span-8 bg-surface-container-highest p-10 md:p-12 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 transition-transform">
+            <h3 class="font-headline font-black text-3xl md:text-5xl uppercase mb-4 tracking-tighter">YOUR DATA.<br>YOUR SERVER.</h3>
+            <p class="text-lg md:text-xl font-medium leading-relaxed max-w-xl">No SaaS middleman. No monthly fees. Deploy on your own infrastructure and own every byte of your billing data.</p>
+        </div>
+        <div class="md:col-span-4 bg-primary-container p-10 md:p-12 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col justify-end text-white">
+            <div class="text-5xl md:text-6xl mb-4">&#9889;</div>
+            <h4 class="font-headline font-black text-2xl md:text-3xl uppercase tracking-tighter">ONE MINUTE INVOICES</h4>
+        </div>
+
+        <div class="md:col-span-4 bg-white p-10 md:p-12 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+            <h4 class="font-headline font-black text-2xl md:text-3xl uppercase tracking-tighter mb-3 text-primary-container">01. CREATE</h4>
+            <p class="font-medium">Line items, tax, discounts, client autocomplete. Professional invoices in seconds.</p>
+        </div>
+        <div class="md:col-span-4 bg-white p-10 md:p-12 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+            <h4 class="font-headline font-black text-2xl md:text-3xl uppercase tracking-tighter mb-3 text-primary-container">02. SEND</h4>
+            <p class="font-medium">Email with PDF attachment, or share via public link. Clients view without accounts.</p>
+        </div>
+        <div class="md:col-span-4 bg-white p-10 md:p-12 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+            <h4 class="font-headline font-black text-2xl md:text-3xl uppercase tracking-tighter mb-3 text-primary-container">03. TRACK</h4>
+            <p class="font-medium">Payment recording, status tracking, monthly reports. Know who owes what.</p>
+        </div>
+    </div>
+</section>
+
+<!-- Footer -->
+<footer class="w-full py-16 px-8 md:px-12 flex flex-col items-start gap-10 md:flex-row md:justify-between bg-surface-container-highest border-t-8 border-black font-body font-bold text-lg">
+    <div class="flex flex-col gap-4">
+        <span class="text-4xl md:text-5xl font-black italic text-black uppercase font-headline">ZIGLAG</span>
+        <p class="max-w-xs text-gray-600 font-normal text-sm">Self-hosted invoicing. Open source. Built on <a href="https://github.com/level09/stk" target="_blank" class="underline">stk</a>.</p>
+    </div>
+    <div class="flex flex-wrap gap-8 md:gap-16">
+        <div class="flex flex-col gap-3">
+            <a class="text-gray-600 hover:scale-110 hover:rotate-2 transition-all duration-300 text-base" href="https://github.com/level09/ziglag" target="_blank">GitHub</a>
+            <a class="text-gray-600 hover:scale-110 hover:rotate-2 transition-all duration-300 text-base" href="/login">Login</a>
+        </div>
+        <div class="flex flex-col gap-3">
+            <a class="text-gray-600 hover:scale-110 hover:rotate-2 transition-all duration-300 text-base" href="https://github.com/level09/stk" target="_blank">stk Framework</a>
+            <a class="text-gray-600 hover:scale-110 hover:rotate-2 transition-all duration-300 text-base" href="/register">Register</a>
+        </div>
+    </div>
+    <div class="flex gap-4">
+        <a href="https://github.com/level09/ziglag" target="_blank" class="w-14 h-14 bg-black flex items-center justify-center hover:scale-110 hover:rotate-6 transition-all duration-300 cursor-pointer border-2 border-black">
+            <svg class="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+        </a>
+        <a href="https://github.com/level09/stk" target="_blank" class="w-14 h-14 bg-primary-container flex items-center justify-center hover:scale-110 hover:-rotate-6 transition-all duration-300 cursor-pointer border-2 border-black">
+            <svg class="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.591-7.305z"/></svg>
+        </a>
+    </div>
+</footer>
+</body>
+</html>

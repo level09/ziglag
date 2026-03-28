@@ -90,6 +90,8 @@ async def health():
 
 @public.route("/")
 async def index():
+    if current_user.is_authenticated:
+        return redirect("/dashboard/")
     return await render_template("index.html")
 
 

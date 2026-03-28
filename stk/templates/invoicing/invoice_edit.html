@@ -203,6 +203,7 @@
                 <div style="flex: 1;">Rate</div>
                 <div style="flex: 1;">Qty</div>
                 <div style="flex: 1; text-align: right;">Amount</div>
+                <div v-if="invoice.tax_rate > 0" style="width: 40px; text-align: center;">VAT</div>
             </div>
 
             <div v-for="(item, idx) in invoice.items" :key="idx" class="line-item-row">
@@ -211,16 +212,38 @@
                 <div style="flex: 1;"><v-text-field v-model="item.unit_price" density="compact" hide-details type="number" @input="calcLine(item)"></v-text-field></div>
                 <div style="flex: 1;"><v-text-field v-model="item.quantity" density="compact" hide-details type="number" @input="calcLine(item)"></v-text-field></div>
                 <div style="flex: 1; text-align: right; padding-top: 8px; font-variant-numeric: tabular-nums;">${formatMoney(item.amount)}</div>
+                <div v-if="invoice.tax_rate > 0" style="width: 40px; text-align: center; padding-top: 4px;">
+                    <v-checkbox v-model="item.taxable" hide-details density="compact" class="d-inline-flex"></v-checkbox>
+                </div>
             </div>
 
             <v-btn @click="addItem" variant="tonal" size="small" class="mt-2 mb-4">
                 <template v-slot:prepend><i class="ti ti-plus"></i></template>Add Item
             </v-btn>
 
+            <!-- Tax Settings -->
+            <v-divider class="my-2"></v-divider>
+            <v-row class="mt-1">
+                <v-col cols="6" sm="3">
+                    <v-text-field label="Tax Label" v-model="invoice.tax_label" density="compact" placeholder="VAT"></v-text-field>
+                </v-col>
+                <v-col cols="6" sm="3">
+                    <v-text-field label="Tax Rate %" v-model="invoice.tax_rate" density="compact" type="number"></v-text-field>
+                </v-col>
+                <v-col cols="6" sm="3">
+                    <v-select label="Tax Type" v-model="invoice.tax_type" density="compact"
+                        :items="[{title:'On Total',value:'on_total'},{title:'Per Line',value:'per_line'},{title:'None',value:'none'}]"
+                    ></v-select>
+                </v-col>
+                <v-col cols="6" sm="3" class="d-flex align-center">
+                    <v-checkbox label="Inclusive" v-model="invoice.tax_inclusive" density="compact" hide-details></v-checkbox>
+                </v-col>
+            </v-row>
+
             <!-- Summary -->
             <div class="mt-4">
                 <div class="summary-row"><span class="summary-label">Subtotal</span><span class="summary-value">${formatMoney(totals.subtotal)}</span></div>
-                <div class="summary-row" v-if="invoice.tax_rate > 0"><span class="summary-label">${invoice.tax_label} (${invoice.tax_rate}%)</span><span class="summary-value">${formatMoney(totals.tax)}</span></div>
+                <div class="summary-row" v-if="parseFloat(invoice.tax_rate) > 0"><span class="summary-label">${invoice.tax_label || 'Tax'} (${invoice.tax_rate}%)</span><span class="summary-value">${formatMoney(totals.tax)}</span></div>
                 <v-divider class="my-1" style="max-width: 280px; margin-left: auto;"></v-divider>
                 <div class="summary-row summary-total"><span class="summary-label">Total</span><span class="summary-value">${invoice.currency_symbol}${formatMoney(totals.total)}</span></div>
             </div>

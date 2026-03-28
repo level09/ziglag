@@ -26,18 +26,26 @@ const config = {
                 variant: 'outlined'
             },
             VChip: {
-                size: 'small'
+                size: 'small',
+                rounded: 'sm'
             },
             VCard: {
                 elevation: 0,
-                rounded: 'xl'
+                rounded: 0
             },
             VMenu: {
                 offset: 10
             },
             VBtn: {
                 variant: 'elevated',
-                size: 'small'
+                size: 'small',
+                rounded: 0
+            },
+            VDialog: {
+                rounded: 0
+            },
+            VToolbar: {
+                elevation: 0
             },
             VDataTableServer: {
                 itemsPerPage: 25,

@@ -8,15 +8,29 @@ body,
     font-family: 'Be Vietnam Pro', sans-serif !important;
 }
 
-/* Headlines: Plus Jakarta Sans */
+/* Headlines: Plus Jakarta Sans, uppercase, tight */
 .v-toolbar-title,
 .v-card-title,
 .text-h1, .text-h2, .text-h3, .text-h4, .text-h5, .text-h6,
 .text-subtitle-1, .text-subtitle-2,
 .font-weight-bold,
-.v-list-item-title,
+.v-list-item-title {
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+    letter-spacing: -0.02em !important;
+}
+
+/* Toolbar titles: uppercase brutalist */
+.v-toolbar-title {
+    text-transform: uppercase;
+    font-weight: 800 !important;
+}
+
+/* Buttons: Plus Jakarta Sans, uppercase */
 .v-btn {
     font-family: 'Plus Jakarta Sans', sans-serif !important;
+    text-transform: uppercase !important;
+    font-weight: 700 !important;
+    letter-spacing: 0 !important;
 }
 
 /* Labels / Metadata: Inter */
@@ -29,23 +43,153 @@ body,
     font-family: 'Inter', sans-serif !important;
 }
 
-/* Table headers */
+/* ===== Brutalist Cards ===== */
+.v-card {
+    border: 2px solid #1b1c1c !important;
+    transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
+}
+
+.v-theme--dark .v-card {
+    border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+/* Card toolbar bottom border */
+.v-card > .v-toolbar {
+    border-bottom: 2px solid #1b1c1c;
+}
+
+.v-theme--dark .v-card > .v-toolbar {
+    border-bottom-color: rgba(255, 255, 255, 0.15);
+}
+
+/* ===== Brutalist Buttons ===== */
+.v-btn--variant-elevated.v-btn--color-primary,
+.v-btn--variant-elevated.bg-primary {
+    background: #4e54c8 !important;
+    border: 2px solid #1b1c1c;
+    box-shadow: 3px 3px 0 0 rgba(0,0,0,1) !important;
+}
+
+.v-btn--variant-elevated.v-btn--color-primary:hover,
+.v-btn--variant-elevated.bg-primary:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 4px 4px 0 0 rgba(0,0,0,1) !important;
+}
+
+.v-btn--variant-elevated.v-btn--color-primary:active,
+.v-btn--variant-elevated.bg-primary:active {
+    transform: translate(1px, 1px);
+    box-shadow: 1px 1px 0 0 rgba(0,0,0,1) !important;
+}
+
+/* Dark mode buttons */
+.v-theme--dark .v-btn--variant-elevated.v-btn--color-primary,
+.v-theme--dark .v-btn--variant-elevated.bg-primary {
+    border-color: rgba(255, 255, 255, 0.3);
+    box-shadow: 3px 3px 0 0 rgba(78, 84, 200, 0.5) !important;
+}
+
+/* Tonal/outlined buttons: subtle border */
+.v-btn--variant-tonal,
+.v-btn--variant-outlined {
+    border: 2px solid #1b1c1c !important;
+    box-shadow: 2px 2px 0 0 rgba(0,0,0,1);
+}
+
+.v-theme--dark .v-btn--variant-tonal,
+.v-theme--dark .v-btn--variant-outlined {
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    box-shadow: 2px 2px 0 0 rgba(255,255,255,0.1);
+}
+
+/* ===== Brutalist Inputs ===== */
+.v-field--variant-outlined .v-field__outline {
+    --v-field-border-width: 2px;
+}
+
+.v-field--focused {
+    box-shadow: 3px 3px 0 0 rgba(53, 58, 175, 0.3) !important;
+}
+
+.v-field--focused .v-field__outline {
+    --v-field-border-opacity: 1;
+    color: #353aaf !important;
+}
+
+/* ===== Data Table ===== */
 .v-data-table th {
-    font-weight: 600 !important;
+    font-weight: 700 !important;
     text-transform: uppercase;
     font-size: 0.7rem !important;
     letter-spacing: 0.08em;
+    border-bottom: 2px solid #1b1c1c !important;
 }
 
-/* Headline tightening */
-.v-toolbar-title,
-.text-h4, .text-h5, .text-h6 {
-    letter-spacing: -0.02em !important;
+.v-theme--dark .v-data-table th {
+    border-bottom-color: rgba(255, 255, 255, 0.15) !important;
 }
 
-/* ===== Card Styling ===== */
-.v-card {
-    transition: box-shadow 0.3s ease-out;
+.v-data-table tbody tr:hover {
+    background-color: rgba(53, 58, 175, 0.04) !important;
+}
+
+/* ===== Chips: sharp ===== */
+.v-chip {
+    font-weight: 600 !important;
+    text-transform: uppercase;
+    font-size: 0.7rem !important;
+    letter-spacing: 0.04em;
+}
+
+/* ===== Dialogs ===== */
+.v-overlay__content > .v-card {
+    border: 3px solid #1b1c1c !important;
+    box-shadow: 8px 8px 0 0 rgba(0,0,0,1) !important;
+}
+
+.v-theme--dark .v-overlay__content > .v-card {
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    box-shadow: 8px 8px 0 0 rgba(78, 84, 200, 0.3) !important;
+}
+
+/* ===== Snackbar ===== */
+.v-snackbar__wrapper {
+    border: 2px solid #1b1c1c !important;
+    border-radius: 0 !important;
+    box-shadow: 4px 4px 0 0 rgba(0,0,0,1) !important;
+}
+
+/* ===== App Bar ===== */
+.v-app-bar {
+    border-bottom: 3px solid #1b1c1c !important;
+}
+
+.v-theme--dark .v-app-bar {
+    border-bottom-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* ===== Navigation Drawer ===== */
+.v-navigation-drawer {
+    border-right: 2px solid #1b1c1c !important;
+}
+
+.v-theme--dark .v-navigation-drawer {
+    border-right-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.nav-header .app-title {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: -0.02em;
+}
+
+.v-navigation-drawer .nav-items .nav-section-title {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
 }
 
 /* ===== Scrollbars ===== */
@@ -60,56 +204,26 @@ body,
 
 ::-webkit-scrollbar-thumb {
     background-color: rgba(0, 0, 0, 0.15);
-    border-radius: 3px;
+    border-radius: 0;
 }
 
 ::-webkit-scrollbar-thumb:hover {
     background-color: rgba(0, 0, 0, 0.25);
 }
 
-/* ===== Input Focus ===== */
-.v-field--focused {
-    box-shadow: 0 0 0 2px rgba(53, 58, 175, 0.25) !important;
-}
-
-.v-field--focused .v-field__outline {
-    --v-field-border-opacity: 1;
-}
-
-/* ===== Data Table ===== */
-.v-data-table tbody tr:hover {
-    background-color: rgba(53, 58, 175, 0.04) !important;
-}
-
 /* ===== Links ===== */
 a {
     color: rgb(var(--v-theme-primary));
-    transition: opacity 0.2s;
+    transition: opacity 0.15s;
 }
 
 a:hover {
     opacity: 0.8;
 }
 
-/* ===== Primary Button Gradient ===== */
-.v-theme--light .v-btn--variant-elevated.bg-primary,
-.v-theme--light .v-btn--variant-elevated.v-btn--color-primary {
-    background: linear-gradient(135deg, #353aaf, #4e54c8) !important;
-}
-
-/* ===== Navigation ===== */
-.nav-header .app-title {
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: -0.02em;
-}
-
-/* ===== Nav section headings ===== */
-.v-navigation-drawer .nav-items .nav-section-title {
-    font-family: 'Inter', sans-serif;
-    font-size: 0.65rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
+/* ===== Tabular numbers for financial data ===== */
+.summary-value,
+.v-data-table td:last-child,
+[style*="tabular-nums"] {
+    font-variant-numeric: tabular-nums;
 }

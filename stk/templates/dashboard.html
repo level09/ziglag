@@ -128,7 +128,12 @@
         const app = createApp({
             mixins: [layoutMixin],
             data() { return {}; },
-            delimiters: config.delimiters
+            delimiters: config.delimiters,
+            methods: {
+                _onWsMessage(msg) {
+                    if (msg.type === 'activity') { location.reload(); }
+                }
+            }
         });
 
         registerStkComponents(app);

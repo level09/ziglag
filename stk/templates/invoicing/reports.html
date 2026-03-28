@@ -22,30 +22,30 @@
             </div>
 
             <!-- Data table -->
-            <v-table v-if="!loading" density="comfortable">
+            <table v-else class="w-100" style="border-collapse: collapse;">
                 <thead>
                     <tr>
-                        <th></th>
-                        <th class="text-right">Clients</th>
-                        <th class="text-right">Invoices</th>
-                        <th class="text-right">Paid</th>
+                        <th style="text-align: left; padding: 10px 12px; border-bottom: 2px solid #1b1c1c; font-family: Inter, sans-serif; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em;"></th>
+                        <th style="text-align: right; padding: 10px 12px; border-bottom: 2px solid #1b1c1c; font-family: Inter, sans-serif; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em;">Clients</th>
+                        <th style="text-align: right; padding: 10px 12px; border-bottom: 2px solid #1b1c1c; font-family: Inter, sans-serif; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em;">Invoices</th>
+                        <th style="text-align: right; padding: 10px 12px; border-bottom: 2px solid #1b1c1c; font-family: Inter, sans-serif; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em;">Paid</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr style="font-weight: 600;">
-                        <td>Tax Year ${year}</td>
-                        <td class="text-right"></td>
-                        <td class="text-right">${yearlyInvoices}</td>
-                        <td class="text-right" style="font-variant-numeric: tabular-nums;">${currencySymbol}${yearlyTotal}</td>
+                    <tr style="font-weight: 700;">
+                        <td style="padding: 10px 12px; border-bottom: 1px solid #f0eded;">Tax Year ${year}</td>
+                        <td style="padding: 10px 12px; border-bottom: 1px solid #f0eded; text-align: right;"></td>
+                        <td style="padding: 10px 12px; border-bottom: 1px solid #f0eded; text-align: right;">${yearlyInvoices}</td>
+                        <td style="padding: 10px 12px; border-bottom: 1px solid #f0eded; text-align: right; font-variant-numeric: tabular-nums;">${currencySymbol}${yearlyTotal}</td>
                     </tr>
-                    <tr v-for="m in months" :key="m.month">
-                        <td>${monthName(m.month)}</td>
-                        <td class="text-right">${m.clients || 0}</td>
-                        <td class="text-right">${m.invoices || 0}</td>
-                        <td class="text-right" style="font-variant-numeric: tabular-nums;">${m.total !== '0' ? currencySymbol + m.total : '-'}</td>
+                    <tr v-for="row in months" :key="row.month">
+                        <td style="padding: 10px 12px; border-bottom: 1px solid #f0eded;">${monthName(row.month)}</td>
+                        <td style="padding: 10px 12px; border-bottom: 1px solid #f0eded; text-align: right;">${row.clients || 0}</td>
+                        <td style="padding: 10px 12px; border-bottom: 1px solid #f0eded; text-align: right;">${row.invoices || 0}</td>
+                        <td style="padding: 10px 12px; border-bottom: 1px solid #f0eded; text-align: right; font-variant-numeric: tabular-nums;">${row.total !== '0' ? currencySymbol + row.total : '-'}</td>
                     </tr>
                 </tbody>
-            </v-table>
+            </table>
 
 
         </v-card-text>

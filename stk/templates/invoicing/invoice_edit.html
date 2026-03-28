@@ -138,7 +138,9 @@
             <!-- Quick actions in preview -->
             <div class="d-flex ga-2 mt-6 flex-wrap">
                 <v-btn @click="mode = 'edit'" variant="tonal" size="small"><i class="ti ti-pencil mr-1"></i> Edit</v-btn>
+                <v-btn v-if="invoice.status === 'draft'" @click="setStatus('sent')" color="primary" variant="tonal" size="small"><i class="ti ti-send mr-1"></i> Mark Sent</v-btn>
                 <v-btn v-if="invoice.status !== 'paid'" @click="markPaid" color="success" variant="tonal" size="small"><i class="ti ti-check mr-1"></i> Mark Paid</v-btn>
+                <v-btn v-if="invoice.status === 'paid'" @click="setStatus('draft')" variant="tonal" size="small"><i class="ti ti-arrow-back mr-1"></i> Reopen</v-btn>
                 <v-btn @click="openPaymentDialog" variant="tonal" size="small"><i class="ti ti-cash mr-1"></i> Record Payment</v-btn>
                 <v-btn :href="'/api/invoice/' + invoice.id + '/pdf'" target="_blank" variant="tonal" size="small"><i class="ti ti-file-type-pdf mr-1"></i> PDF</v-btn>
             </div>
@@ -404,6 +406,9 @@
                     });
                 },
                 deleteInvoice() { if (confirm('Delete this invoice permanently?')) { axios.delete(`/api/invoice/${this.invoice.id}`).then(() => { window.location.href = '/invoices/'; }); } },
+                setStatus(status) {
+                    axios.post(`/api/invoice/${this.invoice.id}/status`, {status}).then(r => { this.showSnack(r.data?.message); this.reloadInvoice(); });
+                },
                 markPaid() {
                     const balance = parseFloat(this.totals.balance) || 0;
                     if (balance <= 0) {

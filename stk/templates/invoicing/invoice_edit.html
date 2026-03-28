@@ -1,11 +1,22 @@
 {% extends 'layout.html' %} {% block css %}
 <style>
     .line-item-row { display: flex; gap: 8px; align-items: center; margin-bottom: 4px; }
-    .line-item-row .v-field { font-size: 0.875rem; }
-    .summary-row { display: flex; justify-content: flex-end; gap: 16px; padding: 4px 0; }
+    .summary-row { display: flex; justify-content: flex-end; gap: 16px; padding: 4px 0; font-variant-numeric: tabular-nums; }
     .summary-label { text-align: right; min-width: 120px; font-weight: 500; }
     .summary-value { min-width: 120px; text-align: right; }
     .summary-total { font-weight: 700; font-size: 1.1rem; }
+    /* Preview mode styles */
+    .preview-section { font-family: 'Be Vietnam Pro', sans-serif; }
+    .preview-header { display: flex; justify-content: space-between; padding-bottom: 16px; border-bottom: 3px solid #353aaf; margin-bottom: 24px; }
+    .preview-label { font-family: 'Inter', sans-serif; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: #767685; margin-bottom: 4px; }
+    .preview-value { font-size: 14px; line-height: 1.5; }
+    .preview-client { background: #f6f3f2; padding: 16px 20px; border-radius: 4px; margin-bottom: 24px; }
+    .preview-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+    .preview-table th { font-family: 'Inter', sans-serif; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: #767685; padding: 8px 0; text-align: left; border-bottom: 2px solid #1b1c1c; }
+    .preview-table th.right { text-align: right; }
+    .preview-table td { padding: 8px 0; font-size: 14px; border-bottom: 1px solid #f0eded; }
+    .preview-table td.right { text-align: right; font-variant-numeric: tabular-nums; }
+    .preview-notes { background: #f6f3f2; padding: 12px 16px; border-radius: 4px; margin-top: 24px; font-size: 13px; color: #464653; white-space: pre-line; }
 </style>
 {% endblock %} {% block sidebar %}
 {% endblock %} {% block layout_classes %} align-center {% endblock %}
@@ -16,17 +27,25 @@
             <v-btn icon variant="text" href="/invoices/">
                 <i class="ti ti-arrow-left"></i>
             </v-btn>
-            <v-toolbar-title class="font-weight-bold">
+            <v-toolbar-title>
                 ${invoice.id ? invoice.invoice_number : 'New Invoice'}
             </v-toolbar-title>
             <v-spacer></v-spacer>
             <v-chip v-if="invoice.id" :color="statusColor(invoice.status)" size="small" class="mr-2" variant="tonal">
                 ${invoice.status}
             </v-chip>
-            <v-btn color="primary" @click="saveInvoice" variant="elevated" :loading="saving" class="mr-2">Save</v-btn>
+
+            <!-- Mode toggle -->
+            <v-btn-toggle v-if="invoice.id" v-model="mode" mandatory density="compact" class="mr-2">
+                <v-btn value="preview" size="small"><i class="ti ti-eye mr-1"></i> Preview</v-btn>
+                <v-btn value="edit" size="small"><i class="ti ti-pencil mr-1"></i> Edit</v-btn>
+            </v-btn-toggle>
+
+            <v-btn v-if="mode === 'edit'" color="primary" @click="saveInvoice" variant="elevated" :loading="saving">Save</v-btn>
+
             <v-menu v-if="invoice.id">
                 <template v-slot:activator="{ props }">
-                    <v-btn v-bind="props" icon variant="text" size="small"><i class="ti ti-dots-vertical"></i></v-btn>
+                    <v-btn v-bind="props" icon variant="text" size="small" class="ml-1"><i class="ti ti-dots-vertical"></i></v-btn>
                 </template>
                 <v-list density="compact">
                     <v-list-item @click="sendInvoice"><v-list-item-title>Send via Email</v-list-item-title></v-list-item>
@@ -37,9 +56,97 @@
             </v-menu>
         </v-toolbar>
 
-        <v-card-text>
+        <!-- ═══ PREVIEW MODE ═══ -->
+        <v-card-text v-if="mode === 'preview'" class="preview-section">
+            <div class="preview-header">
+                <div>
+                    <div style="font-family: 'Plus Jakarta Sans'; font-weight: 800; font-size: 18px;">${invoice.from_name}</div>
+                    <div class="preview-value" style="color: #464653; white-space: pre-line; margin-top: 4px;">${invoice.from_address}</div>
+                    <div v-if="invoice.from_phone" style="color: #464653; font-size: 13px;">${invoice.from_phone}</div>
+                    <div v-if="invoice.from_email" style="color: #464653; font-size: 13px;">${invoice.from_email}</div>
+                    <div v-if="invoice.from_business_number" style="color: #464653; font-size: 13px;">${invoice.from_business_number}</div>
+                </div>
+                <div style="text-align: right;">
+                    <div style="font-family: 'Plus Jakarta Sans'; font-weight: 800; font-size: 28px; color: #353aaf; text-transform: uppercase;">Invoice</div>
+                    <div style="font-family: 'Inter'; font-size: 13px; color: #464653; margin-top: 8px;">
+                        <strong>${invoice.invoice_number}</strong><br>
+                        Date: ${invoice.date}<br>
+                        <span v-if="invoice.due_date">Due: ${invoice.due_date}<br></span>
+                        <span v-if="invoice.terms">Terms: ${invoice.terms.replace('_',' ')}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bill To -->
+            <div v-if="invoice.client" class="preview-client">
+                <div class="preview-label">Bill To</div>
+                <div style="font-weight: 700; font-size: 16px;">${invoice.client.name || invoice.client_name}</div>
+                <div v-if="billTo.email" style="color: #464653; font-size: 13px;">${billTo.email}</div>
+                <div v-if="billTo.address_line1" style="color: #464653; font-size: 13px;">${billTo.address_line1}</div>
+                <div v-if="billTo.address_line2" style="color: #464653; font-size: 13px;">${billTo.address_line2}</div>
+                <div v-if="billTo.phone" style="color: #464653; font-size: 13px;">${billTo.phone}</div>
+            </div>
+
+            <!-- Items table -->
+            <table class="preview-table">
+                <thead>
+                    <tr>
+                        <th>Description</th>
+                        <th class="right">Rate</th>
+                        <th class="right">Qty</th>
+                        <th class="right">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="item in invoice.items" :key="item.id || item.description">
+                        <td>
+                            ${item.description}
+                            <div v-if="item.detail" style="font-size: 12px; color: #767685;">${item.detail}</div>
+                        </td>
+                        <td class="right">${invoice.currency_symbol}${formatMoney(item.unit_price)}</td>
+                        <td class="right">${item.quantity}</td>
+                        <td class="right">${invoice.currency_symbol}${formatMoney(item.amount)}</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- Summary -->
+            <div class="mt-4">
+                <div class="summary-row"><span class="summary-label">Subtotal</span><span class="summary-value">${formatMoney(totals.subtotal)}</span></div>
+                <div class="summary-row" v-if="invoice.tax_rate > 0"><span class="summary-label">${invoice.tax_label} (${invoice.tax_rate}%)</span><span class="summary-value">${formatMoney(totals.tax)}</span></div>
+                <div class="summary-row" v-if="totals.discount > 0"><span class="summary-label">Discount</span><span class="summary-value">-${formatMoney(totals.discount)}</span></div>
+                <v-divider class="my-1" style="max-width: 280px; margin-left: auto; border-width: 2px; border-color: #353aaf;"></v-divider>
+                <div class="summary-row summary-total"><span class="summary-label">Total</span><span class="summary-value">${invoice.currency_symbol}${formatMoney(totals.total)}</span></div>
+                <div class="summary-row" v-if="totals.paid > 0"><span class="summary-label">Paid</span><span class="summary-value">-${formatMoney(totals.paid)}</span></div>
+                <div class="summary-row summary-total" v-if="totals.paid > 0"><span class="summary-label">Balance Due</span><span class="summary-value">${invoice.currency_symbol}${formatMoney(totals.balance)}</span></div>
+            </div>
+
+            <div v-if="invoice.notes" class="preview-notes">
+                <div class="preview-label">Notes</div>
+                ${invoice.notes}
+            </div>
+
+            <!-- Payments -->
+            <template v-if="invoice.payments && invoice.payments.length > 0">
+                <div class="preview-label mt-6">Payments</div>
+                <v-list density="compact" class="pa-0">
+                    <v-list-item v-for="p in invoice.payments" :key="p.id" class="px-0">
+                        <v-list-item-title style="font-variant-numeric: tabular-nums;">${p.payment_date} &mdash; ${invoice.currency_symbol}${p.amount} (${p.method || 'N/A'})</v-list-item-title>
+                    </v-list-item>
+                </v-list>
+            </template>
+
+            <!-- Quick actions in preview -->
+            <div class="d-flex ga-2 mt-6">
+                <v-btn @click="mode = 'edit'" variant="tonal" size="small"><i class="ti ti-pencil mr-1"></i> Edit</v-btn>
+                <v-btn @click="paymentDialog = true" variant="tonal" size="small"><i class="ti ti-cash mr-1"></i> Record Payment</v-btn>
+                <v-btn :href="'/api/invoice/' + invoice.id + '/pdf'" target="_blank" variant="tonal" size="small"><i class="ti ti-file-type-pdf mr-1"></i> PDF</v-btn>
+            </div>
+        </v-card-text>
+
+        <!-- ═══ EDIT MODE ═══ -->
+        <v-card-text v-if="mode === 'edit'">
             <v-row>
-                <!-- From -->
                 <v-col cols="12" md="6">
                     <div class="text-subtitle-2 mb-2 font-weight-bold">From</div>
                     <v-text-field label="Name" v-model="invoice.from_name" density="compact"></v-text-field>
@@ -48,8 +155,6 @@
                     <v-text-field label="Phone" v-model="invoice.from_phone" density="compact"></v-text-field>
                     <v-text-field label="Business Number" v-model="invoice.from_business_number" density="compact"></v-text-field>
                 </v-col>
-
-                <!-- Bill To -->
                 <v-col cols="12" md="6">
                     <div class="text-subtitle-2 mb-2 font-weight-bold">Bill To</div>
                     <v-autocomplete
@@ -76,7 +181,6 @@
 
             <v-divider class="my-4"></v-divider>
 
-            <!-- Invoice Meta -->
             <v-row>
                 <v-col cols="12" sm="4">
                     <v-text-field label="Invoice Number" v-model="invoice.invoice_number" density="compact" readonly></v-text-field>
@@ -86,21 +190,14 @@
                 </v-col>
                 <v-col cols="12" sm="4">
                     <v-select label="Terms" v-model="invoice.terms" density="compact"
-                        :items="[
-                            {title:'On Receipt',value:'on_receipt'},
-                            {title:'Net 15',value:'net_15'},
-                            {title:'Net 30',value:'net_30'},
-                            {title:'Net 60',value:'net_60'}
-                        ]"
+                        :items="[{title:'On Receipt',value:'on_receipt'},{title:'Net 15',value:'net_15'},{title:'Net 30',value:'net_30'},{title:'Net 60',value:'net_60'}]"
                     ></v-select>
                 </v-col>
             </v-row>
 
             <v-divider class="my-4"></v-divider>
 
-            <!-- Line Items -->
             <div class="text-subtitle-2 mb-2 font-weight-bold">Items</div>
-
             <div class="line-item-row text-caption font-weight-bold" style="padding-left: 40px;">
                 <div style="flex: 3;">Description</div>
                 <div style="flex: 1;">Rate</div>
@@ -109,134 +206,63 @@
             </div>
 
             <div v-for="(item, idx) in invoice.items" :key="idx" class="line-item-row">
-                <v-btn icon variant="text" size="x-small" @click="removeItem(idx)" color="error">
-                    <i class="ti ti-x"></i>
-                </v-btn>
-                <div style="flex: 3;">
-                    <v-text-field v-model="item.description" density="compact" hide-details placeholder="Description"></v-text-field>
-                </div>
-                <div style="flex: 1;">
-                    <v-text-field v-model="item.unit_price" density="compact" hide-details type="number" @input="calcLine(item)"></v-text-field>
-                </div>
-                <div style="flex: 1;">
-                    <v-text-field v-model="item.quantity" density="compact" hide-details type="number" @input="calcLine(item)"></v-text-field>
-                </div>
-                <div style="flex: 1; text-align: right; padding-top: 8px;">
-                    ${formatMoney(item.amount)}
-                </div>
+                <v-btn icon variant="text" size="x-small" @click="removeItem(idx)" color="error"><i class="ti ti-x"></i></v-btn>
+                <div style="flex: 3;"><v-text-field v-model="item.description" density="compact" hide-details placeholder="Description"></v-text-field></div>
+                <div style="flex: 1;"><v-text-field v-model="item.unit_price" density="compact" hide-details type="number" @input="calcLine(item)"></v-text-field></div>
+                <div style="flex: 1;"><v-text-field v-model="item.quantity" density="compact" hide-details type="number" @input="calcLine(item)"></v-text-field></div>
+                <div style="flex: 1; text-align: right; padding-top: 8px; font-variant-numeric: tabular-nums;">${formatMoney(item.amount)}</div>
             </div>
 
             <v-btn @click="addItem" variant="tonal" size="small" class="mt-2 mb-4">
-                <template v-slot:prepend><i class="ti ti-plus"></i></template>
-                Add Item
+                <template v-slot:prepend><i class="ti ti-plus"></i></template>Add Item
             </v-btn>
 
             <!-- Summary -->
             <div class="mt-4">
-                <div class="summary-row">
-                    <span class="summary-label">Subtotal</span>
-                    <span class="summary-value">${formatMoney(totals.subtotal)}</span>
-                </div>
-                <div class="summary-row" v-if="invoice.tax_rate > 0">
-                    <span class="summary-label">${invoice.tax_label} (${invoice.tax_rate}%)</span>
-                    <span class="summary-value">${formatMoney(totals.tax)}</span>
-                </div>
-                <div class="summary-row" v-if="totals.discount > 0">
-                    <span class="summary-label">Discount</span>
-                    <span class="summary-value">-${formatMoney(totals.discount)}</span>
-                </div>
+                <div class="summary-row"><span class="summary-label">Subtotal</span><span class="summary-value">${formatMoney(totals.subtotal)}</span></div>
+                <div class="summary-row" v-if="invoice.tax_rate > 0"><span class="summary-label">${invoice.tax_label} (${invoice.tax_rate}%)</span><span class="summary-value">${formatMoney(totals.tax)}</span></div>
                 <v-divider class="my-1" style="max-width: 280px; margin-left: auto;"></v-divider>
-                <div class="summary-row summary-total">
-                    <span class="summary-label">Total</span>
-                    <span class="summary-value">${invoice.currency_symbol}${formatMoney(totals.total)}</span>
-                </div>
-                <div class="summary-row" v-if="totals.paid > 0">
-                    <span class="summary-label">Paid</span>
-                    <span class="summary-value">-${formatMoney(totals.paid)}</span>
-                </div>
-                <div class="summary-row summary-total" v-if="totals.paid > 0">
-                    <span class="summary-label">Balance Due</span>
-                    <span class="summary-value">${invoice.currency_symbol}${formatMoney(totals.balance)}</span>
-                </div>
+                <div class="summary-row summary-total"><span class="summary-label">Total</span><span class="summary-value">${invoice.currency_symbol}${formatMoney(totals.total)}</span></div>
             </div>
 
             <v-divider class="my-4"></v-divider>
-
-            <!-- Notes -->
-            <v-textarea label="Notes" v-model="invoice.notes" rows="4"></v-textarea>
-
-            <!-- Payments (existing invoice only) -->
-            <template v-if="invoice.id && invoice.payments && invoice.payments.length > 0">
-                <div class="text-subtitle-2 mb-2 font-weight-bold mt-4">Payments</div>
-                <v-list density="compact">
-                    <v-list-item v-for="p in invoice.payments" :key="p.id">
-                        <v-list-item-title>${p.payment_date} - ${invoice.currency_symbol}${p.amount} (${p.method || 'N/A'})</v-list-item-title>
-                        <template v-slot:append>
-                            <v-btn icon size="x-small" variant="text" @click="deletePayment(p.id)"><i class="ti ti-trash"></i></v-btn>
-                        </template>
-                    </v-list-item>
-                </v-list>
-            </template>
-
-            <!-- Add Payment -->
-            <template v-if="invoice.id">
-                <v-btn @click="paymentDialog = true" variant="tonal" size="small" class="mt-2">
-                    <template v-slot:prepend><i class="ti ti-cash"></i></template>
-                    Record Payment
-                </v-btn>
-            </template>
-
+            <v-textarea label="Notes" v-model="invoice.notes" rows="3"></v-textarea>
         </v-card-text>
     </v-card>
 
     <!-- Payment Dialog -->
     <v-dialog v-model="paymentDialog" width="400">
         <v-card>
-            <v-toolbar>
-                <v-toolbar-title>Record Payment</v-toolbar-title>
-                <template v-slot:append>
-                    <v-btn @click="paymentDialog=false" icon="ti ti-x" size="small" variant="text"></v-btn>
-                </template>
+            <v-toolbar><v-toolbar-title>Record Payment</v-toolbar-title>
+                <template v-slot:append><v-btn @click="paymentDialog=false" icon="ti ti-x" size="small" variant="text"></v-btn></template>
             </v-toolbar>
             <v-card-text>
                 <v-text-field label="Amount" v-model="newPayment.amount" type="number"></v-text-field>
-                <v-select label="Method" v-model="newPayment.method"
-                    :items="['cash','bank_transfer','paypal','check','other']"
-                ></v-select>
+                <v-select label="Method" v-model="newPayment.method" :items="['cash','bank_transfer','paypal','check','other']"></v-select>
                 <v-text-field label="Date" v-model="newPayment.payment_date" type="date"></v-text-field>
                 <v-textarea label="Notes" v-model="newPayment.notes" rows="2"></v-textarea>
             </v-card-text>
-            <v-card-actions>
-                <v-spacer></v-spacer>
-                <v-btn color="primary" @click="addPayment" variant="elevated">Save</v-btn>
-            </v-card-actions>
+            <v-card-actions><v-spacer></v-spacer><v-btn color="primary" @click="addPayment" variant="elevated">Save</v-btn></v-card-actions>
         </v-card>
     </v-dialog>
 
     <!-- Share Dialog -->
     <v-dialog v-model="shareDialog" width="500">
         <v-card>
-            <v-toolbar>
-                <v-toolbar-title>Share Invoice</v-toolbar-title>
-                <template v-slot:append>
-                    <v-btn @click="shareDialog=false" icon="ti ti-x" size="small" variant="text"></v-btn>
-                </template>
+            <v-toolbar><v-toolbar-title>Share Invoice</v-toolbar-title>
+                <template v-slot:append><v-btn @click="shareDialog=false" icon="ti ti-x" size="small" variant="text"></v-btn></template>
             </v-toolbar>
             <v-card-text>
                 <v-text-field :model-value="shareUrl" readonly label="Share URL" @click="copyShare">
-                    <template v-slot:append-inner>
-                        <v-btn icon size="small" variant="text" @click="copyShare"><i class="ti ti-copy"></i></v-btn>
-                    </template>
+                    <template v-slot:append-inner><v-btn icon size="small" variant="text" @click="copyShare"><i class="ti ti-copy"></i></v-btn></template>
                 </v-text-field>
             </v-card-text>
         </v-card>
     </v-dialog>
 
-    <v-snackbar v-model="snackBar" rounded="pill" elevation="25">
+    <v-snackbar v-model="snackBar" rounded="0" elevation="25">
         ${snackMessage}
-        <template v-slot:actions>
-            <v-btn @click="snackBar=false" icon="ti ti-x" size="small" variant="text"></v-btn>
-        </template>
+        <template v-slot:actions><v-btn @click="snackBar=false" icon="ti ti-x" size="small" variant="text"></v-btn></template>
     </v-snackbar>
 
 {% endblock %} {% block js %}
@@ -257,32 +283,20 @@
         const invoiceData = JSON.parse(document.getElementById('invoice-data').textContent || '{}');
         const settingsData = JSON.parse(document.getElementById('settings-data').textContent || '{}');
 
-        // Default new invoice from settings
         function newInvoice(s) {
             const today = new Date().toISOString().split('T')[0];
             return {
-                id: null,
-                invoice_number: s.invoice_prefix + String(s.invoice_next_number || 1).padStart(4, '0'),
-                status: 'draft',
-                date: today,
-                terms: 'on_receipt',
-                from_name: s.business_name || '',
-                from_email: s.email || '',
+                id: null, invoice_number: s.invoice_prefix + String(s.invoice_next_number || 1).padStart(4, '0'),
+                status: 'draft', date: today, terms: 'on_receipt',
+                from_name: s.business_name || '', from_email: s.email || '',
                 from_address: [s.address_line1, s.address_line2, s.address_line3].filter(Boolean).join('\n'),
-                from_phone: s.phone || '',
-                from_business_number: s.business_number || '',
-                currency_code: s.currency_code || 'USD',
-                currency_symbol: s.currency_symbol || '$',
-                tax_type: s.tax_type || 'on_total',
-                tax_rate: s.tax_rate || 0,
-                tax_label: s.tax_label || 'VAT',
-                tax_inclusive: s.tax_inclusive || false,
-                notes: s.default_invoice_notes || '',
-                discount_type: null,
-                discount_value: 0,
+                from_phone: s.phone || '', from_business_number: s.business_number || '',
+                currency_code: s.currency_code || 'USD', currency_symbol: s.currency_symbol || '$',
+                tax_type: s.tax_type || 'on_total', tax_rate: s.tax_rate || 0,
+                tax_label: s.tax_label || 'VAT', tax_inclusive: s.tax_inclusive || false,
+                notes: s.default_invoice_notes || '', discount_type: null, discount_value: 0,
                 items: [{ description: '', unit_price: 0, quantity: 1, amount: 0, taxable: true, detail: '' }],
-                payments: [],
-                client_id: null
+                payments: [], client_id: null, client: null
             };
         }
 
@@ -292,212 +306,91 @@
             mixins: [layoutMixin],
             data() {
                 const inv = invoiceData.id ? invoiceData : newInvoice(settingsData);
-                // Ensure items have numeric values
-                if (inv.items) {
-                    inv.items.forEach(item => {
-                        item.unit_price = parseFloat(item.unit_price) || 0;
-                        item.quantity = parseFloat(item.quantity) || 1;
-                        item.amount = parseFloat(item.amount) || 0;
-                    });
-                }
+                if (inv.items) inv.items.forEach(item => {
+                    item.unit_price = parseFloat(item.unit_price) || 0;
+                    item.quantity = parseFloat(item.quantity) || 1;
+                    item.amount = parseFloat(item.amount) || 0;
+                });
                 return {
-                    snackBar: false,
-                    snackMessage: "",
-                    saving: false,
+                    snackBar: false, snackMessage: "", saving: false,
+                    mode: inv.id ? 'preview' : 'edit',
                     invoice: inv,
                     billTo: invoiceData.client || {},
                     selectedClient: invoiceData.client || null,
-                    clientSearch: '',
-                    clientResults: invoiceData.client ? [invoiceData.client] : [],
+                    clientSearch: '', clientResults: invoiceData.client ? [invoiceData.client] : [],
                     paymentDialog: false,
                     newPayment: { amount: '', method: 'bank_transfer', payment_date: new Date().toISOString().split('T')[0], notes: '' },
-                    shareDialog: false,
-                    shareUrl: ''
+                    shareDialog: false, shareUrl: ''
                 };
             },
             computed: {
                 totals() {
                     let subtotal = 0;
-                    (this.invoice.items || []).forEach(item => {
-                        subtotal += parseFloat(item.amount) || 0;
-                    });
+                    (this.invoice.items || []).forEach(item => { subtotal += parseFloat(item.amount) || 0; });
                     let discount = 0;
-                    if (this.invoice.discount_type === 'percentage' && this.invoice.discount_value) {
-                        discount = subtotal * parseFloat(this.invoice.discount_value) / 100;
-                    } else if (this.invoice.discount_type === 'fixed' && this.invoice.discount_value) {
-                        discount = parseFloat(this.invoice.discount_value);
-                    }
+                    if (this.invoice.discount_type === 'percentage' && this.invoice.discount_value) discount = subtotal * parseFloat(this.invoice.discount_value) / 100;
+                    else if (this.invoice.discount_type === 'fixed' && this.invoice.discount_value) discount = parseFloat(this.invoice.discount_value);
                     const afterDiscount = subtotal - discount;
                     const rate = parseFloat(this.invoice.tax_rate) || 0;
                     let tax = 0;
                     if (rate > 0 && this.invoice.tax_type !== 'none') {
-                        if (this.invoice.tax_inclusive) {
-                            tax = afterDiscount - (afterDiscount / (1 + rate / 100));
-                        } else {
-                            tax = afterDiscount * rate / 100;
-                        }
+                        tax = this.invoice.tax_inclusive ? afterDiscount - (afterDiscount / (1 + rate / 100)) : afterDiscount * rate / 100;
                     }
                     const total = this.invoice.tax_inclusive ? afterDiscount : afterDiscount + tax;
                     let paid = 0;
                     (this.invoice.payments || []).forEach(p => { paid += parseFloat(p.amount) || 0; });
-                    return {
-                        subtotal: subtotal.toFixed(2),
-                        tax: tax.toFixed(2),
-                        discount: discount.toFixed(2),
-                        total: total.toFixed(2),
-                        paid: paid.toFixed(2),
-                        balance: (total - paid).toFixed(2)
-                    };
+                    return { subtotal: subtotal.toFixed(2), tax: tax.toFixed(2), discount: discount.toFixed(2), total: total.toFixed(2), paid: paid.toFixed(2), balance: (total - paid).toFixed(2) };
                 }
             },
             delimiters: config.delimiters,
             methods: {
                 showSnack(msg) { this.snackMessage = msg; this.snackBar = true; },
                 formatMoney(v) { return parseFloat(v || 0).toFixed(2); },
-                statusColor(status) {
-                    const map = {draft:'grey', sent:'info', viewed:'info', paid:'success', overdue:'error', cancelled:'warning'};
-                    return map[status] || 'grey';
-                },
-
-                // Line items
-                addItem() {
-                    this.invoice.items.push({ description: '', unit_price: 0, quantity: 1, amount: 0, taxable: true, detail: '' });
-                },
-                removeItem(idx) {
-                    this.invoice.items.splice(idx, 1);
-                },
-                calcLine(item) {
-                    item.amount = (parseFloat(item.unit_price) || 0) * (parseFloat(item.quantity) || 0);
-                },
-
-                // Client search
+                statusColor(s) { return {draft:'grey',sent:'info',viewed:'info',paid:'success',overdue:'error',cancelled:'warning'}[s] || 'grey'; },
+                addItem() { this.invoice.items.push({ description: '', unit_price: 0, quantity: 1, amount: 0, taxable: true, detail: '' }); },
+                removeItem(idx) { this.invoice.items.splice(idx, 1); },
+                calcLine(item) { item.amount = (parseFloat(item.unit_price) || 0) * (parseFloat(item.quantity) || 0); },
                 searchClients(val) {
                     clearTimeout(_clientTimeout);
-                    if (!val || val.length < 1) {
-                        // Load all clients when empty (on focus)
-                        axios.get('/api/client/search?q=').then(res => {
-                            this.clientResults = res.data;
-                        });
-                        return;
-                    }
-                    _clientTimeout = setTimeout(() => {
-                        axios.get(`/api/client/search?q=${val}`).then(res => {
-                            this.clientResults = res.data;
-                        });
-                    }, 200);
+                    if (!val || val.length < 1) { axios.get('/api/client/search?q=').then(r => { this.clientResults = r.data; }); return; }
+                    _clientTimeout = setTimeout(() => { axios.get(`/api/client/search?q=${val}`).then(r => { this.clientResults = r.data; }); }, 200);
                 },
                 onClientSelect(client) {
-                    if (!client) {
-                        this.invoice.client_id = null;
-                        this.billTo = {};
-                        return;
-                    }
-                    this.invoice.client_id = client.id;
-                    this.billTo = {...client};
+                    if (!client) { this.invoice.client_id = null; this.billTo = {}; return; }
+                    this.invoice.client_id = client.id; this.billTo = {...client};
                 },
-
-                // Save
                 saveInvoice() {
                     this.saving = true;
-                    const payload = {
-                        ...this.invoice,
-                        items: this.invoice.items.map((item, i) => ({
-                            ...item,
-                            sort_order: i,
-                            unit_price: parseFloat(item.unit_price) || 0,
-                            quantity: parseFloat(item.quantity) || 0
-                        }))
-                    };
+                    const payload = { ...this.invoice, items: this.invoice.items.map((item, i) => ({ ...item, sort_order: i, unit_price: parseFloat(item.unit_price) || 0, quantity: parseFloat(item.quantity) || 0 })) };
                     const url = this.invoice.id ? `/api/invoice/${this.invoice.id}` : '/api/invoice/';
                     axios.post(url, payload)
                         .then(res => {
                             this.showSnack(res.data?.message);
-                            if (!this.invoice.id && res.data?.id) {
-                                window.location.href = `/invoices/${res.data.id}`;
-                            } else {
-                                // Reload to get fresh data
-                                axios.get(`/api/invoice/${this.invoice.id}`).then(r => {
-                                    const inv = r.data;
-                                    inv.items.forEach(item => {
-                                        item.unit_price = parseFloat(item.unit_price) || 0;
-                                        item.quantity = parseFloat(item.quantity) || 1;
-                                        item.amount = parseFloat(item.amount) || 0;
-                                    });
-                                    this.invoice = inv;
-                                });
-                            }
+                            if (!this.invoice.id && res.data?.id) { window.location.href = `/invoices/${res.data.id}`; }
+                            else { this.reloadInvoice(); this.mode = 'preview'; }
                         })
                         .catch(err => this.showSnack(err.response?.data?.message || 'Error'))
                         .finally(() => { this.saving = false; });
                 },
-
-                deleteInvoice() {
-                    if (confirm('Delete this invoice?')) {
-                        axios.delete(`/api/invoice/${this.invoice.id}`)
-                            .then(() => { window.location.href = '/invoices/'; })
-                            .catch(err => this.showSnack('Error deleting'));
-                    }
+                reloadInvoice() {
+                    axios.get(`/api/invoice/${this.invoice.id}`).then(r => {
+                        const inv = r.data;
+                        inv.items.forEach(item => { item.unit_price = parseFloat(item.unit_price) || 0; item.quantity = parseFloat(item.quantity) || 1; item.amount = parseFloat(item.amount) || 0; });
+                        this.invoice = inv;
+                        this.billTo = inv.client || {};
+                    });
                 },
-
-                // Payments
+                deleteInvoice() { if (confirm('Delete this invoice?')) { axios.delete(`/api/invoice/${this.invoice.id}`).then(() => { window.location.href = '/invoices/'; }); } },
                 addPayment() {
-                    axios.post(`/api/invoice/${this.invoice.id}/payment`, this.newPayment)
-                        .then(res => {
-                            this.showSnack(res.data?.message);
-                            this.paymentDialog = false;
-                            // Reload invoice
-                            axios.get(`/api/invoice/${this.invoice.id}`).then(r => {
-                                const inv = r.data;
-                                inv.items.forEach(item => {
-                                    item.unit_price = parseFloat(item.unit_price) || 0;
-                                    item.quantity = parseFloat(item.quantity) || 1;
-                                    item.amount = parseFloat(item.amount) || 0;
-                                });
-                                this.invoice = inv;
-                            });
-                            this.newPayment = { amount: '', method: 'bank_transfer', payment_date: new Date().toISOString().split('T')[0], notes: '' };
-                        })
-                        .catch(err => this.showSnack('Error'));
+                    axios.post(`/api/invoice/${this.invoice.id}/payment`, this.newPayment).then(res => {
+                        this.showSnack(res.data?.message); this.paymentDialog = false; this.reloadInvoice();
+                        this.newPayment = { amount: '', method: 'bank_transfer', payment_date: new Date().toISOString().split('T')[0], notes: '' };
+                    }).catch(() => this.showSnack('Error'));
                 },
-                deletePayment(pid) {
-                    if (confirm('Remove this payment?')) {
-                        axios.delete(`/api/invoice/${this.invoice.id}/payment/${pid}`)
-                            .then(res => {
-                                this.showSnack(res.data?.message);
-                                axios.get(`/api/invoice/${this.invoice.id}`).then(r => {
-                                    const inv = r.data;
-                                    inv.items.forEach(item => {
-                                        item.unit_price = parseFloat(item.unit_price) || 0;
-                                        item.quantity = parseFloat(item.quantity) || 1;
-                                        item.amount = parseFloat(item.amount) || 0;
-                                    });
-                                    this.invoice = inv;
-                                });
-                            });
-                    }
-                },
-
-                // Send email
-                sendInvoice() {
-                    if (confirm('Send this invoice via email?')) {
-                        axios.post(`/api/invoice/${this.invoice.id}/send`)
-                            .then(res => this.showSnack(res.data?.message))
-                            .catch(err => this.showSnack(err.response?.data?.message || 'Error sending'));
-                    }
-                },
-
-                // Share
-                shareInvoice() {
-                    axios.post(`/api/invoice/${this.invoice.id}/share`)
-                        .then(res => {
-                            this.shareUrl = window.location.origin + res.data.url;
-                            this.shareDialog = true;
-                        });
-                },
-                copyShare() {
-                    navigator.clipboard.writeText(this.shareUrl);
-                    this.showSnack('Link copied');
-                }
+                deletePayment(pid) { if (confirm('Remove this payment?')) { axios.delete(`/api/invoice/${this.invoice.id}/payment/${pid}`).then(res => { this.showSnack(res.data?.message); this.reloadInvoice(); }); } },
+                sendInvoice() { if (confirm('Send this invoice via email?')) { axios.post(`/api/invoice/${this.invoice.id}/send`).then(r => this.showSnack(r.data?.message)).catch(e => this.showSnack(e.response?.data?.message || 'Error')); } },
+                shareInvoice() { axios.post(`/api/invoice/${this.invoice.id}/share`).then(r => { this.shareUrl = window.location.origin + r.data.url; this.shareDialog = true; }); },
+                copyShare() { navigator.clipboard.writeText(this.shareUrl); this.showSnack('Link copied'); }
             }
         });
 

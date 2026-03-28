@@ -382,9 +382,9 @@ async def api_invoice_pdf(id):
     settings = await BusinessSettings.get_or_create(current_user.id)
     from stk.invoicing.pdf import generate_invoice_pdf
 
-    pdf_bytes = await generate_invoice_pdf(invoice, settings)
+    pdf_data = await generate_invoice_pdf(invoice, settings)
     return Response(
-        pdf_bytes,
+        bytes(pdf_data),
         content_type="application/pdf",
         headers={
             "Content-Disposition": f'inline; filename="{invoice.invoice_number}.pdf"'

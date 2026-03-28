@@ -1,6 +1,6 @@
 /**
- * stk Framework - Central Configuration
- * Ember/Fire-inspired color palette
+ * ZigLag - Central Configuration
+ * Neo-brutalist editorial design system
  */
 
 const config = {
@@ -11,23 +11,36 @@ const config = {
     vuetifyConfig: {
         defaults: {
             VTextField: {
-                variant: 'outlined'
+                variant: 'solo-filled',
+                flat: true,
+                bgColor: 'surface-container-highest'
             },
             VSelect: {
-                variant: 'outlined'
+                variant: 'solo-filled',
+                flat: true,
+                bgColor: 'surface-container-highest'
             },
             VTextarea: {
-                variant: 'outlined'
+                variant: 'solo-filled',
+                flat: true,
+                bgColor: 'surface-container-highest'
             },
             VCombobox: {
-                variant: 'outlined'
+                variant: 'solo-filled',
+                flat: true,
+                bgColor: 'surface-container-highest'
+            },
+            VAutocomplete: {
+                variant: 'solo-filled',
+                flat: true,
+                bgColor: 'surface-container-highest'
             },
             VChip: {
                 size: 'small'
             },
             VCard: {
                 elevation: 0,
-                rounded: 'lg'
+                rounded: 'xl'
             },
             VMenu: {
                 offset: 10
@@ -42,40 +55,45 @@ const config = {
             }
         },
         theme: {
-            defaultTheme: window.__settings__?.dark ? 'dark' : 'light',
+            defaultTheme: 'light',
             themes: {
                 light: {
                     dark: false,
                     colors: {
-                        // Ember light theme
-                        primary: '#EA580C',      // Ember Orange
-                        secondary: '#1E293B',    // Slate (for contrast)
-                        accent: '#F97316',       // Bright Orange
-                        error: '#DC2626',        // Red
-                        info: '#0EA5E9',         // Sky Blue
-                        success: '#16A34A',      // Green
-                        warning: '#EAB308',      // Yellow
-                        background: '#FFFFFF',   // White
-                        surface: '#F8FAFC',      // Slate 50
-                        'surface-light': '#F1F5F9', // Slate 100
-                        'on-surface': '#1E293B', // Slate 800
-                    }
-                },
-                dark: {
-                    dark: true,
-                    colors: {
-                        // Ember dark theme
-                        primary: '#F97316',      // Bright Orange (more visible on dark)
-                        secondary: '#CBD5E1',    // Slate 300
-                        accent: '#FB923C',       // Orange 400
-                        error: '#EF4444',        // Red 500
-                        info: '#38BDF8',         // Sky 400
-                        success: '#22C55E',      // Green 500
-                        warning: '#FACC15',      // Yellow 400
-                        background: '#0F172A',   // Slate 900
-                        surface: '#1E293B',      // Slate 800
-                        'surface-light': '#334155', // Slate 700
-                        'on-surface': '#F1F5F9', // Slate 100
+                        primary: '#353aaf',
+                        'primary-container': '#4e54c8',
+                        secondary: '#4f53b6',
+                        'secondary-container': '#9297fe',
+                        tertiary: '#59454a',
+                        'tertiary-container': '#725c62',
+                        error: '#ba1a1a',
+                        'error-container': '#ffdad6',
+                        background: '#fbf9f8',
+                        surface: '#fbf9f8',
+                        'surface-bright': '#fbf9f8',
+                        'surface-dim': '#dcd9d9',
+                        'surface-container-lowest': '#ffffff',
+                        'surface-container-low': '#f6f3f2',
+                        'surface-container': '#f0eded',
+                        'surface-container-high': '#eae8e7',
+                        'surface-container-highest': '#e4e2e1',
+                        'surface-variant': '#e4e2e1',
+                        'on-surface': '#1b1c1c',
+                        'on-surface-variant': '#464653',
+                        'on-primary': '#ffffff',
+                        'on-primary-container': '#dbdbff',
+                        'on-secondary': '#ffffff',
+                        'on-tertiary': '#ffffff',
+                        'on-error': '#ffffff',
+                        'on-background': '#1b1c1c',
+                        'outline': '#767685',
+                        'outline-variant': '#c6c5d5',
+                        'inverse-surface': '#303030',
+                        'inverse-on-surface': '#f3f0f0',
+                        'inverse-primary': '#bfc2ff',
+                        info: '#353aaf',
+                        success: '#16A34A',
+                        warning: '#EAB308',
                     }
                 }
             }

@@ -1,0 +1,191 @@
+{% extends 'layout.html' %} {% block css %} {% endblock %} {% block sidebar %}
+{% endblock %} {% block layout_classes %} align-center {% endblock %}
+{% block content %}
+
+    <v-card class="ma-2 mt-12 w-100" style="max-width: 800px;">
+        <v-toolbar>
+            <v-toolbar-title class="font-weight-bold">Business Settings</v-toolbar-title>
+            <v-spacer></v-spacer>
+            <v-btn color="primary" @click="save" variant="elevated" :loading="saving">Save</v-btn>
+        </v-toolbar>
+
+        <v-card-text v-if="loaded">
+
+            <!-- Business Details -->
+            <div class="text-h6 mb-4 mt-2">Business Details</div>
+
+            <div class="mb-4">
+                <div class="text-body-2 mb-2">Logo</div>
+                <div v-if="s.logo_path" class="mb-2">
+                    <img :src="'/static/' + s.logo_path" style="max-height: 80px;" />
+                </div>
+                <v-file-input
+                    label="Upload Logo"
+                    accept="image/*"
+                    @change="uploadLogo"
+                    prepend-icon=""
+                    prepend-inner-icon="ti ti-upload"
+                    density="compact"
+                ></v-file-input>
+            </div>
+
+            <v-text-field label="Business Name" v-model="s.business_name"></v-text-field>
+            <v-text-field label="Owner Name" v-model="s.owner_name"></v-text-field>
+            <v-text-field label="Business Number" v-model="s.business_number"></v-text-field>
+            <v-text-field label="Address Line 1" v-model="s.address_line1"></v-text-field>
+            <v-text-field label="Address Line 2" v-model="s.address_line2"></v-text-field>
+            <v-text-field label="Address Line 3" v-model="s.address_line3"></v-text-field>
+            <v-row>
+                <v-col><v-text-field label="Email" v-model="s.email"></v-text-field></v-col>
+                <v-col><v-text-field label="Phone" v-model="s.phone"></v-text-field></v-col>
+            </v-row>
+            <v-row>
+                <v-col><v-text-field label="Mobile" v-model="s.mobile"></v-text-field></v-col>
+                <v-col><v-text-field label="Website" v-model="s.website"></v-text-field></v-col>
+            </v-row>
+
+            <v-divider class="my-6"></v-divider>
+
+            <!-- Tax -->
+            <div class="text-h6 mb-4">Tax</div>
+            <v-row>
+                <v-col>
+                    <v-select label="Type" v-model="s.tax_type"
+                        :items="[{title:'On Total',value:'on_total'},{title:'Per Line',value:'per_line'},{title:'None',value:'none'}]"
+                    ></v-select>
+                </v-col>
+                <v-col>
+                    <v-text-field label="Rate (%)" v-model="s.tax_rate" type="number"></v-text-field>
+                </v-col>
+                <v-col>
+                    <v-text-field label="Label" v-model="s.tax_label"></v-text-field>
+                </v-col>
+            </v-row>
+            <v-checkbox label="Tax Inclusive" v-model="s.tax_inclusive" hide-details></v-checkbox>
+
+            <v-divider class="my-6"></v-divider>
+
+            <!-- Invoice Numbering -->
+            <div class="text-h6 mb-4">Invoice Number</div>
+            <v-row>
+                <v-col>
+                    <v-text-field label="Prefix" v-model="s.invoice_prefix"></v-text-field>
+                </v-col>
+                <v-col>
+                    <v-text-field label="Next Number" v-model="s.invoice_next_number" type="number"></v-text-field>
+                </v-col>
+            </v-row>
+
+            <v-divider class="my-6"></v-divider>
+
+            <!-- Default Notes -->
+            <div class="text-h6 mb-4">Default Notes</div>
+            <v-textarea label="Default Invoice Notes" v-model="s.default_invoice_notes" rows="4"></v-textarea>
+
+            <v-divider class="my-6"></v-divider>
+
+            <!-- Region -->
+            <div class="text-h6 mb-4">Region</div>
+            <v-row>
+                <v-col>
+                    <v-text-field label="Currency Code" v-model="s.currency_code"></v-text-field>
+                </v-col>
+                <v-col>
+                    <v-text-field label="Currency Symbol" v-model="s.currency_symbol"></v-text-field>
+                </v-col>
+                <v-col>
+                    <v-select label="Date Format" v-model="s.date_format"
+                        :items="['YYYY-MM-DD','MM/DD/YYYY','DD/MM/YYYY','DD.MM.YYYY']"
+                    ></v-select>
+                </v-col>
+            </v-row>
+
+            <v-divider class="my-6"></v-divider>
+
+            <!-- Customization -->
+            <div class="text-h6 mb-4">Customize</div>
+            <v-text-field label="Invoice Title" v-model="s.invoice_title"></v-text-field>
+            <v-row>
+                <v-col><v-text-field label="Quantity Label" v-model="s.quantity_label"></v-text-field></v-col>
+                <v-col><v-text-field label="Unit Cost Label" v-model="s.unit_cost_label"></v-text-field></v-col>
+            </v-row>
+            <v-checkbox label="Show Quantity and Unit Cost" v-model="s.show_quantity_unit_cost" hide-details></v-checkbox>
+
+            <v-divider class="my-6"></v-divider>
+
+            <!-- Email -->
+            <div class="text-h6 mb-4">Email</div>
+            <v-textarea label="Default Email Message" v-model="s.default_email_message" rows="3"></v-textarea>
+            <v-checkbox label="Send me a copy of emails" v-model="s.send_copy_to_self" hide-details></v-checkbox>
+
+            <v-divider class="my-6"></v-divider>
+
+            <!-- Payment Methods -->
+            <div class="text-h6 mb-4">Payment Methods</div>
+            <v-text-field label="PayPal Address" v-model="s.payment_paypal"></v-text-field>
+            <v-textarea label="Payment Instructions" v-model="s.payment_instructions" rows="3"></v-textarea>
+            <v-textarea label="Other" v-model="s.payment_other" rows="2"></v-textarea>
+
+        </v-card-text>
+    </v-card>
+
+    <v-snackbar v-model="snackBar" rounded="pill" elevation="25">
+        ${snackMessage}
+        <template v-slot:actions>
+            <v-btn @click="snackBar=false" icon="ti ti-x" size="small" variant="text"></v-btn>
+        </template>
+    </v-snackbar>
+
+{% endblock %} {% block js %}
+
+    <script>
+        const {createApp} = Vue;
+        const {createVuetify} = Vuetify;
+        const vuetify = createVuetify(config.vuetifyConfig);
+
+        window.app = createApp({
+            mixins: [layoutMixin],
+            data() {
+                return {
+                    snackBar: false,
+                    snackMessage: "",
+                    loaded: false,
+                    saving: false,
+                    s: {}
+                };
+            },
+            delimiters: config.delimiters,
+            mounted() {
+                axios.get('/api/settings').then(res => {
+                    this.s = res.data;
+                    this.loaded = true;
+                });
+            },
+            methods: {
+                showSnack(msg) { this.snackMessage = msg; this.snackBar = true; },
+                save() {
+                    this.saving = true;
+                    axios.post('/api/settings', this.s)
+                        .then(res => { this.showSnack(res.data?.message); })
+                        .catch(err => this.showSnack(err.response?.data?.message || 'Error'))
+                        .finally(() => { this.saving = false; });
+                },
+                uploadLogo(e) {
+                    const file = e.target?.files?.[0];
+                    if (!file) return;
+                    const fd = new FormData();
+                    fd.append('logo', file);
+                    axios.post('/api/settings/logo', fd)
+                        .then(res => {
+                            this.s.logo_path = res.data.logo_path;
+                            this.showSnack(res.data?.message);
+                        })
+                        .catch(err => this.showSnack('Upload failed'));
+                }
+            }
+        });
+
+        registerStkComponents(app);
+        app.use(vuetify).mount("#app");
+    </script>
+{% endblock %}

@@ -1,16 +1,38 @@
 /**
- * stk Navigation Configuration
- * Define your sidebar navigation structure here
+ * ZigLag Navigation Configuration
  */
 
 const stkNavigation = [
   {
-    heading: 'Main'
+    heading: 'Invoicing'
   },
   {
     title: 'Dashboard',
-    icon: 'ti ti-home',
+    icon: 'ti ti-dashboard',
     to: '/dashboard'
+  },
+  {
+    title: 'Invoices',
+    icon: 'ti ti-file-invoice',
+    to: '/invoices'
+  },
+  {
+    title: 'Clients',
+    icon: 'ti ti-users',
+    to: '/clients'
+  },
+  {
+    title: 'Reports',
+    icon: 'ti ti-chart-bar',
+    to: '/reports'
+  },
+  {
+    heading: 'Settings'
+  },
+  {
+    title: 'Business Settings',
+    icon: 'ti ti-settings',
+    to: '/settings/business'
   },
   {
     heading: 'Account'
@@ -19,16 +41,6 @@ const stkNavigation = [
     title: 'Change Password',
     icon: 'ti ti-key',
     to: '/change'
-  },
-  {
-    title: 'Two-Factor Auth',
-    icon: 'ti ti-shield-lock',
-    to: '/tf-setup'
-  },
-  {
-    title: 'Recovery Codes',
-    icon: 'ti ti-lifebuoy',
-    to: '/mf-recovery-codes'
   },
   {
     heading: 'Administration'

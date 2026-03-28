@@ -1,0 +1,90 @@
+{% extends 'layout.html' %} {% block css %} {% endblock %} {% block sidebar %}
+{% endblock %} {% block layout_classes %} align-center {% endblock %}
+{% block content %}
+
+    <v-card class="ma-2 mt-12 w-100 h-100">
+        <v-toolbar>
+            <v-toolbar-title class="font-weight-bold">Reports</v-toolbar-title>
+            <v-spacer></v-spacer>
+        </v-toolbar>
+        <v-card-text>
+
+            <v-table>
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th class="text-right">Clients</th>
+                        <th class="text-right">Invoices</th>
+                        <th class="text-right">Paid</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="font-weight-bold">
+                        <td>Tax Year ${year}</td>
+                        <td class="text-right">-</td>
+                        <td class="text-right">${yearlyInvoices}</td>
+                        <td class="text-right">${currencySymbol}${yearlyTotal}</td>
+                    </tr>
+                    <tr v-for="m in months" :key="m.month">
+                        <td>${monthName(m.month)}</td>
+                        <td class="text-right">${m.clients}</td>
+                        <td class="text-right">${m.invoices}</td>
+                        <td class="text-right">${currencySymbol}${m.total}</td>
+                    </tr>
+                </tbody>
+            </v-table>
+
+            <div class="d-flex justify-center mt-6 ga-2">
+                <v-btn v-for="y in years" :key="y" :variant="y === year ? 'elevated' : 'outlined'" :color="y === year ? 'primary' : ''" size="small" @click="loadYear(y)">
+                    ${y}
+                </v-btn>
+            </div>
+
+        </v-card-text>
+    </v-card>
+
+{% endblock %} {% block js %}
+
+    <script>
+        const {createApp} = Vue;
+        const {createVuetify} = Vuetify;
+        const vuetify = createVuetify(config.vuetifyConfig);
+
+        const currentYear = new Date().getFullYear();
+        const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+        window.app = createApp({
+            mixins: [layoutMixin],
+            data() {
+                return {
+                    year: currentYear,
+                    years: Array.from({length: 5}, (_, i) => currentYear - i),
+                    months: [],
+                    currencySymbol: '$',
+                    yearlyTotal: '0',
+                    yearlyInvoices: 0
+                };
+            },
+            delimiters: config.delimiters,
+            mounted() {
+                this.loadYear(this.year);
+            },
+            methods: {
+                monthName(m) { return monthNames[m - 1]; },
+                loadYear(y) {
+                    this.year = y;
+                    axios.get(`/api/reports/monthly?year=${y}`)
+                        .then(res => {
+                            this.months = res.data.months;
+                            this.currencySymbol = res.data.currency_symbol || '$';
+                            this.yearlyTotal = res.data.yearly_total;
+                            this.yearlyInvoices = res.data.yearly_invoices;
+                        });
+                }
+            }
+        });
+
+        registerStkComponents(app);
+        app.use(vuetify).mount("#app");
+    </script>
+{% endblock %}

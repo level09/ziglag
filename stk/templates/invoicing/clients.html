@@ -1,0 +1,175 @@
+{% extends 'layout.html' %} {% block css %} {% endblock %} {% block sidebar %}
+{% endblock %} {% block layout_classes %} align-center {% endblock %}
+{% block content %}
+
+    <v-card class="ma-2 mt-12 w-100 h-100">
+        <v-toolbar>
+            <v-toolbar-title class="font-weight-bold">Clients</v-toolbar-title>
+            <v-spacer></v-spacer>
+        </v-toolbar>
+        <v-card-text>
+
+            <v-data-table-server
+            :items="items"
+            :items-length="itemsLength"
+            :headers="headers"
+            :page="options.page"
+            :items-per-page="options.itemsPerPage"
+            @update:options="refresh"
+            hover
+            >
+
+                <template v-slot:top>
+                    <v-toolbar dense elevation="0" color="transparent">
+                        <v-text-field
+                            v-model="search"
+                            prepend-inner-icon="ti ti-search"
+                            label="Search clients"
+                            single-line
+                            hide-details
+                            density="compact"
+                            style="max-width: 300px;"
+                            @input="debouncedRefresh"
+                        ></v-text-field>
+                        <v-spacer></v-spacer>
+                        <v-btn @click="createItem" size="small" color="primary" variant="elevated">
+                            <template v-slot:prepend><i class="ti ti-plus"></i></template>
+                            New Client
+                        </v-btn>
+                    </v-toolbar>
+                </template>
+
+                <template v-slot:item.total_billed="{ item }">
+                    ${item.total_billed}
+                </template>
+
+                <template v-slot:item.actions="{ item }">
+                    <v-icon small class="mr-2" @click="editItem(item)">ti ti-pencil</v-icon>
+                    <v-icon small @click="deleteItem(item)">ti ti-trash</v-icon>
+                </template>
+
+            </v-data-table-server>
+
+        </v-card-text>
+    </v-card>
+
+
+    <!--Edit Dialog-->
+    <v-dialog v-model="edialog" width="660">
+        <v-card v-if="edialog">
+            <v-toolbar>
+                <v-toolbar-title>${eitem.id ? 'Edit' : 'New'} Client</v-toolbar-title>
+                <template v-slot:append>
+                    <v-btn @click="edialog=false" size="small" icon="ti ti-x" variant="text"></v-btn>
+                </template>
+            </v-toolbar>
+
+            <v-card-text>
+                <v-text-field label="Name" v-model="eitem.name"></v-text-field>
+                <v-text-field label="Email" v-model="eitem.email"></v-text-field>
+                <v-text-field label="Address Line 1" v-model="eitem.address_line1"></v-text-field>
+                <v-text-field label="Address Line 2" v-model="eitem.address_line2"></v-text-field>
+                <v-text-field label="Address Line 3" v-model="eitem.address_line3"></v-text-field>
+                <v-row>
+                    <v-col><v-text-field label="Phone" v-model="eitem.phone"></v-text-field></v-col>
+                    <v-col><v-text-field label="Mobile" v-model="eitem.mobile"></v-text-field></v-col>
+                </v-row>
+                <v-textarea label="Notes" v-model="eitem.notes" rows="3"></v-textarea>
+            </v-card-text>
+
+            <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn color="primary" @click="saveItem" variant="elevated">Save</v-btn>
+            </v-card-actions>
+        </v-card>
+    </v-dialog>
+
+    <v-snackbar v-model="snackBar" rounded="pill" elevation="25">
+        ${snackMessage}
+        <template v-slot:actions>
+            <v-btn @click="snackBar=false" icon="ti ti-x" size="small" variant="text"></v-btn>
+        </template>
+    </v-snackbar>
+
+{% endblock %} {% block js %}
+
+    <script>
+        const {createApp, toRaw} = Vue;
+        const {createVuetify} = Vuetify;
+        const vuetify = createVuetify(config.vuetifyConfig);
+
+        let _searchTimeout = null;
+
+        window.app = createApp({
+            mixins: [layoutMixin],
+            data() {
+                return {
+                    snackBar: false,
+                    snackMessage: "",
+                    search: "",
+                    items: [],
+                    itemsLength: 0,
+                    options: { page: 1, itemsPerPage: 25 },
+                    headers: [
+                        {title: 'Name', value: 'name'},
+                        {title: 'Email', value: 'email'},
+                        {title: 'Phone', value: 'phone'},
+                        {title: 'Total Billed', value: 'total_billed', sortable: false},
+                        {title: 'Actions', value: 'actions', sortable: false}
+                    ],
+                    edialog: false,
+                    eitem: {}
+                };
+            },
+            delimiters: config.delimiters,
+            methods: {
+                showSnack(message) {
+                    this.snackMessage = message;
+                    this.snackBar = true;
+                },
+                debouncedRefresh() {
+                    clearTimeout(_searchTimeout);
+                    _searchTimeout = setTimeout(() => this.refresh(), 300);
+                },
+                refresh(options) {
+                    if (options) {
+                        this.options = { ...this.options, page: options.page, itemsPerPage: options.itemsPerPage };
+                    }
+                    axios.get(`/api/clients?page=${this.options.page}&per_page=${this.options.itemsPerPage}&search=${this.search}`)
+                        .then(res => {
+                            this.items = res.data.items;
+                            this.itemsLength = res.data.total;
+                        });
+                },
+                createItem() {
+                    this.eitem = {};
+                    this.edialog = true;
+                },
+                editItem(item) {
+                    this.eitem = {...toRaw(item)};
+                    this.edialog = true;
+                },
+                saveItem() {
+                    const url = this.eitem.id ? `/api/client/${this.eitem.id}` : '/api/client/';
+                    axios.post(url, {item: this.eitem})
+                        .then(res => {
+                            this.showSnack(res.data?.message);
+                            this.refresh();
+                        })
+                        .catch(err => this.showSnack(err.response?.data?.message || 'Error'));
+                    this.edialog = false;
+                },
+                deleteItem(item) {
+                    if (confirm('Delete this client?')) {
+                        axios.delete(`/api/client/${item.id}`)
+                            .then(res => { this.showSnack(res.data?.message); this.refresh(); })
+                            .catch(err => this.showSnack(err.response?.data?.message || 'Error'));
+                    }
+                }
+            }
+        });
+
+        registerStkComponents(app);
+        app.use(vuetify).mount("#app");
+    </script>
+{% endblock %}

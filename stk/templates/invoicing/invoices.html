@@ -1,0 +1,131 @@
+{% extends 'layout.html' %} {% block css %} {% endblock %} {% block sidebar %}
+{% endblock %} {% block layout_classes %} align-center {% endblock %}
+{% block content %}
+
+    <v-card class="ma-2 mt-12 w-100 h-100">
+        <v-toolbar>
+            <v-toolbar-title class="font-weight-bold">Invoices</v-toolbar-title>
+            <v-spacer></v-spacer>
+        </v-toolbar>
+        <v-card-text>
+
+            <v-toolbar dense elevation="0" color="transparent" class="mb-2">
+                <v-btn-toggle v-model="statusFilter" mandatory density="compact" color="primary">
+                    <v-btn value="all" size="small">All</v-btn>
+                    <v-btn value="outstanding" size="small">Outstanding</v-btn>
+                    <v-btn value="paid" size="small">Paid</v-btn>
+                </v-btn-toggle>
+
+                <v-spacer></v-spacer>
+
+                <v-text-field
+                    v-model="search"
+                    prepend-inner-icon="ti ti-search"
+                    label="Search by client"
+                    single-line
+                    hide-details
+                    density="compact"
+                    style="max-width: 250px;"
+                    @input="debouncedRefresh"
+                    class="mr-4"
+                ></v-text-field>
+
+                <v-btn color="primary" href="/invoices/new" variant="elevated" size="small">
+                    <template v-slot:prepend><i class="ti ti-plus"></i></template>
+                    New Invoice
+                </v-btn>
+            </v-toolbar>
+
+            <v-data-table-server
+            :items="items"
+            :items-length="itemsLength"
+            :headers="headers"
+            :page="options.page"
+            :items-per-page="options.itemsPerPage"
+            @update:options="refresh"
+            hover
+            @click:row="(e, {item}) => goToInvoice(item)"
+            style="cursor: pointer;"
+            >
+
+                <template v-slot:item.status="{ item }">
+                    <v-chip :color="statusColor(item.status)" size="small" variant="tonal">
+                        ${item.status}
+                    </v-chip>
+                </template>
+
+                <template v-slot:item.balance_due="{ item }">
+                    ${item.currency_symbol}${item.balance_due}
+                </template>
+
+                <template v-slot:item.total="{ item }">
+                    ${item.currency_symbol}${item.total}
+                </template>
+
+            </v-data-table-server>
+
+        </v-card-text>
+    </v-card>
+
+{% endblock %} {% block js %}
+
+    <script>
+        const {createApp} = Vue;
+        const {createVuetify} = Vuetify;
+        const vuetify = createVuetify(config.vuetifyConfig);
+
+        let _searchTimeout = null;
+
+        window.app = createApp({
+            mixins: [layoutMixin],
+            data() {
+                return {
+                    search: "",
+                    statusFilter: "all",
+                    items: [],
+                    itemsLength: 0,
+                    options: { page: 1, itemsPerPage: 25 },
+                    headers: [
+                        {title: 'Invoice', value: 'invoice_number'},
+                        {title: 'Client', value: 'client_name'},
+                        {title: 'Date', value: 'date'},
+                        {title: 'Total', value: 'total', sortable: false},
+                        {title: 'Balance Due', value: 'balance_due', sortable: false},
+                        {title: 'Status', value: 'status', sortable: false}
+                    ]
+                };
+            },
+            watch: {
+                statusFilter() { this.options.page = 1; this.refresh(); }
+            },
+            delimiters: config.delimiters,
+            methods: {
+                debouncedRefresh() {
+                    clearTimeout(_searchTimeout);
+                    _searchTimeout = setTimeout(() => this.refresh(), 300);
+                },
+                refresh(options) {
+                    if (options) {
+                        this.options = { ...this.options, page: options.page, itemsPerPage: options.itemsPerPage };
+                    }
+                    const params = `page=${this.options.page}&per_page=${this.options.itemsPerPage}&status=${this.statusFilter}&search=${this.search}`;
+                    axios.get(`/api/invoices?${params}`)
+                        .then(res => {
+                            this.items = res.data.items;
+                            this.itemsLength = res.data.total;
+                        });
+                },
+                goToInvoice(item) {
+                    window.location.href = `/invoices/${item.id}`;
+                },
+                statusColor(status) {
+                    const map = {draft:'grey', sent:'info', viewed:'info', paid:'success', overdue:'error', cancelled:'warning'};
+                    return map[status] || 'grey';
+                }
+            }
+        });
+
+        registerStkComponents(app);
+        app.use(vuetify).mount("#app");
+    </script>
+{% endblock %}

@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&amp;family=Be+Vietnam+Pro:wght@400;500;700;900&amp;family=Inter:wght@400;500;600&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-tint": "#4a50c4",
+              "background": "#fbf9f8",
+              "outline": "#767685",
+              "error": "#ba1a1a",
+              "primary-container": "#4e54c8",
+              "inverse-primary": "#bfc2ff",
+              "on-background": "#1b1c1c",
+              "on-error": "#ffffff",
+              "on-primary": "#ffffff",
+              "on-tertiary-fixed-variant": "#554247",
+              "secondary-fixed-dim": "#bfc1ff",
+              "on-primary-container": "#dbdbff",
+              "primary": "#353aaf",
+              "primary-fixed": "#e0e0ff",
+              "surface-variant": "#e4e2e1",
+              "surface-container-highest": "#e4e2e1",
+              "tertiary": "#59454a",
+              "on-secondary-fixed-variant": "#363a9c",
+              "inverse-on-surface": "#f3f0f0",
+              "tertiary-fixed": "#f8dbe2",
+              "on-primary-fixed": "#02006d",
+              "secondary-fixed": "#e1e0ff",
+              "surface-bright": "#fbf9f8",
+              "on-secondary-container": "#25288c",
+              "on-tertiary": "#ffffff",
+              "on-primary-fixed-variant": "#3136ab",
+              "outline-variant": "#c6c5d5",
+              "secondary": "#4f53b6",
+              "surface-container-low": "#f6f3f2",
+              "surface-container": "#f0eded",
+              "secondary-container": "#9297fe",
+              "on-tertiary-fixed": "#27171c",
+              "tertiary-container": "#725c62",
+              "surface-container-high": "#eae8e7",
+              "on-secondary": "#ffffff",
+              "error-container": "#ffdad6",
+              "on-error-container": "#93000a",
+              "on-surface-variant": "#464653",
+              "surface-dim": "#dcd9d9",
+              "surface-container-lowest": "#ffffff",
+              "on-surface": "#1b1c1c",
+              "on-secondary-fixed": "#03006d",
+              "on-tertiary-container": "#f3d7de",
+              "primary-fixed-dim": "#bfc2ff",
+              "tertiary-fixed-dim": "#dbc0c6",
+              "surface": "#fbf9f8",
+              "inverse-surface": "#303030"
+            },
+            fontFamily: {
+              "headline": ["Plus Jakarta Sans"],
+              "body": ["Be Vietnam Pro"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        @keyframes scroll {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+        .animate-scroll {
+            display: flex;
+            width: max-content;
+            animation: scroll 20s linear infinite;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body selection:bg-primary-container selection:text-white">
+<!-- TopAppBar from JSON -->
+<nav class="sticky top-0 z-50 flex justify-between items-center w-full px-8 py-6 bg-surface dark:bg-surface-dark border-b-4 border-black">
+<div class="flex items-center gap-8">
+<span class="text-3xl font-black tracking-tighter text-black uppercase font-headline">INVØICE</span>
+<div class="hidden md:flex gap-6">
+<a class="font-headline font-black tracking-tighter uppercase text-[#4e54c8] underline decoration-4 underline-offset-4 hover:-translate-y-1 hover:translate-x-1 transition-transform duration-200" href="#">Solutions</a>
+<a class="font-headline font-black tracking-tighter uppercase text-black hover:-translate-y-1 hover:translate-x-1 transition-transform duration-200" href="#">Pricing</a>
+<a class="font-headline font-black tracking-tighter uppercase text-black hover:-translate-y-1 hover:translate-x-1 transition-transform duration-200" href="#">Journal</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined text-black p-2 hover:-translate-y-1 hover:translate-x-1 transition-transform duration-200" data-icon="search">search</button>
+<a class="hidden md:block font-headline font-black tracking-tighter uppercase text-black hover:-translate-y-1 hover:translate-x-1 transition-transform duration-200" href="#">Login</a>
+<button class="bg-primary-container text-white px-6 py-2 border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] font-headline font-black tracking-tighter uppercase hover:-translate-y-1 hover:translate-x-1 transition-transform duration-200 active:scale-95 active:shadow-none">
+                Get Started
+            </button>
+<button class="md:hidden material-symbols-outlined text-black p-2" data-icon="menu">menu</button>
+</div>
+</nav>
+<!-- Hero Section -->
+<main class="relative overflow-hidden">
+<!-- Tonal Layering Background -->
+<div class="absolute inset-0 bg-surface z-0"></div>
+<div class="absolute top-0 right-0 w-2/3 h-full bg-surface-container-low -skew-x-12 translate-x-1/4 z-0"></div>
+<section class="relative z-10 px-8 pt-20 pb-32 max-w-7xl mx-auto flex flex-col items-center text-center">
+<!-- Neo-Brutalist Badge -->
+<div class="mb-8 inline-block bg-black text-white px-4 py-1 font-headline font-extrabold uppercase tracking-widest text-sm -rotate-1 border-2 border-black">
+                REBEL AGAINST THE ORDINARY
+            </div>
+<!-- Main Headline -->
+<h1 class="font-headline font-black text-6xl md:text-9xl leading-[0.85] tracking-tighter text-black uppercase mb-12 max-w-5xl">
+                F*CK <span class="text-primary-container italic">AVERAGE</span> <br/>INVOICING
+            </h1>
+<p class="max-w-2xl text-xl md:text-2xl font-medium text-on-surface mb-12 leading-tight">
+                Stop using templates that look like tax audits. INVØICE is the high-performance design tool for billing that converts.
+            </p>
+<!-- Hero CTA -->
+<div class="flex flex-col sm:flex-row gap-6 mb-24">
+<button class="bg-primary-container text-white text-2xl px-12 py-6 border-4 border-black shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] font-headline font-black tracking-tighter uppercase hover:-translate-y-2 hover:translate-x-2 transition-all duration-200 active:scale-95 active:shadow-none">
+                    Get Started
+                </button>
+<button class="bg-white text-black text-2xl px-12 py-6 border-4 border-black shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] font-headline font-black tracking-tighter uppercase hover:-translate-y-2 hover:translate-x-2 transition-all duration-200 active:scale-95 active:shadow-none">
+                    Watch Demo
+                </button>
+</div>
+<!-- Dashboard Screenshot Container -->
+<div class="relative w-full max-w-6xl mx-auto group">
+<div class="absolute -inset-4 bg-primary-container -rotate-1 z-0 shadow-[20px_20px_0px_0px_rgba(0,0,0,1)] border-4 border-black"></div>
+<div class="relative z-10 border-4 border-black bg-white overflow-hidden shadow-[20px_20px_0px_0px_rgba(0,0,0,1)]">
+<img alt="INVØICE Dashboard Overview" class="w-full grayscale hover:grayscale-0 transition-all duration-700 aspect-video object-cover" data-alt="Bold high contrast modern dashboard interface dark theme" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD5VjJUdiav9yRH_uytMZfqtVwXLmDPTLqnrnGBLj2dhyKUgCYjyjIArQKly_iD3KTIK4PI9BuYSSiYZvFMqbQaaEkyabLudnlFAGBvnhmRrLa7-FfFFcFuJWgDlHc7bIRD7dPQIQ_DYdAUc1ITACYodgW0dvGkzJF08T82ykJYRJ9rikcuUhEwQDYopwcinmA0jJ5KNsAx9nJqJLEqPujMqeJ1_eH6f5He5nNk5PL7amrdzlVviFu3vVnK3mYZujCkhGjwnFpTea0"/>
+<!-- Dashboard UI Overlay Elements -->
+<div class="absolute top-8 left-8 bg-black text-white p-6 border-2 border-white shadow-[8px_8px_0px_0px_rgba(78,84,200,1)] -rotate-3">
+<span class="font-headline font-black text-3xl">$142,000.00</span>
+<p class="font-label uppercase text-xs tracking-widest mt-2">Revenue Generated</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Scrolling Ticker -->
+<div class="w-full bg-black py-8 overflow-hidden border-y-8 border-primary-container mt-12 mb-20">
+<div class="animate-scroll whitespace-nowrap flex items-center gap-16">
+<span class="text-white font-headline font-black text-5xl uppercase italic tracking-tighter">ATELIER X</span>
+<span class="text-primary-container font-headline font-black text-5xl uppercase tracking-tighter">●</span>
+<span class="text-white font-headline font-black text-5xl uppercase italic tracking-tighter">MODERN REBEL</span>
+<span class="text-primary-container font-headline font-black text-5xl uppercase tracking-tighter">●</span>
+<span class="text-white font-headline font-black text-5xl uppercase italic tracking-tighter">STUDIO VØID</span>
+<span class="text-primary-container font-headline font-black text-5xl uppercase tracking-tighter">●</span>
+<span class="text-white font-headline font-black text-5xl uppercase italic tracking-tighter">NEO GRAPHIC</span>
+<span class="text-primary-container font-headline font-black text-5xl uppercase tracking-tighter">●</span>
+<!-- Duplicate for seamless loop -->
+<span class="text-white font-headline font-black text-5xl uppercase italic tracking-tighter">ATELIER X</span>
+<span class="text-primary-container font-headline font-black text-5xl uppercase tracking-tighter">●</span>
+<span class="text-white font-headline font-black text-5xl uppercase italic tracking-tighter">MODERN REBEL</span>
+<span class="text-primary-container font-headline font-black text-5xl uppercase tracking-tighter">●</span>
+<span class="text-white font-headline font-black text-5xl uppercase italic tracking-tighter">STUDIO VØID</span>
+<span class="text-primary-container font-headline font-black text-5xl uppercase tracking-tighter">●</span>
+<span class="text-white font-headline font-black text-5xl uppercase italic tracking-tighter">NEO GRAPHIC</span>
+<span class="text-primary-container font-headline font-black text-5xl uppercase tracking-tighter">●</span>
+</div>
+</div>
+</main>
+<!-- Brutalist Bento Section -->
+<section class="px-8 py-24 max-w-7xl mx-auto">
+<div class="grid grid-cols-1 md:grid-cols-12 gap-8">
+<div class="md:col-span-8 bg-surface-container-highest p-12 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 transition-transform">
+<h3 class="font-headline font-black text-5xl uppercase mb-6 tracking-tighter">DESIGN AS A WEAPON</h3>
+<p class="text-xl font-medium leading-relaxed max-w-xl">Generic invoices get ignored. High-impact visual systems get paid 3x faster. We built the first billing platform for the creative elite.</p>
+</div>
+<div class="md:col-span-4 bg-primary-container p-12 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col justify-end text-white">
+<span class="material-symbols-outlined text-6xl mb-6" data-icon="bolt">bolt</span>
+<h4 class="font-headline font-black text-3xl uppercase tracking-tighter">LIGHTNING FAST</h4>
+</div>
+<div class="md:col-span-4 bg-white p-12 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+<h4 class="font-headline font-black text-3xl uppercase tracking-tighter mb-4 text-primary-container">01. CREATE</h4>
+<p class="font-medium">The most intuitive drag-and-drop editor ever conceived.</p>
+</div>
+<div class="md:col-span-4 bg-white p-12 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+<h4 class="font-headline font-black text-3xl uppercase tracking-tighter mb-4 text-primary-container">02. SEND</h4>
+<p class="font-medium">Direct-to-client portals with seamless one-click pay.</p>
+</div>
+<div class="md:col-span-4 bg-white p-12 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+<h4 class="font-headline font-black text-3xl uppercase tracking-tighter mb-4 text-primary-container">03. SCALE</h4>
+<p class="font-medium">Advanced analytics for those who care about the numbers.</p>
+</div>
+</div>
+</section>
+<!-- Footer from JSON -->
+<footer class="w-full py-20 px-12 flex flex-col items-start gap-12 md:flex-row md:justify-between bg-[#e4e2e1] border-t-8 border-black font-['Be_Vietnam_Pro'] font-bold text-lg">
+<div class="flex flex-col gap-6">
+<span class="text-5xl font-black italic text-black uppercase">INVØICE</span>
+<p class="max-w-xs text-gray-600">© 2024 INVØICE ATELIER. REBEL AGAINST THE ORDINARY.</p>
+</div>
+<div class="flex flex-wrap gap-8 md:gap-16">
+<div class="flex flex-col gap-4">
+<a class="text-gray-600 hover:scale-110 hover:rotate-2 transition-all duration-300" href="#">Terms</a>
+<a class="text-gray-600 hover:scale-110 hover:rotate-2 transition-all duration-300" href="#">Privacy</a>
+</div>
+<div class="flex flex-col gap-4">
+<a class="text-gray-600 hover:scale-110 hover:rotate-2 transition-all duration-300" href="#">Security</a>
+<a class="text-gray-600 hover:scale-110 hover:rotate-2 transition-all duration-300" href="#">Support</a>
+</div>
+</div>
+<div class="flex gap-4">
+<div class="w-16 h-16 bg-black flex items-center justify-center hover:scale-110 hover:rotate-6 transition-all duration-300 cursor-pointer border-2 border-black">
+<span class="material-symbols-outlined text-white text-3xl" data-icon="share">share</span>
+</div>
+<div class="w-16 h-16 bg-primary-container flex items-center justify-center hover:scale-110 hover:-rotate-6 transition-all duration-300 cursor-pointer border-2 border-black">
+<span class="material-symbols-outlined text-white text-3xl" data-icon="alternate_email">alternate_email</span>
+</div>
+</div>
+</footer>
+</body></html>

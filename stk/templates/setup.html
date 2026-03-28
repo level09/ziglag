@@ -46,7 +46,6 @@
         {% endfor %}
 
         <form method="POST" action="/setup">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <label for="name">Your Name</label>
             <input type="text" id="name" name="name" placeholder="Jane Doe" autofocus>
 

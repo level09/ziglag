@@ -272,50 +272,26 @@ def _build_pdf(inv, stg, logo_path):
 
     # Notes
     if inv["notes"]:
-        pdf.set_y(pdf.get_y() + 10)
-        pdf.set_fill_color(*light_bg)
-        y_start = pdf.get_y()
-        pdf.set_font("Helvetica", "", 7)
+        pdf.set_y(pdf.get_y() + 8)
+        pdf.set_font("Helvetica", "B", 7)
         pdf.set_text_color(*muted)
-        pdf.set_xy(14, y_start + 3)
+        pdf.set_x(10)
         pdf.cell(40, 4, "NOTES", new_x="LMARGIN", new_y="NEXT")
         pdf.set_font("Helvetica", "", 8.5)
-        pdf.set_x(14)
-        pdf.multi_cell(175, 4.5, inv["notes"], new_x="LMARGIN", new_y="NEXT")
-        box_h = pdf.get_y() - y_start + 4
-        pdf.rect(10, y_start, 190, box_h, "F")
-        pdf.set_xy(14, y_start + 3)
-        pdf.set_font("Helvetica", "", 7)
-        pdf.set_text_color(*muted)
-        pdf.cell(40, 4, "NOTES", new_x="LMARGIN", new_y="NEXT")
-        pdf.set_font("Helvetica", "", 8.5)
-        pdf.set_x(14)
-        pdf.multi_cell(175, 4.5, inv["notes"], new_x="LMARGIN", new_y="NEXT")
+        pdf.set_x(10)
+        pdf.multi_cell(180, 4, inv["notes"], new_x="LMARGIN", new_y="NEXT")
 
     # Payment instructions
     if stg["payment_instructions"]:
-        pdf.set_y(pdf.get_y() + 6)
-        y_start = pdf.get_y()
-        pdf.set_fill_color(*light_bg)
-        pdf.set_font("Helvetica", "", 7)
+        pdf.set_y(pdf.get_y() + 4)
+        pdf.set_font("Helvetica", "B", 7)
         pdf.set_text_color(*muted)
-        pdf.set_xy(14, y_start + 3)
+        pdf.set_x(10)
         pdf.cell(40, 4, "PAYMENT INSTRUCTIONS", new_x="LMARGIN", new_y="NEXT")
         pdf.set_font("Helvetica", "", 8.5)
-        pdf.set_x(14)
+        pdf.set_x(10)
         pdf.multi_cell(
-            175, 4.5, stg["payment_instructions"], new_x="LMARGIN", new_y="NEXT"
-        )
-        box_h = pdf.get_y() - y_start + 4
-        pdf.rect(10, y_start, 190, box_h, "F")
-        pdf.set_xy(14, y_start + 3)
-        pdf.set_font("Helvetica", "", 7)
-        pdf.set_text_color(*muted)
-        pdf.cell(40, 4, "PAYMENT INSTRUCTIONS", new_x="LMARGIN", new_y="NEXT")
-        pdf.set_font("Helvetica", "", 8.5)
-        pdf.set_x(14)
-        pdf.multi_cell(
-            175, 4.5, stg["payment_instructions"], new_x="LMARGIN", new_y="NEXT"
+            180, 4, stg["payment_instructions"], new_x="LMARGIN", new_y="NEXT"
         )
 
     # Footer

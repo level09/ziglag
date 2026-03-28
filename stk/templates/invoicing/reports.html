@@ -22,7 +22,7 @@
             </div>
 
             <!-- Data table -->
-            <v-table v-else-if="months.length" density="comfortable">
+            <v-table v-if="!loading" density="comfortable">
                 <thead>
                     <tr>
                         <th></th>
@@ -47,16 +47,6 @@
                 </tbody>
             </v-table>
 
-            <!-- Empty state -->
-            <div v-else class="text-center pa-12">
-                <i class="ti ti-chart-bar" style="font-size: 48px; color: #c6c5d5;"></i>
-                <div class="text-h6 mt-4 mb-2">No paid invoices yet</div>
-                <div class="text-body-2 text-medium-emphasis mb-4">Reports appear once you have paid invoices.</div>
-                <v-btn href="/invoices/new" color="primary" variant="elevated" size="small">
-                    <template v-slot:prepend><i class="ti ti-plus"></i></template>
-                    Create Invoice
-                </v-btn>
-            </div>
 
         </v-card-text>
     </v-card>

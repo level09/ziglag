@@ -3,103 +3,114 @@
     <v-container class="py-6">
         <!-- Stats Row -->
         <v-row class="mb-6">
-            <v-col cols="12" sm="4">
+            <v-col cols="12" sm="6" md="3">
                 <v-card class="pa-4">
                     <div class="d-flex align-center">
-                        <i class="ti ti-users mr-4 text-medium-emphasis" style="font-size: 32px;"></i>
+                        <i class="ti ti-file-invoice mr-4" style="font-size: 32px; color: #353aaf;"></i>
                         <div>
-                            <div class="text-h4 font-weight-bold">{{ stats.users }}</div>
-                            <div class="text-medium-emphasis">Users</div>
+                            <div class="text-h4 font-weight-bold">{{ stats.total_invoices }}</div>
+                            <div class="text-medium-emphasis">Invoices</div>
                         </div>
                     </div>
                 </v-card>
             </v-col>
-            <v-col cols="12" sm="4">
+            <v-col cols="12" sm="6" md="3">
                 <v-card class="pa-4">
                     <div class="d-flex align-center">
-                        <i class="ti ti-shield mr-4 text-medium-emphasis" style="font-size: 32px;"></i>
+                        <i class="ti ti-clock-dollar mr-4" style="font-size: 32px; color: #EAB308;"></i>
                         <div>
-                            <div class="text-h4 font-weight-bold">{{ stats.roles }}</div>
-                            <div class="text-medium-emphasis">Roles</div>
+                            <div class="text-h5 font-weight-bold">{{ stats.currency_symbol }}{{ stats.outstanding }}</div>
+                            <div class="text-medium-emphasis">Outstanding</div>
                         </div>
                     </div>
                 </v-card>
             </v-col>
-            <v-col cols="12" sm="4">
+            <v-col cols="12" sm="6" md="3">
                 <v-card class="pa-4">
                     <div class="d-flex align-center">
-                        <i class="ti ti-history mr-4 text-medium-emphasis" style="font-size: 32px;"></i>
+                        <i class="ti ti-cash mr-4" style="font-size: 32px; color: #16A34A;"></i>
                         <div>
-                            <div class="text-h4 font-weight-bold">{{ stats.activities }}</div>
-                            <div class="text-medium-emphasis">Activity Logs</div>
+                            <div class="text-h5 font-weight-bold">{{ stats.currency_symbol }}{{ stats.total_paid }}</div>
+                            <div class="text-medium-emphasis">Total Paid</div>
+                        </div>
+                    </div>
+                </v-card>
+            </v-col>
+            <v-col cols="12" sm="6" md="3">
+                <v-card class="pa-4">
+                    <div class="d-flex align-center">
+                        <i class="ti ti-users mr-4" style="font-size: 32px; color: #4e54c8;"></i>
+                        <div>
+                            <div class="text-h4 font-weight-bold">{{ stats.clients }}</div>
+                            <div class="text-medium-emphasis">Clients</div>
                         </div>
                     </div>
                 </v-card>
             </v-col>
         </v-row>
 
-        <!-- Profile Card -->
         <v-row>
-            <v-col cols="12" md="6">
+            <!-- Recent Invoices -->
+            <v-col cols="12" md="8">
                 <v-card>
-                    <v-card-text class="pa-6">
-                        <div class="d-flex align-center mb-4">
-                            <v-avatar color="primary" size="64" class="mr-4">
-                                <span class="text-h5">{{ current_user.name[:2]|upper if current_user.name else 'U' }}</span>
-                            </v-avatar>
-                            <div>
-                                <div class="text-h5 font-weight-medium">{{ current_user.display_name }}</div>
-                                <div class="text-medium-emphasis">{{ current_user.email }}</div>
-                            </div>
-                        </div>
-                        <v-divider class="my-4"></v-divider>
-                        <div class="d-flex align-center text-medium-emphasis mb-2">
-                            <i class="ti ti-clock mr-2"></i>
-                            <span>Last login: {{ current_user.last_login_at.strftime('%B %-d, %Y at %-I:%M %p') if current_user.last_login_at else 'Never' }}</span>
-                        </div>
-                        <div class="d-flex align-center text-medium-emphasis">
-                            <i class="ti ti-shield-check mr-2"></i>
-                            <span>Roles: {% for role in current_user.roles %}{{ role.name }}{% if not loop.last %}, {% endif %}{% endfor %}</span>
-                        </div>
-                    </v-card-text>
-                    <v-card-actions class="pa-6 pt-0">
-                        <v-btn href="/change" variant="text">
-                            <template v-slot:prepend><i class="ti ti-key"></i></template>
-                            Change Password
-                        </v-btn>
-                        <v-btn href="/logout" variant="text">
-                            <template v-slot:prepend><i class="ti ti-logout"></i></template>
-                            Logout
-                        </v-btn>
-                    </v-card-actions>
+                    <v-card-title class="pa-6 pb-2 d-flex align-center">
+                        Recent Invoices
+                        <v-spacer></v-spacer>
+                        <v-btn href="/invoices/" variant="text" size="small">View All</v-btn>
+                    </v-card-title>
+                    <v-list class="pa-2">
+                        {% for inv in recent %}
+                        <v-list-item href="/invoices/{{ inv.id }}" class="rounded-lg mb-1">
+                            <template v-slot:prepend>
+                                <i class="ti ti-file-invoice mr-3 text-medium-emphasis" style="font-size: 20px;"></i>
+                            </template>
+                            <v-list-item-title>{{ inv.invoice_number }} - {{ inv.client_name }}</v-list-item-title>
+                            <v-list-item-subtitle>{{ inv.date }} &middot; {{ stats.currency_symbol }}{{ inv.total }}</v-list-item-subtitle>
+                            <template v-slot:append>
+                                <v-chip size="x-small" variant="tonal"
+                                    color="{% if inv.status == 'paid' %}success{% elif inv.status == 'overdue' %}error{% elif inv.status in ['sent','viewed'] %}info{% else %}grey{% endif %}">
+                                    {{ inv.status }}
+                                </v-chip>
+                            </template>
+                        </v-list-item>
+                        {% endfor %}
+                        {% if not recent %}
+                        <v-list-item>
+                            <v-list-item-title class="text-medium-emphasis">No invoices yet</v-list-item-title>
+                        </v-list-item>
+                        {% endif %}
+                    </v-list>
                 </v-card>
             </v-col>
 
-            <!-- Quick Links Card -->
-            <v-col cols="12" md="6">
+            <!-- Quick Actions -->
+            <v-col cols="12" md="4">
                 <v-card>
-                    <v-card-title class="pa-6 pb-2">Quick Links</v-card-title>
+                    <v-card-title class="pa-6 pb-2">Quick Actions</v-card-title>
                     <v-list class="pa-2">
-                        <v-list-item href="/users" class="rounded-lg mb-1">
+                        <v-list-item href="/invoices/new" class="rounded-lg mb-1">
                             <template v-slot:prepend>
-                                <i class="ti ti-users mr-3 text-medium-emphasis" style="font-size: 22px;"></i>
+                                <i class="ti ti-plus mr-3" style="font-size: 20px; color: #353aaf;"></i>
                             </template>
-                            <v-list-item-title>Manage Users</v-list-item-title>
-                            <v-list-item-subtitle>Add, edit, or remove users</v-list-item-subtitle>
+                            <v-list-item-title>New Invoice</v-list-item-title>
                         </v-list-item>
-                        <v-list-item href="/roles" class="rounded-lg mb-1">
+                        <v-list-item href="/clients/" class="rounded-lg mb-1">
                             <template v-slot:prepend>
-                                <i class="ti ti-shield mr-3 text-medium-emphasis" style="font-size: 22px;"></i>
+                                <i class="ti ti-user-plus mr-3" style="font-size: 20px; color: #4e54c8;"></i>
                             </template>
-                            <v-list-item-title>Manage Roles</v-list-item-title>
-                            <v-list-item-subtitle>Configure user permissions</v-list-item-subtitle>
+                            <v-list-item-title>New Client</v-list-item-title>
                         </v-list-item>
-                        <v-list-item href="/activities" class="rounded-lg">
+                        <v-list-item href="/reports/" class="rounded-lg mb-1">
                             <template v-slot:prepend>
-                                <i class="ti ti-history mr-3 text-medium-emphasis" style="font-size: 22px;"></i>
+                                <i class="ti ti-chart-bar mr-3" style="font-size: 20px; color: #16A34A;"></i>
                             </template>
-                            <v-list-item-title>Activity Logs</v-list-item-title>
-                            <v-list-item-subtitle>View system activity</v-list-item-subtitle>
+                            <v-list-item-title>View Reports</v-list-item-title>
+                        </v-list-item>
+                        <v-list-item href="/settings/business/" class="rounded-lg">
+                            <template v-slot:prepend>
+                                <i class="ti ti-settings mr-3" style="font-size: 20px; color: #767685;"></i>
+                            </template>
+                            <v-list-item-title>Business Settings</v-list-item-title>
                         </v-list-item>
                     </v-list>
                 </v-card>
@@ -116,17 +127,11 @@
 
         const app = createApp({
             mixins: [layoutMixin],
-            data() {
-                return {
-                    // Page-specific data here
-                };
-            },
+            data() { return {}; },
             delimiters: config.delimiters
         });
 
-        // Register components
         registerStkComponents(app);
-
         app.use(vuetify).mount('#app');
     </script>
 {% endblock %}

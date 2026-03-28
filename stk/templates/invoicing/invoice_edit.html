@@ -29,6 +29,7 @@
                     <v-btn v-bind="props" icon variant="text" size="small"><i class="ti ti-dots-vertical"></i></v-btn>
                 </template>
                 <v-list density="compact">
+                    <v-list-item @click="sendInvoice"><v-list-item-title>Send via Email</v-list-item-title></v-list-item>
                     <v-list-item @click="shareInvoice"><v-list-item-title>Get Share Link</v-list-item-title></v-list-item>
                     <v-list-item :href="'/api/invoice/' + invoice.id + '/pdf'" target="_blank"><v-list-item-title>Download PDF</v-list-item-title></v-list-item>
                     <v-list-item @click="deleteInvoice"><v-list-item-title class="text-error">Delete Invoice</v-list-item-title></v-list-item>
@@ -467,6 +468,15 @@
                                     this.invoice = inv;
                                 });
                             });
+                    }
+                },
+
+                // Send email
+                sendInvoice() {
+                    if (confirm('Send this invoice via email?')) {
+                        axios.post(`/api/invoice/${this.invoice.id}/send`)
+                            .then(res => this.showSnack(res.data?.message))
+                            .catch(err => this.showSnack(err.response?.data?.message || 'Error sending'));
                     }
                 },
 

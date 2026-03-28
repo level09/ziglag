@@ -126,9 +126,11 @@ def register_blueprints(app):
     app.register_blueprint(portal)
     app.register_blueprint(ws_bp)
 
+    from stk.invoicing.public import public_invoice
     from stk.invoicing.views import invoicing
 
     app.register_blueprint(invoicing)
+    app.register_blueprint(public_invoice)
     return None
 
 

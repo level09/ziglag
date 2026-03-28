@@ -360,6 +360,24 @@ async def api_invoice_get(id):
     return Response(json.dumps(invoice.to_dict()), content_type="application/json")
 
 
+@invoicing.route("/api/invoice/<int:id>/pdf")
+async def api_invoice_pdf(id):
+    invoice = await g.db_session.get(Invoice, id)
+    if not invoice or invoice.user_id != current_user.id:
+        return {"message": "Not found"}, 404
+    settings = await BusinessSettings.get_or_create(current_user.id)
+    from stk.invoicing.pdf import generate_invoice_pdf
+
+    pdf_bytes = await generate_invoice_pdf(invoice, settings)
+    return Response(
+        pdf_bytes,
+        content_type="application/pdf",
+        headers={
+            "Content-Disposition": f'inline; filename="{invoice.invoice_number}.pdf"'
+        },
+    )
+
+
 @invoicing.post("/api/invoice/<int:id>/payment")
 async def api_invoice_payment_add(id):
     invoice = await g.db_session.get(Invoice, id)
@@ -428,6 +446,78 @@ async def api_invoice_share(id):
     token = invoice.generate_share_token()
     await g.db_session.commit()
     return {"token": token, "url": f"/i/{token}"}
+
+
+@invoicing.post("/api/invoice/<int:id>/send")
+async def api_invoice_send(id):
+    from datetime import datetime
+
+    from stk.invoicing.pdf import generate_invoice_pdf
+    from stk.tasks import run_in_background
+
+    invoice = await g.db_session.get(Invoice, id)
+    if not invoice or invoice.user_id != current_user.id:
+        return {"message": "Not found"}, 404
+
+    if not invoice.client or not invoice.client.email:
+        return {"message": "Client has no email address"}, 400
+
+    settings = await BusinessSettings.get_or_create(current_user.id)
+    pdf_bytes = await generate_invoice_pdf(invoice, settings)
+
+    # Build share link
+    token = invoice.generate_share_token()
+    share_url = request.host_url.rstrip("/") + f"/i/{token}"
+
+    subject = f"{settings.invoice_title or 'Invoice'} {invoice.invoice_number} from {settings.business_name}"
+    body = f"Please find attached {settings.invoice_title or 'Invoice'} {invoice.invoice_number}.\n\nView online: {share_url}"
+
+    html_body = await render_template(
+        "invoicing/email_invoice.html",
+        invoice=invoice,
+        settings=settings,
+        share_url=share_url,
+    )
+
+    recipient = invoice.client.email
+    sender = settings.email or None
+
+    async def _send():
+        from email.message import EmailMessage as EM
+
+        import aiosmtplib
+
+        app = current_app._get_current_object()
+        msg = EM()
+        msg["Subject"] = subject
+        msg["From"] = sender or app.config.get(
+            "SECURITY_EMAIL_SENDER", "noreply@localhost"
+        )
+        msg["To"] = recipient
+        msg.set_content(body)
+        msg.add_alternative(html_body, subtype="html")
+        msg.add_attachment(
+            pdf_bytes,
+            maintype="application",
+            subtype="pdf",
+            filename=f"{invoice.invoice_number}.pdf",
+        )
+        await aiosmtplib.send(
+            msg,
+            hostname=app.config.get("MAIL_SERVER", "localhost"),
+            port=app.config.get("MAIL_PORT", 465),
+            username=app.config.get("MAIL_USERNAME"),
+            password=app.config.get("MAIL_PASSWORD"),
+            use_tls=app.config.get("MAIL_USE_SSL", False),
+            start_tls=app.config.get("MAIL_USE_TLS", False),
+        )
+
+    await run_in_background(_send())
+
+    invoice.status = "sent"
+    invoice.sent_at = datetime.now()
+    await g.db_session.commit()
+    return {"message": f"Invoice sent to {recipient}"}
 
 
 # ── Reports API ──

@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ invoice.invoice_number }} - {{ invoice.from_name }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&family=Be+Vietnam+Pro:wght@400;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Be Vietnam Pro', sans-serif;
+            background: #f6f3f2;
+            color: #1b1c1c;
+        }
+        .container {
+            max-width: 800px;
+            margin: 40px auto;
+            background: #fff;
+            border-radius: 16px;
+            padding: 48px;
+            box-shadow: 0 20px 40px rgba(53, 58, 175, 0.06);
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 40px;
+            padding-bottom: 24px;
+            border-bottom: 3px solid #353aaf;
+        }
+        .business-name {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-weight: 800;
+            font-size: 20px;
+            letter-spacing: -0.02em;
+        }
+        .business-details {
+            font-size: 13px;
+            color: #464653;
+            margin-top: 8px;
+            line-height: 1.6;
+        }
+        .invoice-title {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-weight: 800;
+            font-size: 36px;
+            letter-spacing: -0.02em;
+            text-transform: uppercase;
+            color: #353aaf;
+        }
+        .invoice-meta {
+            text-align: right;
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            color: #464653;
+            margin-top: 8px;
+            line-height: 1.8;
+        }
+        .invoice-meta strong { color: #1b1c1c; }
+        .bill-to {
+            background: #f6f3f2;
+            border-radius: 12px;
+            padding: 20px 24px;
+            margin-bottom: 32px;
+        }
+        .bill-to-label {
+            font-family: 'Inter', sans-serif;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #767685;
+            margin-bottom: 6px;
+        }
+        .bill-to-name {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-weight: 700;
+            font-size: 16px;
+        }
+        .bill-to-details { font-size: 13px; color: #464653; margin-top: 4px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+        th {
+            font-family: 'Inter', sans-serif;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #767685;
+            padding: 12px;
+            text-align: left;
+            border-bottom: 2px solid #e4e2e1;
+        }
+        th.right, td.right { text-align: right; }
+        td {
+            padding: 12px;
+            font-size: 14px;
+            border-bottom: 1px solid #f0eded;
+        }
+        .item-detail { font-size: 12px; color: #767685; margin-top: 2px; }
+        .summary { margin-left: auto; width: 280px; }
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            font-size: 14px;
+        }
+        .summary-row.total {
+            border-top: 3px solid #353aaf;
+            margin-top: 8px;
+            padding-top: 12px;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-weight: 700;
+            font-size: 20px;
+            color: #353aaf;
+        }
+        .summary-row.balance { font-weight: 700; font-size: 16px; }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-family: 'Inter', sans-serif;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .status-paid { background: #dcfce7; color: #166534; }
+        .status-sent, .status-viewed { background: #dbeafe; color: #1e40af; }
+        .status-draft { background: #f3f4f6; color: #374151; }
+        .status-overdue { background: #fef2f2; color: #991b1b; }
+        .notes {
+            margin-top: 32px;
+            padding: 20px 24px;
+            background: #f6f3f2;
+            border-radius: 12px;
+            font-size: 13px;
+            color: #464653;
+        }
+        .notes-label {
+            font-family: 'Inter', sans-serif;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #767685;
+            margin-bottom: 8px;
+        }
+        .actions {
+            text-align: center;
+            margin-top: 24px;
+        }
+        .actions a {
+            display: inline-block;
+            background: linear-gradient(135deg, #353aaf, #4e54c8);
+            color: #fff;
+            text-decoration: none;
+            padding: 12px 32px;
+            border-radius: 8px;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-weight: 700;
+            font-size: 14px;
+            letter-spacing: -0.01em;
+        }
+        .actions a:hover { opacity: 0.9; }
+        .footer {
+            text-align: center;
+            margin-top: 32px;
+            font-family: 'Inter', sans-serif;
+            font-size: 12px;
+            color: #767685;
+        }
+        @media (max-width: 600px) {
+            .container { margin: 16px; padding: 24px; }
+            .header { flex-direction: column; gap: 16px; }
+            .invoice-meta { text-align: left; }
+            .summary { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <div>
+            {% if settings.logo_path %}
+            <img src="/static/{{ settings.logo_path }}" style="max-height: 50px; margin-bottom: 12px;" alt="Logo">
+            {% endif %}
+            <div class="business-name">{{ invoice.from_name }}</div>
+            <div class="business-details">
+                {{ invoice.from_address | replace('\n', '<br>') | safe }}<br>
+                {% if invoice.from_phone %}{{ invoice.from_phone }}<br>{% endif %}
+                {% if invoice.from_email %}{{ invoice.from_email }}{% endif %}
+                {% if invoice.from_business_number %}<br>{{ invoice.from_business_number }}{% endif %}
+            </div>
+        </div>
+        <div>
+            <div class="invoice-title">{{ settings.invoice_title or 'Invoice' }}</div>
+            <div class="invoice-meta">
+                <strong>{{ invoice.invoice_number }}</strong><br>
+                Date: {{ invoice.date }}<br>
+                {% if invoice.due_date %}Due: {{ invoice.due_date }}<br>{% endif %}
+                Status: <span class="status-badge status-{{ invoice.status }}">{{ invoice.status }}</span>
+            </div>
+        </div>
+    </div>
+
+    {% if invoice.client %}
+    <div class="bill-to">
+        <div class="bill-to-label">Bill To</div>
+        <div class="bill-to-name">{{ invoice.client.name }}</div>
+        <div class="bill-to-details">
+            {% if invoice.client.address_line1 %}{{ invoice.client.address_line1 }}<br>{% endif %}
+            {% if invoice.client.address_line2 %}{{ invoice.client.address_line2 }}<br>{% endif %}
+            {% if invoice.client.email %}{{ invoice.client.email }}{% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <table>
+        <thead>
+            <tr>
+                <th>Description</th>
+                <th class="right">Rate</th>
+                <th class="right">Qty</th>
+                <th class="right">Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in invoice.items %}
+            <tr>
+                <td>
+                    {{ item.description }}
+                    {% if item.detail %}<div class="item-detail">{{ item.detail }}</div>{% endif %}
+                </td>
+                <td class="right">{{ invoice.currency_symbol }}{{ "%.2f"|format(item.unit_price|float) }}</td>
+                <td class="right">{{ item.quantity }}</td>
+                <td class="right">{{ invoice.currency_symbol }}{{ "%.2f"|format(item.amount|float) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="summary">
+        <div class="summary-row">
+            <span>Subtotal</span>
+            <span>{{ invoice.currency_symbol }}{{ "%.2f"|format(invoice.subtotal|float) }}</span>
+        </div>
+        {% if invoice.discount_amount and invoice.discount_amount|float > 0 %}
+        <div class="summary-row">
+            <span>Discount</span>
+            <span>-{{ invoice.currency_symbol }}{{ "%.2f"|format(invoice.discount_amount|float) }}</span>
+        </div>
+        {% endif %}
+        {% if invoice.tax_amount and invoice.tax_amount|float > 0 %}
+        <div class="summary-row">
+            <span>{{ invoice.tax_label }} ({{ invoice.tax_rate }}%)</span>
+            <span>{{ invoice.currency_symbol }}{{ "%.2f"|format(invoice.tax_amount|float) }}</span>
+        </div>
+        {% endif %}
+        <div class="summary-row total">
+            <span>Total</span>
+            <span>{{ invoice.currency_symbol }}{{ "%.2f"|format(invoice.total|float) }}</span>
+        </div>
+        {% if invoice.amount_paid and invoice.amount_paid|float > 0 %}
+        <div class="summary-row">
+            <span>Paid</span>
+            <span>-{{ invoice.currency_symbol }}{{ "%.2f"|format(invoice.amount_paid|float) }}</span>
+        </div>
+        <div class="summary-row balance">
+            <span>Balance Due</span>
+            <span>{{ invoice.currency_symbol }}{{ "%.2f"|format(invoice.balance_due|float) }}</span>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if invoice.notes %}
+    <div class="notes">
+        <div class="notes-label">Notes</div>
+        {{ invoice.notes | replace('\n', '<br>') | safe }}
+    </div>
+    {% endif %}
+
+    {% if settings.payment_instructions %}
+    <div class="notes" style="margin-top: 12px;">
+        <div class="notes-label">Payment Instructions</div>
+        {{ settings.payment_instructions | replace('\n', '<br>') | safe }}
+    </div>
+    {% endif %}
+
+    <div class="actions">
+        <a href="/i/{{ invoice.share_token }}/pdf">Download PDF</a>
+    </div>
+
+    <div class="footer">
+        {{ invoice.from_name }}{% if invoice.from_email %} &middot; {{ invoice.from_email }}{% endif %}
+    </div>
+</div>
+</body>
+</html>

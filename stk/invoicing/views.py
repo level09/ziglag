@@ -157,15 +157,21 @@ async def api_clients():
 @invoicing.route("/api/client/search")
 async def api_client_search():
     q = request.args.get("q", "").strip()
-    if not q:
-        return Response(json.dumps([]), content_type="application/json")
-    result = await g.db_session.execute(
-        select(Client)
-        .where(Client.user_id == current_user.id)
-        .where(Client.name.ilike(f"%{q}%"))
-        .limit(10)
-    )
-    items = [c.to_dict() for c in result.scalars().all()]
+    query = select(Client).where(Client.user_id == current_user.id)
+    if q:
+        query = query.where(Client.name.ilike(f"%{q}%"))
+    result = await g.db_session.execute(query.order_by(Client.name).limit(20))
+    items = [
+        {
+            "id": c.id,
+            "name": c.name,
+            "email": c.email,
+            "address_line1": c.address_line1,
+            "address_line2": c.address_line2,
+            "phone": c.phone,
+        }
+        for c in result.scalars().all()
+    ]
     return Response(json.dumps(items), content_type="application/json")
 
 

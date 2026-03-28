@@ -59,12 +59,13 @@
                         item-title="name"
                         item-value="id"
                         return-object
-                        :search="clientSearch"
+                        v-model:search="clientSearch"
                         @update:search="searchClients"
                         @update:model-value="onClientSelect"
                         density="compact"
                         clearable
-                        no-filter
+                        :no-filter="true"
+                        placeholder="Type to search clients..."
                     ></v-autocomplete>
                     <v-text-field label="Email" v-model="billTo.email" density="compact"></v-text-field>
                     <v-text-field label="Address" v-model="billTo.address_line1" density="compact"></v-text-field>
@@ -371,14 +372,19 @@
 
                 // Client search
                 searchClients(val) {
-                    this.clientSearch = val;
                     clearTimeout(_clientTimeout);
-                    if (!val || val.length < 2) return;
+                    if (!val || val.length < 1) {
+                        // Load all clients when empty (on focus)
+                        axios.get('/api/client/search?q=').then(res => {
+                            this.clientResults = res.data;
+                        });
+                        return;
+                    }
                     _clientTimeout = setTimeout(() => {
                         axios.get(`/api/client/search?q=${val}`).then(res => {
                             this.clientResults = res.data;
                         });
-                    }, 300);
+                    }, 200);
                 },
                 onClientSelect(client) {
                     if (!client) {

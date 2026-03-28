@@ -3,32 +3,52 @@ html, body {
 }
 
 /* ===== Design System Typography ===== */
-body {
-    font-family: 'Be Vietnam Pro', sans-serif;
+body,
+.v-application {
+    font-family: 'Be Vietnam Pro', sans-serif !important;
 }
 
-.v-toolbar-title, .text-h4, .text-h5, .text-h6,
-.v-card-title, .font-weight-bold {
+/* Headlines: Plus Jakarta Sans */
+.v-toolbar-title,
+.v-card-title,
+.text-h1, .text-h2, .text-h3, .text-h4, .text-h5, .text-h6,
+.text-subtitle-1, .text-subtitle-2,
+.font-weight-bold,
+.v-list-item-title,
+.v-btn {
     font-family: 'Plus Jakarta Sans', sans-serif !important;
-    letter-spacing: -0.02em !important;
 }
 
+/* Labels / Metadata: Inter */
 .v-data-table th,
+.v-chip,
+.v-label,
 .text-caption, .text-overline,
-.v-chip, .v-label {
+.v-field__input,
+.v-pagination {
     font-family: 'Inter', sans-serif !important;
 }
 
-/* ===== Card Styling (Tonal Depth, No Borders) ===== */
+/* Table headers */
+.v-data-table th {
+    font-weight: 600 !important;
+    text-transform: uppercase;
+    font-size: 0.7rem !important;
+    letter-spacing: 0.08em;
+}
+
+/* Headline tightening */
+.v-toolbar-title,
+.text-h4, .text-h5, .text-h6 {
+    letter-spacing: -0.02em !important;
+}
+
+/* ===== Card Styling ===== */
 .v-card {
     transition: box-shadow 0.3s ease-out;
 }
 
-.v-card:hover {
-    box-shadow: 0 20px 40px rgba(53, 58, 175, 0.06) !important;
-}
-
-/* ===== Global Scrollbars ===== */
+/* ===== Scrollbars ===== */
 ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -47,7 +67,7 @@ body {
     background-color: rgba(0, 0, 0, 0.25);
 }
 
-/* ===== Input Focus States ===== */
+/* ===== Input Focus ===== */
 .v-field--focused {
     box-shadow: 0 0 0 2px rgba(53, 58, 175, 0.25) !important;
 }
@@ -61,14 +81,6 @@ body {
     background-color: rgba(53, 58, 175, 0.04) !important;
 }
 
-.v-data-table th {
-    font-weight: 600 !important;
-    text-transform: uppercase;
-    font-size: 0.7rem !important;
-    letter-spacing: 0.08em;
-    color: rgba(var(--v-theme-on-surface-variant), 1) !important;
-}
-
 /* ===== Links ===== */
 a {
     color: rgb(var(--v-theme-primary));
@@ -80,8 +92,8 @@ a:hover {
 }
 
 /* ===== Primary Button Gradient ===== */
-.v-btn--variant-elevated.bg-primary,
-.v-btn--variant-elevated.v-btn--color-primary {
+.v-theme--light .v-btn--variant-elevated.bg-primary,
+.v-theme--light .v-btn--variant-elevated.v-btn--color-primary {
     background: linear-gradient(135deg, #353aaf, #4e54c8) !important;
 }
 
@@ -91,4 +103,13 @@ a:hover {
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: -0.02em;
+}
+
+/* ===== Nav section headings ===== */
+.v-navigation-drawer .nav-items .nav-section-title {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
 }

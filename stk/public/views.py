@@ -119,8 +119,9 @@ async def setup():
         password = form.get("password", "").strip()
         name = form.get("name", "").strip()
 
-        if not email or not password or len(password) < 12:
-            await flash("Email and password (min 12 chars) are required.", "error")
+        min_len = current_app.config.get("SECURITY_PASSWORD_LENGTH_MIN", 12)
+        if not email or not password or len(password) < min_len:
+            await flash(f"Email and password (min {min_len} chars) are required.", "error")
             return redirect("/setup")
 
         from quart_security import hash_password

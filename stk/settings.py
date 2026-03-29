@@ -57,7 +57,7 @@ class Config:
 
     SECURITY_FRESHNESS = timedelta(minutes=60)
     SECURITY_FRESHNESS_GRACE_PERIOD = timedelta(minutes=60)
-    SECURITY_PASSWORD_LENGTH_MIN = 12
+    SECURITY_PASSWORD_LENGTH_MIN = int(os.environ.get("SECURITY_PASSWORD_LENGTH_MIN", 12))
 
     SECURITY_TOTP_SECRETS = {"1": os.environ.get("SECURITY_TOTP_SECRETS")}
     SECURITY_TOTP_ISSUER = "ZigLag"

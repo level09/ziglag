@@ -11,14 +11,15 @@ Async Quart web framework with Vue 3 + Vuetify frontend (no build step). Full au
 ```bash
 ./setup.sh                        # First-time setup (venv, deps, .env)
 uv sync --extra dev               # Install with dev tools
-uv run quart run                  # Dev server at localhost:5000
-uv run quart run --port 5001      # Alt port (macOS 5000 conflict)
 uv run quart create-db            # Apply all migrations (upgrade to head)
-uv run quart install              # Create admin user
+uv run quart run --port 5001      # Dev server (5001 avoids macOS AirPlay on 5000)
 uv run ruff check --fix . && uv run ruff format .  # Lint + format
 uv run python checks.py           # Sanity checks (not pytest)
 docker compose up --build          # Full stack (Redis, PostgreSQL, Nginx)
 ```
+
+First run: `setup.sh` -> `create-db` -> `quart run` -> open browser -> `/setup` creates admin account.
+CLI alternative: `uv run quart install -e admin@example.com -p yourpassword`
 
 ### Database Migrations (Alembic)
 

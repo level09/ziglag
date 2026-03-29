@@ -28,12 +28,12 @@ class Config:
 
     # Database - default to async SQLite in instance folder
     _default_db = (
-        f"sqlite+aiosqlite:///{os.path.join(PROJECT_ROOT, 'instance', 'stk.db')}"
+        f"sqlite+aiosqlite:///{os.path.join(PROJECT_ROOT, 'instance', 'ziglag.db')}"
     )
     SQLALCHEMY_DATABASE_URI = os.environ.get("SQLALCHEMY_DATABASE_URI", _default_db)
 
     # security
-    SECURITY_REGISTERABLE = True
+    SECURITY_REGISTERABLE = False
     SECURITY_RECOVERABLE = False
     SECURITY_CONFIRMABLE = False
     SECURITY_CHANGEABLE = True
@@ -60,7 +60,7 @@ class Config:
     SECURITY_PASSWORD_LENGTH_MIN = 12
 
     SECURITY_TOTP_SECRETS = {"1": os.environ.get("SECURITY_TOTP_SECRETS")}
-    SECURITY_TOTP_ISSUER = "stk"
+    SECURITY_TOTP_ISSUER = "ZigLag"
 
     SECURITY_WEBAUTHN = True
     SECURITY_WAN_ALLOW_AS_FIRST_FACTOR = True
@@ -91,7 +91,9 @@ class Config:
     MAIL_USE_SSL = True
     MAIL_USERNAME = os.environ.get("MAIL_USERNAME")
     MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
-    SECURITY_EMAIL_SENDER = os.environ.get("SECURITY_EMAIL_SENDER", "info@domain.com")
+    SECURITY_EMAIL_SENDER = os.environ.get(
+        "SECURITY_EMAIL_SENDER", "noreply@ziglag.com"
+    )
     SECURITY_SEND_PASSWORD_CHANGE_EMAIL = False
 
     # Google OAuth Settings

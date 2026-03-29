@@ -227,7 +227,7 @@
             resolveNavComponent,
             toggleNavCollapse() {
                 this.isNavCollapsed = !this.isNavCollapsed;
-                localStorage.setItem('stk-nav-collapsed', this.isNavCollapsed);
+                localStorage.setItem('ziglag-nav-collapsed', this.isNavCollapsed);
             },
             handleResize() {
                 this.isMobile = window.innerWidth < 960;
@@ -276,7 +276,7 @@
         },
         mounted() {
             // Restore nav collapsed state
-            const savedCollapsed = localStorage.getItem('stk-nav-collapsed');
+            const savedCollapsed = localStorage.getItem('ziglag-nav-collapsed');
             if (savedCollapsed !== null && !this.isMobile) {
                 this.isNavCollapsed = savedCollapsed === 'true';
             }

@@ -31,7 +31,7 @@ const ThemeSwitcher = {
       document.body.classList.toggle('dark-mode', this.isDark);
 
       // Save preference
-      localStorage.setItem('stk-theme', this.isDark ? 'dark' : 'light');
+      localStorage.setItem('ziglag-theme', this.isDark ? 'dark' : 'light');
 
       // Update window settings if available
       if (window.__settings__) {
@@ -41,7 +41,7 @@ const ThemeSwitcher = {
 
     loadTheme() {
       // Check localStorage first
-      const saved = localStorage.getItem('stk-theme');
+      const saved = localStorage.getItem('ziglag-theme');
       if (saved) {
         this.isDark = saved === 'dark';
       } else if (window.__settings__?.dark !== undefined) {

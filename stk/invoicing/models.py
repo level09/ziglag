@@ -378,8 +378,12 @@ class Invoice(Base):
         self.amount_paid = sum(Decimal(str(p.amount or 0)) for p in self.payments)
         self.balance_due = self.total - self.amount_paid
 
-        # auto-status
-        if self.amount_paid > 0 and self.balance_due <= 0:
+        # auto-status: only escalate, never override manual draft/cancelled
+        if (
+            self.amount_paid > 0
+            and self.balance_due <= 0
+            and self.status not in ("draft", "cancelled")
+        ):
             self.status = "paid"
             if not self.paid_at:
                 self.paid_at = datetime.now()

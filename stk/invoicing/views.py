@@ -456,6 +456,13 @@ async def api_invoice_status(id):
     if new_status not in ("draft", "sent", "viewed", "paid", "overdue", "cancelled"):
         return {"message": "Invalid status"}, 400
     invoice.status = new_status
+    if new_status == "draft":
+        invoice.paid_at = None
+    elif new_status == "sent":
+        from datetime import datetime
+
+        if not invoice.sent_at:
+            invoice.sent_at = datetime.now()
     try:
         await g.db_session.commit()
         return {"message": f"Status updated to {new_status}"}

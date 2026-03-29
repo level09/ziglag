@@ -258,11 +258,11 @@ def check_admin_reset_route(app):
     )
 
 
-@check("GET / returns 200")
+@check("GET / redirects to login or setup")
 async def check_http_index(app):
     client = app.test_client()
     response = await client.get("/")
-    assert response.status_code == 200, f"Expected 200, got {response.status_code}"
+    assert response.status_code == 302, f"Expected 302 redirect, got {response.status_code}"
 
 
 @check("GET /dashboard/ requires auth")

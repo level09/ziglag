@@ -215,7 +215,7 @@
                 <div style="flex: 1;"><v-text-field v-model="item.quantity" density="compact" hide-details type="number" @input="calcLine(item)"></v-text-field></div>
                 <div style="flex: 1; text-align: right; padding-top: 8px; font-variant-numeric: tabular-nums;">${formatMoney(item.amount)}</div>
                 <div v-if="invoice.tax_rate > 0" style="width: 40px; text-align: center; padding-top: 4px;">
-                    <v-checkbox v-model="item.taxable" hide-details density="compact" class="d-inline-flex"></v-checkbox>
+                    <v-checkbox v-model="item.taxable" hide-details density="compact" color="primary" class="d-inline-flex"></v-checkbox>
                 </div>
             </div>
 
@@ -238,7 +238,7 @@
                     ></v-select>
                 </v-col>
                 <v-col cols="6" sm="3" class="d-flex align-center">
-                    <v-checkbox label="Inclusive" v-model="invoice.tax_inclusive" density="compact" hide-details></v-checkbox>
+                    <v-checkbox label="Inclusive" v-model="invoice.tax_inclusive" density="compact" hide-details color="primary"></v-checkbox>
                 </v-col>
             </v-row>
 

@@ -62,7 +62,7 @@
                     <v-text-field label="Label" v-model="s.tax_label"></v-text-field>
                 </v-col>
             </v-row>
-            <v-checkbox label="Tax Inclusive" v-model="s.tax_inclusive" hide-details></v-checkbox>
+            <v-checkbox label="Tax Inclusive" v-model="s.tax_inclusive" hide-details color="primary"></v-checkbox>
 
             <v-divider class="my-6"></v-divider>
 
@@ -110,14 +110,14 @@
                 <v-col><v-text-field label="Quantity Label" v-model="s.quantity_label"></v-text-field></v-col>
                 <v-col><v-text-field label="Unit Cost Label" v-model="s.unit_cost_label"></v-text-field></v-col>
             </v-row>
-            <v-checkbox label="Show Quantity and Unit Cost" v-model="s.show_quantity_unit_cost" hide-details></v-checkbox>
+            <v-checkbox label="Show Quantity and Unit Cost" v-model="s.show_quantity_unit_cost" hide-details color="primary"></v-checkbox>
 
             <v-divider class="my-6"></v-divider>
 
             <!-- Email -->
             <div class="text-h6 mb-4">Email</div>
             <v-textarea label="Default Email Message" v-model="s.default_email_message" rows="3"></v-textarea>
-            <v-checkbox label="Send me a copy of emails" v-model="s.send_copy_to_self" hide-details></v-checkbox>
+            <v-checkbox label="Send me a copy of emails" v-model="s.send_copy_to_self" hide-details color="primary"></v-checkbox>
 
             <v-divider class="my-6"></v-divider>
 

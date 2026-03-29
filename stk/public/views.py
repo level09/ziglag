@@ -92,7 +92,7 @@ async def health():
 async def index():
     if current_user.is_authenticated:
         return redirect("/dashboard/")
-    # Check if any users exist; if not, redirect to setup
+    # If no users exist, redirect to first-run setup
     from sqlalchemy import func
 
     count = (
@@ -100,7 +100,7 @@ async def index():
     ).scalar()
     if count == 0:
         return redirect("/setup")
-    return await render_template("index.html")
+    return redirect("/login")
 
 
 @public.route("/setup", methods=["GET", "POST"])

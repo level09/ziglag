@@ -53,7 +53,7 @@
             <input type="email" id="email" name="email" placeholder="you@company.com" required>
 
             <label for="password">Password</label>
-            <input type="password" id="password" name="password" placeholder="Min 12 characters" required minlength="12">
+            <input type="password" id="password" name="password" placeholder="Min {{ config.SECURITY_PASSWORD_LENGTH_MIN }} characters" required minlength="{{ config.SECURITY_PASSWORD_LENGTH_MIN }}">
 
             <button type="submit">Create Account</button>
         </form>

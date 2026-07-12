@@ -119,7 +119,7 @@ class InvoiceValidationTests(unittest.TestCase):
         invoice = valid_invoice("reverse_charge")
         invoice.client_vat_id = ""
         self.assertIn(
-            "Reverse charge requires supplier and client VAT IDs",
+            "Reverse charge requires your business and customer VAT IDs",
             invoice.validate_for_issue(),
         )
 
@@ -228,7 +228,7 @@ class ProductionConfigTests(unittest.TestCase):
         ).read_text()
         self.assertIn('"currency_code": inv.currency_code', views)
         self.assertIn("this.issueErrors = [];", editor)
-        self.assertIn("Could not create client", editor)
+        self.assertIn("Could not create customer", editor)
 
     def test_installers_generate_totp_secret(self):
         for filename in ("setup.sh", "deploy.sh"):

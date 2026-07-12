@@ -433,7 +433,7 @@ async def api_invoice_create():
     if invoice.client_id:
         client = await g.db_session.get(Client, invoice.client_id)
         if not client or client.user_id != current_user.id:
-            return {"message": "Client not found"}, 400
+            return {"message": "Customer not found"}, 400
         invoice.client = client
         invoice.client_vat_id = client.vat_id or invoice.client_vat_id or ""
 
@@ -477,7 +477,7 @@ async def api_invoice_update(id):
     if invoice.client_id:
         client = await g.db_session.get(Client, invoice.client_id)
         if not client or client.user_id != current_user.id:
-            return {"message": "Client not found"}, 400
+            return {"message": "Customer not found"}, 400
         invoice.client = client
         invoice.client_vat_id = client.vat_id or invoice.client_vat_id or ""
 
@@ -702,7 +702,7 @@ async def api_invoice_send(id):
         return {"message": "Not found"}, 404
 
     if not invoice.client or not invoice.client.email:
-        return {"message": "Client has no email address"}, 400
+        return {"message": "Customer has no email address"}, 400
     if invoice.status == "cancelled":
         return {"message": "Cancelled invoices cannot be sent"}, 409
 

@@ -21,7 +21,7 @@
                 <v-text-field
                     v-model="search"
                     prepend-inner-icon="ti ti-search"
-                    label="Search by client"
+                    label="Search by customer"
                     single-line
                     hide-details
                     density="compact"
@@ -91,7 +91,7 @@
                     options: { page: 1, itemsPerPage: 25 },
                     headers: [
                         {title: 'Invoice', value: 'invoice_number'},
-                        {title: 'Client', value: 'client_name'},
+                        {title: 'Customer', value: 'client_name'},
                         {title: 'Date', value: 'date'},
                         {title: 'Total', value: 'total', sortable: false},
                         {title: 'Balance Due', value: 'balance_due', sortable: false},

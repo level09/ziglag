@@ -4,7 +4,7 @@
 
     <v-card class="ma-2 mt-12 w-100 h-100">
         <v-toolbar>
-            <v-toolbar-title class="font-weight-bold">Clients</v-toolbar-title>
+            <v-toolbar-title class="font-weight-bold">Customers</v-toolbar-title>
             <v-spacer></v-spacer>
         </v-toolbar>
         <v-card-text>
@@ -24,7 +24,7 @@
                         <v-text-field
                             v-model="search"
                             prepend-inner-icon="ti ti-search"
-                            label="Search clients"
+                            label="Search customers"
                             single-line
                             hide-details
                             density="compact"
@@ -34,7 +34,7 @@
                         <v-spacer></v-spacer>
                         <v-btn @click="createItem" size="small" color="primary" variant="elevated">
                             <template v-slot:prepend><i class="ti ti-plus"></i></template>
-                            New Client
+                            New Customer
                         </v-btn>
                     </v-toolbar>
                 </template>
@@ -58,7 +58,7 @@
     <v-dialog v-model="edialog" width="660">
         <v-card v-if="edialog">
             <v-toolbar>
-                <v-toolbar-title>${eitem.id ? 'Edit' : 'New'} Client</v-toolbar-title>
+                <v-toolbar-title>${eitem.id ? 'Edit' : 'New'} Customer</v-toolbar-title>
                 <template v-slot:append>
                     <v-btn @click="edialog=false" size="small" icon="ti ti-x" variant="text"></v-btn>
                 </template>
@@ -161,7 +161,7 @@
                     this.edialog = false;
                 },
                 deleteItem(item) {
-                    if (confirm('Delete this client?')) {
+                    if (confirm('Delete this customer?')) {
                         axios.delete(`/api/client/${item.id}`)
                             .then(res => { this.showSnack(res.data?.message); this.refresh(); })
                             .catch(err => this.showSnack(err.response?.data?.message || 'Error'));

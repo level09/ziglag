@@ -168,7 +168,7 @@
                 <v-col cols="12" md="6">
                     <div class="text-subtitle-2 mb-2 font-weight-bold">Bill To</div>
                     <v-autocomplete
-                        label="Client"
+                        label="Customer"
                         v-model="selectedClient"
                         :items="clientResults"
                         item-title="name"
@@ -180,13 +180,13 @@
                         density="compact"
                         clearable
                         :no-filter="true"
-                        placeholder="Type to search clients..."
+                        placeholder="Type to search customers..."
                     >
                         <template v-slot:no-data>
                             <v-list-item v-if="clientSearch" @click="createClientInline">
-                                <v-list-item-title><i class="ti ti-plus mr-2"></i>Create "${clientSearch}"</v-list-item-title>
+                                <v-list-item-title><i class="ti ti-plus mr-2"></i>Create customer "${clientSearch}"</v-list-item-title>
                             </v-list-item>
-                            <v-list-item v-else title="Type a client name"></v-list-item>
+                            <v-list-item v-else title="Type a customer name"></v-list-item>
                         </template>
                     </v-autocomplete>
                     <v-text-field label="Email" v-model="billTo.email" density="compact"></v-text-field>
@@ -442,7 +442,7 @@
                 async createClientInline() {
                     this.billTo.name = this.clientSearch.trim();
                     try { await this.persistClient(); }
-                    catch (err) { this.showSnack(err.response?.data?.message || 'Could not create client'); }
+                    catch (err) { this.showSnack(err.response?.data?.message || 'Could not create customer'); }
                 },
                 async persistClient() {
                     const name = (this.billTo.name || this.selectedClient?.name || this.clientSearch || '').trim();
@@ -462,7 +462,7 @@
                     this.saving = true;
                     this.issueErrors = [];
                     try { await this.persistClient(); }
-                    catch (err) { this.showSnack(err.response?.data?.message || 'Could not save client'); this.saving = false; return; }
+                    catch (err) { this.showSnack(err.response?.data?.message || 'Could not save customer'); this.saving = false; return; }
                     const payload = { ...this.invoice, items: this.invoice.items.map((item, i) => ({ ...item, sort_order: i, unit_price: parseFloat(item.unit_price) || 0, quantity: parseFloat(item.quantity) || 0 })) };
                     const url = this.invoice.id ? `/api/invoice/${this.invoice.id}` : '/api/invoice/';
                     axios.post(url, payload)

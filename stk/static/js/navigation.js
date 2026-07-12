@@ -17,7 +17,7 @@ const stkNavigation = [
     to: '/invoices'
   },
   {
-    title: 'Clients',
+    title: 'Customers',
     icon: 'ti ti-users',
     to: '/clients'
   },

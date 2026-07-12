@@ -393,11 +393,11 @@ class Invoice(Base):
     def validate_for_issue(self):
         errors = []
         if not self.from_name or not self.from_address:
-            errors.append("Supplier name and address are required")
+            errors.append("Your business name and address are required")
         if not self.from_tax_number and not self.from_vat_id:
-            errors.append("Supplier Steuernummer or VAT ID is required")
+            errors.append("Your Steuernummer or VAT ID is required")
         if not self.client or not self.client.name or not self.client.address_line1:
-            errors.append("Client name and address are required")
+            errors.append("Customer name and address are required")
         if not self.items or any(not item.description for item in self.items):
             errors.append("Every line item needs a description")
         if not self.service_date_from:
@@ -406,7 +406,9 @@ class Invoice(Base):
             errors.append("Service period end cannot precede its start")
         if self.tax_treatment == "reverse_charge":
             if not self.from_vat_id or not self.client_vat_id:
-                errors.append("Reverse charge requires supplier and client VAT IDs")
+                errors.append(
+                    "Reverse charge requires your business and customer VAT IDs"
+                )
         elif self.tax_treatment == "exempt" and not self.tax_exemption_reason:
             errors.append("Tax exemption reason is required")
         elif self.tax_treatment not in ("standard", "reverse_charge", "exempt"):

@@ -1,7 +1,7 @@
 import dataclasses
 import re
 import secrets
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 
 from quart import g
@@ -167,6 +167,7 @@ class BusinessSettings(Base):
             "default_tax_treatment",
             "default_invoice_template",
             "invoice_prefix",
+            "invoice_next_number",
             "default_invoice_notes",
             "default_email_message",
             "send_copy_to_self",
@@ -189,6 +190,15 @@ class BusinessSettings(Base):
             raise ValueError(
                 "Invoice prefix may contain only letters, numbers, - and _"
             )
+        if "invoice_next_number" in data:
+            try:
+                data["invoice_next_number"] = int(data["invoice_next_number"])
+            except (TypeError, ValueError) as exc:
+                raise ValueError(
+                    "Next invoice number must be a positive integer"
+                ) from exc
+            if data["invoice_next_number"] < 1:
+                raise ValueError("Next invoice number must be a positive integer")
         for f in fields:
             if f in data:
                 setattr(self, f, data[f])
@@ -270,7 +280,7 @@ class Invoice(Base):
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("user.id"), nullable=False)
     client_id = Column(Integer, ForeignKey("client.id"), nullable=True)
-    invoice_number = Column(String(50), nullable=False, unique=True)
+    invoice_number = Column(String(50), nullable=True, unique=True)
     status = Column(String(20), default="draft")
     date = Column(Date, default=date.today)
     due_date = Column(Date, nullable=True)
@@ -303,6 +313,7 @@ class Invoice(Base):
 
     notes = Column(Text, nullable=True)
     share_token = Column(String(64), unique=True, nullable=True)
+    share_token_expires_at = Column(DateTime, nullable=True)
 
     # business info snapshot
     from_name = Column(String(255), default="")
@@ -472,10 +483,23 @@ class Invoice(Base):
             if not self.paid_at:
                 self.paid_at = datetime.now()
 
-    def generate_share_token(self):
-        if not self.share_token:
-            self.share_token = secrets.token_urlsafe(32)
+    def rotate_share_token(self, now=None, lifetime=timedelta(days=30)):
+        now = now or datetime.now()
+        self.share_token = secrets.token_urlsafe(32)
+        self.share_token_expires_at = now + lifetime
         return self.share_token
+
+    def revoke_share_token(self):
+        self.share_token = None
+        self.share_token_expires_at = None
+
+    def share_is_active(self, now=None):
+        now = now or datetime.now()
+        return bool(
+            self.share_token
+            and self.share_token_expires_at
+            and now < self.share_token_expires_at
+        )
 
     def _client_dict(self):
         c = self.client
@@ -524,6 +548,9 @@ class Invoice(Base):
             "template_key": self.template_key,
             "notes": self.notes,
             "share_token": self.share_token,
+            "share_token_expires_at": self.share_token_expires_at.isoformat()
+            if self.share_token_expires_at
+            else None,
             "from_name": self.from_name,
             "from_email": self.from_email,
             "from_address": self.from_address,

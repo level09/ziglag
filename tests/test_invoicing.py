@@ -1,13 +1,17 @@
 import re
 import unittest
-from datetime import date
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 
-from stk.invoicing.models import Client, Invoice, InvoiceItem
+from stk.invoicing.models import BusinessSettings, Client, Invoice, InvoiceItem
 from stk.invoicing.pdf import _build_pdf
 from stk.invoicing.presentation import TEMPLATES, tax_statement
-from stk.invoicing.views import invoice_archive_path
+from stk.invoicing.views import (
+    invoice_archive_path,
+    invoice_archive_relative_path,
+    resolve_invoice_archive,
+)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
@@ -37,6 +41,32 @@ def valid_invoice(treatment="standard"):
 
 
 class InvoiceValidationTests(unittest.TestCase):
+    def test_next_invoice_number_is_editable_and_positive(self):
+        settings = BusinessSettings(invoice_next_number=1)
+        settings.from_dict({"invoice_next_number": "68"})
+        self.assertEqual(settings.invoice_next_number, 68)
+        with self.assertRaises(ValueError):
+            settings.from_dict({"invoice_next_number": 0})
+
+    def test_share_links_rotate_expire_and_revoke(self):
+        invoice = Invoice()
+        now = datetime.now()
+        first = invoice.rotate_share_token(now)
+        second = invoice.rotate_share_token(now)
+        self.assertNotEqual(first, second)
+        self.assertTrue(invoice.share_is_active(now + timedelta(days=29)))
+        self.assertFalse(invoice.share_is_active(now + timedelta(days=30)))
+        invoice.revoke_share_token()
+        self.assertFalse(invoice.share_is_active(now))
+
+    def test_archive_paths_are_relative_and_contained(self):
+        self.assertEqual(
+            invoice_archive_relative_path(1, 2),
+            Path("invoices/1/2/invoice-2.pdf"),
+        )
+        with self.assertRaises(ValueError):
+            resolve_invoice_archive("/tmp/instance", "../../etc/passwd")
+
     def test_archive_path_never_uses_invoice_number(self):
         archive_dir, archive_path = invoice_archive_path("/srv/app", 7, 42)
         self.assertEqual(archive_dir, "/srv/app/invoices/7/42")

@@ -1,6 +1,7 @@
 import logging
 import os
 from datetime import datetime
+from pathlib import Path
 
 import orjson as json
 from quart import (
@@ -31,9 +32,26 @@ invoicing = Blueprint("invoicing", __name__, static_folder="../static")
 PER_PAGE = 25
 
 
+def invoice_archive_relative_path(user_id, invoice_id):
+    return Path("invoices", str(user_id), str(invoice_id), f"invoice-{invoice_id}.pdf")
+
+
 def invoice_archive_path(instance_path, user_id, invoice_id):
-    archive_dir = os.path.join(instance_path, "invoices", str(user_id), str(invoice_id))
-    return archive_dir, os.path.join(archive_dir, f"invoice-{invoice_id}.pdf")
+    path = Path(instance_path) / invoice_archive_relative_path(user_id, invoice_id)
+    return str(path.parent), str(path)
+
+
+def resolve_invoice_archive(instance_path, stored_path):
+    root = (Path(instance_path) / "invoices").resolve()
+    candidate = Path(stored_path)
+    candidate = (
+        candidate.resolve()
+        if candidate.is_absolute()
+        else (Path(instance_path) / candidate).resolve()
+    )
+    if not candidate.is_relative_to(root):
+        raise ValueError("Invoice archive path is outside invoice archive")
+    return candidate
 
 
 async def _issue_invoice(invoice, status="sent"):
@@ -59,13 +77,14 @@ async def _issue_invoice(invoice, status="sent"):
     from stk.invoicing.pdf import generate_invoice_pdf
 
     settings = await BusinessSettings.get_or_create(current_user.id)
+    if not invoice.invoice_number:
+        invoice.invoice_number = settings.generate_invoice_number()
     invoice.invoice_title_snapshot = settings.invoice_title or "Invoice"
     invoice.payment_instructions_snapshot = settings.payment_instructions or ""
     pdf_bytes = bytes(await generate_invoice_pdf(invoice, settings))
-    archive_dir, archive_path = invoice_archive_path(
-        current_app.instance_path, current_user.id, invoice.id
-    )
-    os.makedirs(archive_dir, exist_ok=True)
+    relative_archive = invoice_archive_relative_path(current_user.id, invoice.id)
+    archive_path = Path(current_app.instance_path) / relative_archive
+    os.makedirs(archive_path.parent, exist_ok=True)
     if os.path.exists(archive_path):
         return ["Issued invoice archive already exists"]
     created_archive = False
@@ -73,7 +92,7 @@ async def _issue_invoice(invoice, status="sent"):
         with open(archive_path, "xb") as archive:
             archive.write(pdf_bytes)
         created_archive = True
-        invoice.archived_pdf_path = archive_path
+        invoice.archived_pdf_path = relative_archive.as_posix()
         invoice.issued_at = datetime.now()
         if status in ("sent", "viewed"):
             invoice.sent_at = invoice.sent_at or invoice.issued_at
@@ -166,6 +185,23 @@ async def api_settings_update():
     settings = await BusinessSettings.get_or_create(current_user.id)
     data = await request.json
     try:
+        prefix = data.get("invoice_prefix", settings.invoice_prefix) or ""
+        if "invoice_next_number" in data:
+            next_number = int(data["invoice_next_number"])
+            result = await g.db_session.execute(
+                select(Invoice.invoice_number).where(
+                    Invoice.user_id == current_user.id,
+                    Invoice.issued_at.is_not(None),
+                    Invoice.invoice_number.startswith(prefix),
+                )
+            )
+            used = [
+                int(number[len(prefix) :])
+                for number in result.scalars()
+                if number and number[len(prefix) :].isdigit()
+            ]
+            if used and next_number <= max(used):
+                return {"message": f"Next number must be greater than {max(used)}"}, 400
         settings.from_dict(data)
         await g.db_session.commit()
         return {"message": "Settings saved"}
@@ -380,7 +416,6 @@ async def api_invoice_create():
     data = await request.json
     settings = await BusinessSettings.get_or_create(current_user.id)
     invoice = Invoice(user_id=current_user.id)
-    invoice.invoice_number = settings.generate_invoice_number()
     invoice.snapshot_business(settings)
     invoice.from_dict(data)
     if invoice.client_id:
@@ -481,7 +516,9 @@ async def api_invoice_pdf(id):
         return {"message": "Not found"}, 404
     if invoice.is_issued and invoice.archived_pdf_path:
         return await send_file(
-            invoice.archived_pdf_path,
+            resolve_invoice_archive(
+                current_app.instance_path, invoice.archived_pdf_path
+            ),
             mimetype="application/pdf",
             as_attachment=False,
             attachment_filename=f"{invoice.invoice_number}.pdf",
@@ -614,9 +651,23 @@ async def api_invoice_share(id):
     invoice = await g.db_session.get(Invoice, id)
     if not invoice or invoice.user_id != current_user.id:
         return {"message": "Not found"}, 404
-    token = invoice.generate_share_token()
+    token = invoice.rotate_share_token()
     await g.db_session.commit()
-    return {"token": token, "url": f"/i/{token}"}
+    return {
+        "token": token,
+        "url": f"/i/{token}",
+        "expires_at": invoice.share_token_expires_at.isoformat(),
+    }
+
+
+@invoicing.delete("/api/invoice/<int:id>/share")
+async def api_invoice_share_revoke(id):
+    invoice = await g.db_session.get(Invoice, id)
+    if not invoice or invoice.user_id != current_user.id:
+        return {"message": "Not found"}, 404
+    invoice.revoke_share_token()
+    await g.db_session.commit()
+    return {"message": "Share link revoked"}
 
 
 @invoicing.post("/api/invoice/<int:id>/send")
@@ -639,11 +690,14 @@ async def api_invoice_send(id):
     settings = await BusinessSettings.get_or_create(current_user.id)
     if not invoice.archived_pdf_path:
         return {"message": "Issued invoice archive is missing"}, 500
-    with open(invoice.archived_pdf_path, "rb") as archive:
+    with open(
+        resolve_invoice_archive(current_app.instance_path, invoice.archived_pdf_path),
+        "rb",
+    ) as archive:
         pdf_bytes = archive.read()
 
     # Build share link
-    token = invoice.generate_share_token()
+    token = invoice.rotate_share_token()
     share_url = request.host_url.rstrip("/") + f"/i/{token}"
 
     invoice_title = invoice.invoice_title_snapshot or "Invoice"

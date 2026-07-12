@@ -30,13 +30,16 @@ The script prints generated credentials at the end and stores a copy on the serv
 
 ZigLag stores the exact PDF created when an invoice is issued under `instance/invoices/`. Back up that directory with the database. A database-only backup cannot restore issued invoices.
 
-Use one backup job that captures:
+Create and verify one recovery bundle containing a consistent database backup and the complete invoice tree:
 
-1. A consistent PostgreSQL dump.
-2. The complete `instance/invoices/` tree.
-3. The application `.env` through a separate secrets backup.
+```bash
+uv run quart backup create --output backups/ziglag-$(date +%Y%m%d).tar.gz
+uv run quart backup verify backups/ziglag-$(date +%Y%m%d).tar.gz
+```
 
-Test restoration on another host before treating the installation as production-ready.
+Test restoration into an empty staging installation with `uv run quart backup restore ARCHIVE`. Restore refuses non-empty targets unless `--force` is supplied. PostgreSQL requires compatible `pg_dump` and `pg_restore` executables. Back up `.env` separately as a secret.
+
+A bundle on the application server is not an offsite backup. Copy it to independent storage, monitor transfers, and test restoration periodically.
 
 ## Updates
 

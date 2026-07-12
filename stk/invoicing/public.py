@@ -1,10 +1,11 @@
 from datetime import datetime
 
-from quart import Blueprint, Response, g, render_template, send_file
+from quart import Blueprint, Response, current_app, g, render_template, send_file
 from sqlalchemy import select
 
 from stk.invoicing.models import BusinessSettings, Invoice
 from stk.invoicing.presentation import service_period, tax_statement
+from stk.invoicing.views import resolve_invoice_archive
 
 public_invoice = Blueprint("public_invoice", __name__, static_folder="../static")
 
@@ -15,7 +16,7 @@ async def view_invoice(token):
         select(Invoice).where(Invoice.share_token == token)
     )
     invoice = result.scalar_one_or_none()
-    if not invoice:
+    if not invoice or not invoice.share_is_active():
         return "Invoice not found", 404
 
     # Mark as viewed on first access
@@ -61,12 +62,14 @@ async def public_pdf(token):
         select(Invoice).where(Invoice.share_token == token)
     )
     invoice = result.scalar_one_or_none()
-    if not invoice:
+    if not invoice or not invoice.share_is_active():
         return "Invoice not found", 404
 
     if invoice.is_issued and invoice.archived_pdf_path:
         return await send_file(
-            invoice.archived_pdf_path,
+            resolve_invoice_archive(
+                current_app.instance_path, invoice.archived_pdf_path
+            ),
             mimetype="application/pdf",
             as_attachment=False,
             attachment_filename=f"{invoice.invoice_number}.pdf",

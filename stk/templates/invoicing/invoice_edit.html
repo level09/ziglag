@@ -68,7 +68,7 @@
                 <div style="text-align: right;">
                     <div style="font-family: 'Plus Jakarta Sans'; font-weight: 800; font-size: 28px; color: #353aaf; text-transform: uppercase;">Invoice</div>
                     <div style="font-family: 'Inter'; font-size: 13px; color: #464653; margin-top: 8px;">
-                        <strong>${invoice.invoice_number}</strong><br>
+                        <strong>${invoice.invoice_number || 'Draft'}</strong><br>
                         Date: ${invoice.date}<br>
                         <span v-if="invoice.due_date">Due: ${invoice.due_date}<br></span>
                         <span v-if="invoice.terms">Terms: ${invoice.terms.replace('_',' ')}</span>
@@ -197,7 +197,7 @@
                 <v-row>
                     <v-col cols="12"><v-select label="Tax Treatment" v-model="invoice.tax_treatment" density="compact" :items="[{title:'Standard VAT',value:'standard'},{title:'Reverse Charge',value:'reverse_charge'},{title:'Tax Exempt',value:'exempt'}]"></v-select></v-col>
                 <v-col cols="12" sm="4">
-                    <v-text-field label="Invoice Number" v-model="invoice.invoice_number" density="compact" readonly></v-text-field>
+                    <v-text-field label="Invoice Number" :model-value="invoice.invoice_number || 'Assigned when issued'" density="compact" readonly></v-text-field>
                 </v-col>
                 <v-col cols="12" sm="4">
                     <v-text-field label="Date" v-model="invoice.date" type="date" density="compact"></v-text-field>
@@ -294,6 +294,8 @@
                 <v-text-field :model-value="shareUrl" readonly label="Share URL" @click="copyShare">
                     <template v-slot:append-inner><v-btn icon size="small" variant="text" @click="copyShare"><i class="ti ti-copy"></i></v-btn></template>
                 </v-text-field>
+                <div v-if="shareExpiresAt" class="text-caption mb-3">Expires ${new Date(shareExpiresAt).toLocaleString()}</div>
+                <v-btn color="error" variant="text" @click="revokeShare">Revoke link</v-btn>
             </v-card-text>
         </v-card>
     </v-dialog>
@@ -324,7 +326,7 @@
         function newInvoice(s) {
             const today = new Date().toISOString().split('T')[0];
             return {
-                id: null, invoice_number: s.invoice_prefix + String(s.invoice_next_number || 1).padStart(4, '0'),
+                id: null, invoice_number: null,
                 status: 'draft', date: today, terms: 'on_receipt',
                 from_name: s.business_name || '', from_email: s.email || '',
                 from_address: [s.address_line1, s.address_line2, s.address_line3].filter(Boolean).join('\n'),
@@ -359,7 +361,7 @@
                     clientSearch: '', clientResults: invoiceData.client ? [invoiceData.client] : [],
                     paymentDialog: false,
                     newPayment: { amount: '', method: 'bank_transfer', payment_date: new Date().toISOString().split('T')[0], notes: '' },
-                    shareDialog: false, shareUrl: ''
+                    shareDialog: false, shareUrl: '', shareExpiresAt: null
                 };
             },
             computed: {
@@ -446,8 +448,9 @@
                     }).catch(() => this.showSnack('Error'));
                 },
                 deletePayment(pid) { if (confirm('Remove this payment?')) { axios.delete(`/api/invoice/${this.invoice.id}/payment/${pid}`).then(res => { this.showSnack(res.data?.message); this.reloadInvoice(); }); } },
-                shareInvoice() { axios.post(`/api/invoice/${this.invoice.id}/share`).then(r => { this.shareUrl = window.location.origin + r.data.url; this.shareDialog = true; }); },
-                copyShare() { navigator.clipboard.writeText(this.shareUrl); this.showSnack('Link copied'); }
+                shareInvoice() { axios.post(`/api/invoice/${this.invoice.id}/share`).then(r => { this.shareUrl = window.location.origin + r.data.url; this.shareExpiresAt = r.data.expires_at; this.shareDialog = true; }); },
+                copyShare() { navigator.clipboard.writeText(this.shareUrl); this.showSnack('Link copied'); },
+                revokeShare() { axios.delete(`/api/invoice/${this.invoice.id}/share`).then(r => { this.shareUrl = ''; this.shareExpiresAt = null; this.shareDialog = false; this.showSnack(r.data.message); }); }
             }
         });
 

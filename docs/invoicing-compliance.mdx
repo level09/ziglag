@@ -54,7 +54,7 @@ Provide the legal exemption reason. ZigLag sets the VAT amount to zero and print
 
 ## Retention and Backups
 
-The database holds invoice records and lifecycle state. `instance/invoices/` holds issued PDFs. Back up and restore both together.
+The database holds invoice records and lifecycle state. `instance/invoices/` holds issued PDFs. `quart backup create` and `quart backup verify` preserve both together. Transfer each verified bundle to independent storage and keep the downloaded Invoice Simple history separately.
 
 ZigLag does not claim GoBD certification. Production use still requires documented operating procedures, controlled access, tested backups, retention management, and review by the business's Steuerberater.
 

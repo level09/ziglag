@@ -71,6 +71,8 @@ uv run quart verify --json
 uv run quart inspect context --json
 ```
 
+Create a restorable local bundle with `uv run quart backup create`, verify it, then copy it to independent storage.
+
 ## Configuration
 
 `setup.sh` creates `.env`. Required secrets include:

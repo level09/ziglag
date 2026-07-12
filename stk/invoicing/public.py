@@ -1,9 +1,10 @@
 from datetime import datetime
 
-from quart import Blueprint, Response, g, render_template
+from quart import Blueprint, Response, g, render_template, send_file
 from sqlalchemy import select
 
 from stk.invoicing.models import BusinessSettings, Invoice
+from stk.invoicing.presentation import service_period, tax_statement
 
 public_invoice = Blueprint("public_invoice", __name__, static_folder="../static")
 
@@ -26,8 +27,31 @@ async def view_invoice(token):
     settings = await BusinessSettings.get_or_create(invoice.user_id)
     await g.db_session.commit()
 
+    bill_to = None
+    if invoice.client:
+        bill_to = {
+            "name": invoice.client_name_snapshot or invoice.client.name,
+            "email": invoice.client_email_snapshot or invoice.client.email,
+            "address": invoice.client_address_snapshot
+            or "\n".join(
+                filter(
+                    None,
+                    [
+                        invoice.client.address_line1,
+                        invoice.client.address_line2,
+                        invoice.client.address_line3,
+                    ],
+                )
+            ),
+        }
+
     return await render_template(
-        "invoicing/public_invoice.html", invoice=invoice, settings=settings
+        "invoicing/public_invoice.html",
+        invoice=invoice,
+        settings=settings,
+        service_period=service_period(invoice),
+        tax_statement=tax_statement(invoice),
+        bill_to=bill_to,
     )
 
 
@@ -39,6 +63,14 @@ async def public_pdf(token):
     invoice = result.scalar_one_or_none()
     if not invoice:
         return "Invoice not found", 404
+
+    if invoice.is_issued and invoice.archived_pdf_path:
+        return await send_file(
+            invoice.archived_pdf_path,
+            mimetype="application/pdf",
+            as_attachment=False,
+            attachment_filename=f"{invoice.invoice_number}.pdf",
+        )
 
     settings = await BusinessSettings.get_or_create(invoice.user_id)
     await g.db_session.commit()

@@ -22,7 +22,7 @@ ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1
 
 # Install runtime deps and create user
-RUN apt-get update && apt-get install -y --no-install-recommends curl libexpat1 \
+RUN apt-get update && apt-get install -y --no-install-recommends curl libexpat1 fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/* \
     && useradd -m -u 1000 stk
 

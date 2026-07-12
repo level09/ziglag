@@ -33,6 +33,10 @@
             <v-text-field label="Business Name" v-model="s.business_name"></v-text-field>
             <v-text-field label="Owner Name" v-model="s.owner_name"></v-text-field>
             <v-text-field label="Business Number" v-model="s.business_number"></v-text-field>
+            <v-row>
+                <v-col><v-text-field label="Steuernummer" v-model="s.tax_number"></v-text-field></v-col>
+                <v-col><v-text-field label="USt-IdNr." v-model="s.vat_id"></v-text-field></v-col>
+            </v-row>
             <v-text-field label="Address Line 1" v-model="s.address_line1"></v-text-field>
             <v-text-field label="Address Line 2" v-model="s.address_line2"></v-text-field>
             <v-text-field label="Address Line 3" v-model="s.address_line3"></v-text-field>
@@ -63,6 +67,9 @@
                 </v-col>
             </v-row>
             <v-checkbox label="Tax Inclusive" v-model="s.tax_inclusive" hide-details color="primary"></v-checkbox>
+            <v-select label="Default Tax Treatment" v-model="s.default_tax_treatment"
+                :items="[{title:'Standard VAT',value:'standard'},{title:'Reverse Charge',value:'reverse_charge'},{title:'Tax Exempt',value:'exempt'}]"
+            ></v-select>
 
             <v-divider class="my-6"></v-divider>
 
@@ -105,6 +112,9 @@
 
             <!-- Customization -->
             <div class="text-h6 mb-4">Customize</div>
+            <v-select label="Default Invoice Template" v-model="s.default_invoice_template"
+                :items="[{title:'Precision',value:'precision'},{title:'Branded',value:'branded'},{title:'Editorial',value:'editorial'}]"
+            ></v-select>
             <v-text-field label="Invoice Title" v-model="s.invoice_title"></v-text-field>
             <v-row>
                 <v-col><v-text-field label="Quantity Label" v-model="s.quantity_label"></v-text-field></v-col>

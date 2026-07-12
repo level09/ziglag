@@ -168,6 +168,26 @@
             font-size: 12px;
             color: #767685;
         }
+        .template-branded .header {
+            margin: -48px -48px 40px;
+            padding: 40px 48px 28px;
+            color: #fff;
+            background: #a83200;
+            border: 0;
+        }
+        .template-branded .invoice-title,
+        .template-branded .invoice-meta,
+        .template-branded .invoice-meta strong,
+        .template-branded .business-details { color: #fff; }
+        .template-editorial { background: #efe7e0; }
+        .template-editorial .container { background: #fff8f3; border-radius: 8px; }
+        .template-editorial .invoice-title,
+        .template-editorial .business-name { font-family: Georgia, 'Times New Roman', serif; }
+        .template-editorial .invoice-title { color: #a83200; text-transform: none; }
+        .template-editorial .header { border-color: #a83200; }
+        .template-editorial .summary-row.total { color: #a83200; border-color: #a83200; }
+        .template-editorial .bill-to,
+        .template-editorial .notes { background: #f4ece6; }
         @media (max-width: 600px) {
             .container { margin: 16px; padding: 24px; }
             .header { flex-direction: column; gap: 16px; }
@@ -176,7 +196,7 @@
         }
     </style>
 </head>
-<body>
+<body class="template-{{ invoice.template_key or 'precision' }}">
 <div class="container">
     <div class="header">
         <div>
@@ -189,27 +209,30 @@
                 {% if invoice.from_phone %}{{ invoice.from_phone }}<br>{% endif %}
                 {% if invoice.from_email %}{{ invoice.from_email }}{% endif %}
                 {% if invoice.from_business_number %}<br>{{ invoice.from_business_number }}{% endif %}
+                {% if invoice.from_tax_number %}<br>Steuernummer: {{ invoice.from_tax_number }}{% endif %}
+                {% if invoice.from_vat_id %}<br>USt-IdNr.: {{ invoice.from_vat_id }}{% endif %}
             </div>
         </div>
         <div>
-            <div class="invoice-title">{{ settings.invoice_title or 'Invoice' }}</div>
+            <div class="invoice-title">{{ invoice.invoice_title_snapshot or settings.invoice_title or 'Invoice' }}</div>
             <div class="invoice-meta">
                 <strong>{{ invoice.invoice_number }}</strong><br>
                 Date: {{ invoice.date }}<br>
                 {% if invoice.due_date %}Due: {{ invoice.due_date }}<br>{% endif %}
+                {% if service_period %}Service: {{ service_period }}<br>{% endif %}
                 Status: <span class="status-badge status-{{ invoice.status }}">{{ invoice.status }}</span>
             </div>
         </div>
     </div>
 
-    {% if invoice.client %}
+    {% if bill_to %}
     <div class="bill-to">
         <div class="bill-to-label">Bill To</div>
-        <div class="bill-to-name">{{ invoice.client.name }}</div>
+        <div class="bill-to-name">{{ bill_to.name }}</div>
         <div class="bill-to-details">
-            {% if invoice.client.address_line1 %}{{ invoice.client.address_line1 }}<br>{% endif %}
-            {% if invoice.client.address_line2 %}{{ invoice.client.address_line2 }}<br>{% endif %}
-            {% if invoice.client.email %}{{ invoice.client.email }}{% endif %}
+            {% if bill_to.address %}{{ bill_to.address | replace('\n', '<br>') | safe }}<br>{% endif %}
+            {% if bill_to.email %}{{ bill_to.email }}{% endif %}
+            {% if invoice.client_vat_id %}<br>VAT ID: {{ invoice.client_vat_id }}{% endif %}
         </div>
     </div>
     {% endif %}
@@ -278,10 +301,18 @@
     </div>
     {% endif %}
 
-    {% if settings.payment_instructions %}
+    {% if tax_statement %}
+    <div class="notes">
+        <div class="notes-label">Tax</div>
+        {{ tax_statement }}
+    </div>
+    {% endif %}
+
+    {% set payment_instructions = invoice.payment_instructions_snapshot or settings.payment_instructions %}
+    {% if payment_instructions %}
     <div class="notes" style="margin-top: 12px;">
         <div class="notes-label">Payment Instructions</div>
-        {{ settings.payment_instructions | replace('\n', '<br>') | safe }}
+        {{ payment_instructions | replace('\n', '<br>') | safe }}
     </div>
     {% endif %}
 

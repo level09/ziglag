@@ -1,8 +1,17 @@
 import logging
 import os
+from datetime import datetime
 
 import orjson as json
-from quart import Blueprint, Response, current_app, g, render_template, request
+from quart import (
+    Blueprint,
+    Response,
+    current_app,
+    g,
+    render_template,
+    request,
+    send_file,
+)
 from quart_security import auth_required, current_user
 from sqlalchemy import extract, func, select
 
@@ -20,6 +29,68 @@ log = logging.getLogger(__name__)
 invoicing = Blueprint("invoicing", __name__, static_folder="../static")
 
 PER_PAGE = 25
+
+
+def invoice_archive_path(instance_path, user_id, invoice_id):
+    archive_dir = os.path.join(instance_path, "invoices", str(user_id), str(invoice_id))
+    return archive_dir, os.path.join(archive_dir, f"invoice-{invoice_id}.pdf")
+
+
+async def _issue_invoice(invoice, status="sent"):
+    if invoice.is_issued:
+        return None
+    if invoice.client:
+        invoice.client_vat_id = invoice.client.vat_id or invoice.client_vat_id or ""
+        invoice.client_name_snapshot = invoice.client.name or ""
+        invoice.client_email_snapshot = invoice.client.email or ""
+        invoice.client_address_snapshot = "\n".join(
+            filter(
+                None,
+                [
+                    invoice.client.address_line1,
+                    invoice.client.address_line2,
+                    invoice.client.address_line3,
+                ],
+            )
+        )
+    errors = invoice.validate_for_issue()
+    if errors:
+        return errors
+    from stk.invoicing.pdf import generate_invoice_pdf
+
+    settings = await BusinessSettings.get_or_create(current_user.id)
+    invoice.invoice_title_snapshot = settings.invoice_title or "Invoice"
+    invoice.payment_instructions_snapshot = settings.payment_instructions or ""
+    pdf_bytes = bytes(await generate_invoice_pdf(invoice, settings))
+    archive_dir, archive_path = invoice_archive_path(
+        current_app.instance_path, current_user.id, invoice.id
+    )
+    os.makedirs(archive_dir, exist_ok=True)
+    if os.path.exists(archive_path):
+        return ["Issued invoice archive already exists"]
+    created_archive = False
+    try:
+        with open(archive_path, "xb") as archive:
+            archive.write(pdf_bytes)
+        created_archive = True
+        invoice.archived_pdf_path = archive_path
+        invoice.issued_at = datetime.now()
+        if status in ("sent", "viewed"):
+            invoice.sent_at = invoice.sent_at or invoice.issued_at
+        invoice.status = status
+        await Activity.register(
+            current_user.id, "Invoice Issue", {"number": invoice.invoice_number}
+        )
+        await g.db_session.commit()
+    except FileExistsError:
+        await g.db_session.rollback()
+        return ["Invoice issuance is already in progress"]
+    except Exception:
+        await g.db_session.rollback()
+        if created_archive and os.path.exists(archive_path):
+            os.unlink(archive_path)
+        raise
+    return None
 
 
 @invoicing.before_request
@@ -187,6 +258,7 @@ async def api_client_search():
             "address_line1": c.address_line1,
             "address_line2": c.address_line2,
             "phone": c.phone,
+            "vat_id": c.vat_id,
         }
         for c in result.scalars().all()
     ]
@@ -309,8 +381,14 @@ async def api_invoice_create():
     settings = await BusinessSettings.get_or_create(current_user.id)
     invoice = Invoice(user_id=current_user.id)
     invoice.invoice_number = settings.generate_invoice_number()
-    invoice.from_dict(data)
     invoice.snapshot_business(settings)
+    invoice.from_dict(data)
+    if invoice.client_id:
+        client = await g.db_session.get(Client, invoice.client_id)
+        if not client or client.user_id != current_user.id:
+            return {"message": "Client not found"}, 400
+        invoice.client = client
+        invoice.client_vat_id = client.vat_id or invoice.client_vat_id or ""
 
     # line items
     for i, item_data in enumerate(data.get("items", [])):
@@ -338,9 +416,17 @@ async def api_invoice_update(id):
     invoice = await g.db_session.get(Invoice, id)
     if not invoice or invoice.user_id != current_user.id:
         return {"message": "Not found"}, 404
+    if invoice.is_issued:
+        return {"message": "Issued invoices cannot be edited"}, 409
 
     data = await request.json
     invoice.from_dict(data)
+    if invoice.client_id:
+        client = await g.db_session.get(Client, invoice.client_id)
+        if not client or client.user_id != current_user.id:
+            return {"message": "Client not found"}, 400
+        invoice.client = client
+        invoice.client_vat_id = client.vat_id or invoice.client_vat_id or ""
 
     # replace line items
     if "items" in data:
@@ -366,6 +452,8 @@ async def api_invoice_delete(id):
     invoice = await g.db_session.get(Invoice, id)
     if not invoice or invoice.user_id != current_user.id:
         return {"message": "Not found"}, 404
+    if invoice.is_issued:
+        return {"message": "Issued invoices cannot be deleted"}, 409
     number = invoice.invoice_number
     try:
         await g.db_session.delete(invoice)
@@ -391,6 +479,13 @@ async def api_invoice_pdf(id):
     invoice = await g.db_session.get(Invoice, id)
     if not invoice or invoice.user_id != current_user.id:
         return {"message": "Not found"}, 404
+    if invoice.is_issued and invoice.archived_pdf_path:
+        return await send_file(
+            invoice.archived_pdf_path,
+            mimetype="application/pdf",
+            as_attachment=False,
+            attachment_filename=f"{invoice.invoice_number}.pdf",
+        )
     settings = await BusinessSettings.get_or_create(current_user.id)
     from stk.invoicing.pdf import generate_invoice_pdf
 
@@ -409,6 +504,8 @@ async def api_invoice_payment_add(id):
     invoice = await g.db_session.get(Invoice, id)
     if not invoice or invoice.user_id != current_user.id:
         return {"message": "Not found"}, 404
+    if invoice.status == "cancelled":
+        return {"message": "Cancelled invoices cannot accept payments"}, 409
     data = await request.json
     payment = Payment(invoice_id=invoice.id)
     payment.from_dict(data)
@@ -430,6 +527,8 @@ async def api_invoice_payment_delete(id, pid):
     invoice = await g.db_session.get(Invoice, id)
     if not invoice or invoice.user_id != current_user.id:
         return {"message": "Not found"}, 404
+    if invoice.status == "cancelled":
+        return {"message": "Cancelled invoices cannot change payments"}, 409
     payment = await g.db_session.get(Payment, pid)
     if not payment or payment.invoice_id != invoice.id:
         return {"message": "Payment not found"}, 404
@@ -455,7 +554,17 @@ async def api_invoice_status(id):
     new_status = data.get("status")
     if new_status not in ("draft", "sent", "viewed", "paid", "overdue", "cancelled"):
         return {"message": "Invalid status"}, 400
-    invoice.status = new_status
+    if invoice.status == "cancelled":
+        return {"message": "Cancelled invoices cannot change status"}, 409
+    if new_status == "cancelled":
+        return {"message": "Use the cancellation action"}, 400
+    if invoice.is_issued and new_status == "draft":
+        return {"message": "Issued invoices cannot be reopened"}, 409
+    if new_status != "draft" and not invoice.is_issued:
+        if errors := await _issue_invoice(invoice, status=new_status):
+            return {"message": "; ".join(errors)}, 400
+    else:
+        invoice.status = new_status
     if new_status == "draft":
         invoice.paid_at = None
     elif new_status == "sent":
@@ -471,6 +580,35 @@ async def api_invoice_status(id):
         return {"message": "Error updating status"}, 412
 
 
+@invoicing.post("/api/invoice/<int:id>/issue")
+async def api_invoice_issue(id):
+    invoice = await g.db_session.get(Invoice, id)
+    if not invoice or invoice.user_id != current_user.id:
+        return {"message": "Not found"}, 404
+    if errors := await _issue_invoice(invoice):
+        return {"message": "; ".join(errors)}, 400
+    await g.db_session.commit()
+    return {"message": "Invoice issued"}
+
+
+@invoicing.post("/api/invoice/<int:id>/cancel")
+async def api_invoice_cancel(id):
+    invoice = await g.db_session.get(Invoice, id)
+    if not invoice or invoice.user_id != current_user.id:
+        return {"message": "Not found"}, 404
+    if not invoice.is_issued:
+        return {"message": "Only issued invoices can be cancelled"}, 409
+    if invoice.status == "cancelled":
+        return {"message": "Invoice is already cancelled"}, 409
+    invoice.status = "cancelled"
+    invoice.cancelled_at = datetime.now()
+    await Activity.register(
+        current_user.id, "Invoice Cancel", {"number": invoice.invoice_number}
+    )
+    await g.db_session.commit()
+    return {"message": "Invoice cancelled"}
+
+
 @invoicing.post("/api/invoice/<int:id>/share")
 async def api_invoice_share(id):
     invoice = await g.db_session.get(Invoice, id)
@@ -483,9 +621,6 @@ async def api_invoice_share(id):
 
 @invoicing.post("/api/invoice/<int:id>/send")
 async def api_invoice_send(id):
-    from datetime import datetime
-
-    from stk.invoicing.pdf import generate_invoice_pdf
     from stk.tasks import run_in_background
 
     invoice = await g.db_session.get(Invoice, id)
@@ -494,16 +629,26 @@ async def api_invoice_send(id):
 
     if not invoice.client or not invoice.client.email:
         return {"message": "Client has no email address"}, 400
+    if invoice.status == "cancelled":
+        return {"message": "Cancelled invoices cannot be sent"}, 409
+
+    if not invoice.is_issued:
+        if errors := await _issue_invoice(invoice):
+            return {"message": "; ".join(errors)}, 400
 
     settings = await BusinessSettings.get_or_create(current_user.id)
-    pdf_bytes = await generate_invoice_pdf(invoice, settings)
+    if not invoice.archived_pdf_path:
+        return {"message": "Issued invoice archive is missing"}, 500
+    with open(invoice.archived_pdf_path, "rb") as archive:
+        pdf_bytes = archive.read()
 
     # Build share link
     token = invoice.generate_share_token()
     share_url = request.host_url.rstrip("/") + f"/i/{token}"
 
-    subject = f"{settings.invoice_title or 'Invoice'} {invoice.invoice_number} from {settings.business_name}"
-    body = f"Please find attached {settings.invoice_title or 'Invoice'} {invoice.invoice_number}.\n\nView online: {share_url}"
+    invoice_title = invoice.invoice_title_snapshot or "Invoice"
+    subject = f"{invoice_title} {invoice.invoice_number} from {invoice.from_name}"
+    body = f"Please find attached {invoice_title} {invoice.invoice_number}.\n\nView online: {share_url}"
 
     html_body = await render_template(
         "invoicing/email_invoice.html",
@@ -548,7 +693,6 @@ async def api_invoice_send(id):
     await run_in_background(_send())
 
     invoice.status = "sent"
-    invoice.sent_at = datetime.now()
     await g.db_session.commit()
     return {"message": f"Invoice sent to {recipient}"}
 

@@ -1,4 +1,5 @@
 import dataclasses
+import re
 import secrets
 from datetime import date, datetime
 from decimal import Decimal
@@ -32,6 +33,8 @@ class BusinessSettings(Base):
     business_name = Column(String(255), default="")
     business_number = Column(String(100), default="")
     business_number_label = Column(String(100), default="Business Number")
+    tax_number = Column(String(100), default="")
+    vat_id = Column(String(100), default="")
     owner_name = Column(String(255), default="")
     address_line1 = Column(String(255), default="")
     address_line2 = Column(String(255), default="")
@@ -47,6 +50,8 @@ class BusinessSettings(Base):
     tax_rate = Column(Numeric(5, 2), default=0)
     tax_label = Column(String(50), default="VAT")
     tax_inclusive = Column(Boolean, default=False)
+    default_tax_treatment = Column(String(30), default="standard")
+    default_invoice_template = Column(String(30), default="precision")
 
     # invoice numbering
     invoice_prefix = Column(String(20), default="INV")
@@ -90,6 +95,10 @@ class BusinessSettings(Base):
         return settings
 
     def generate_invoice_number(self):
+        if not re.fullmatch(r"[A-Za-z0-9_-]{0,20}", self.invoice_prefix or ""):
+            raise ValueError(
+                "Invoice prefix may contain only letters, numbers, - and _"
+            )
         number = f"{self.invoice_prefix}{self.invoice_next_number:04d}"
         self.invoice_next_number += 1
         return number
@@ -101,6 +110,8 @@ class BusinessSettings(Base):
             "business_name": self.business_name,
             "business_number": self.business_number,
             "business_number_label": self.business_number_label,
+            "tax_number": self.tax_number,
+            "vat_id": self.vat_id,
             "owner_name": self.owner_name,
             "address_line1": self.address_line1,
             "address_line2": self.address_line2,
@@ -114,6 +125,8 @@ class BusinessSettings(Base):
             "tax_rate": str(self.tax_rate) if self.tax_rate else "0",
             "tax_label": self.tax_label,
             "tax_inclusive": self.tax_inclusive,
+            "default_tax_treatment": self.default_tax_treatment,
+            "default_invoice_template": self.default_invoice_template,
             "invoice_prefix": self.invoice_prefix,
             "invoice_next_number": self.invoice_next_number,
             "default_invoice_notes": self.default_invoice_notes,
@@ -138,6 +151,8 @@ class BusinessSettings(Base):
             "business_name",
             "business_number",
             "business_number_label",
+            "tax_number",
+            "vat_id",
             "owner_name",
             "address_line1",
             "address_line2",
@@ -149,6 +164,8 @@ class BusinessSettings(Base):
             "tax_type",
             "tax_label",
             "tax_inclusive",
+            "default_tax_treatment",
+            "default_invoice_template",
             "invoice_prefix",
             "default_invoice_notes",
             "default_email_message",
@@ -166,6 +183,12 @@ class BusinessSettings(Base):
             "payment_paypal",
             "payment_other",
         ]
+        if "invoice_prefix" in data and not re.fullmatch(
+            r"[A-Za-z0-9_-]{0,20}", data["invoice_prefix"] or ""
+        ):
+            raise ValueError(
+                "Invoice prefix may contain only letters, numbers, - and _"
+            )
         for f in fields:
             if f in data:
                 setattr(self, f, data[f])
@@ -188,6 +211,7 @@ class Client(Base):
     phone = Column(String(50), nullable=True)
     mobile = Column(String(50), nullable=True)
     fax = Column(String(50), nullable=True)
+    vat_id = Column(String(100), nullable=True)
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
@@ -205,6 +229,7 @@ class Client(Base):
             "phone": self.phone,
             "mobile": self.mobile,
             "fax": self.fax,
+            "vat_id": self.vat_id,
             "notes": self.notes,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "total_billed": str(self.total_billed),
@@ -229,6 +254,7 @@ class Client(Base):
             "phone",
             "mobile",
             "fax",
+            "vat_id",
             "notes",
         ]
         for f in fields:
@@ -249,6 +275,8 @@ class Invoice(Base):
     date = Column(Date, default=date.today)
     due_date = Column(Date, nullable=True)
     terms = Column(String(50), default="on_receipt")
+    service_date_from = Column(Date, nullable=True)
+    service_date_to = Column(Date, nullable=True)
 
     # totals
     subtotal = Column(Numeric(12, 2), default=0)
@@ -269,6 +297,9 @@ class Invoice(Base):
     tax_rate = Column(Numeric(5, 2), default=0)
     tax_label = Column(String(50), default="VAT")
     tax_inclusive = Column(Boolean, default=False)
+    tax_treatment = Column(String(30), default="standard")
+    tax_exemption_reason = Column(Text, nullable=True)
+    template_key = Column(String(30), default="precision")
 
     notes = Column(Text, nullable=True)
     share_token = Column(String(64), unique=True, nullable=True)
@@ -279,12 +310,23 @@ class Invoice(Base):
     from_address = Column(Text, default="")
     from_phone = Column(String(50), default="")
     from_business_number = Column(String(100), default="")
+    from_tax_number = Column(String(100), default="")
+    from_vat_id = Column(String(100), default="")
+    client_vat_id = Column(String(100), default="")
+    client_name_snapshot = Column(String(255), default="")
+    client_email_snapshot = Column(String(255), default="")
+    client_address_snapshot = Column(Text, default="")
+    invoice_title_snapshot = Column(String(100), default="")
+    payment_instructions_snapshot = Column(Text, default="")
+    archived_pdf_path = Column(String(500), nullable=True)
 
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     sent_at = Column(DateTime, nullable=True)
     viewed_at = Column(DateTime, nullable=True)
     paid_at = Column(DateTime, nullable=True)
+    issued_at = Column(DateTime, nullable=True)
+    cancelled_at = Column(DateTime, nullable=True)
 
     client = relationship("Client", back_populates="invoices", lazy="selectin")
     items = relationship(
@@ -317,12 +359,52 @@ class Invoice(Base):
         )
         self.from_phone = settings.phone
         self.from_business_number = settings.business_number
+        self.from_tax_number = settings.tax_number
+        self.from_vat_id = settings.vat_id
         self.currency_code = settings.currency_code
         self.currency_symbol = settings.currency_symbol
         self.tax_type = settings.tax_type
         self.tax_rate = settings.tax_rate
         self.tax_label = settings.tax_label
         self.tax_inclusive = settings.tax_inclusive
+        self.tax_treatment = settings.default_tax_treatment
+        self.template_key = settings.default_invoice_template
+        if self.client:
+            self.client_vat_id = self.client.vat_id or ""
+
+    @property
+    def is_issued(self):
+        return self.issued_at is not None
+
+    def validate_for_issue(self):
+        errors = []
+        if not self.from_name or not self.from_address:
+            errors.append("Supplier name and address are required")
+        if not self.from_tax_number and not self.from_vat_id:
+            errors.append("Supplier Steuernummer or VAT ID is required")
+        if not self.client or not self.client.name or not self.client.address_line1:
+            errors.append("Client name and address are required")
+        if not self.items or any(not item.description for item in self.items):
+            errors.append("Every line item needs a description")
+        if not self.service_date_from:
+            errors.append("Service date is required")
+        if self.service_date_to and self.service_date_to < self.service_date_from:
+            errors.append("Service period end cannot precede its start")
+        if self.tax_treatment == "reverse_charge":
+            if not self.from_vat_id or not self.client_vat_id:
+                errors.append("Reverse charge requires supplier and client VAT IDs")
+        elif self.tax_treatment == "exempt" and not self.tax_exemption_reason:
+            errors.append("Tax exemption reason is required")
+        elif self.tax_treatment not in ("standard", "reverse_charge", "exempt"):
+            errors.append("Invalid tax treatment")
+        if self.tax_treatment == "standard":
+            if Decimal(str(self.tax_rate or 0)) < 0:
+                errors.append("VAT rate cannot be negative")
+            if self.tax_type == "none":
+                errors.append("Standard VAT requires a tax calculation type")
+        if self.template_key not in ("precision", "branded", "editorial"):
+            errors.append("Invalid invoice template")
+        return errors
 
     def recalculate(self):
         rate = Decimal(str(self.tax_rate or 0)) / Decimal("100")
@@ -354,7 +436,9 @@ class Invoice(Base):
             taxable_amount = taxable_amount * after_discount / subtotal
 
         # tax
-        if self.tax_type == "none" or rate == 0:
+        if self.tax_treatment in ("reverse_charge", "exempt"):
+            self.tax_amount = Decimal("0")
+        elif self.tax_type == "none" or rate == 0:
             self.tax_amount = Decimal("0")
         elif self.tax_type == "per_line":
             if self.tax_inclusive:
@@ -415,6 +499,12 @@ class Invoice(Base):
             "date": self.date.isoformat() if self.date else None,
             "due_date": self.due_date.isoformat() if self.due_date else None,
             "terms": self.terms,
+            "service_date_from": self.service_date_from.isoformat()
+            if self.service_date_from
+            else None,
+            "service_date_to": self.service_date_to.isoformat()
+            if self.service_date_to
+            else None,
             "subtotal": str(self.subtotal),
             "tax_amount": str(self.tax_amount),
             "discount_type": self.discount_type,
@@ -429,6 +519,9 @@ class Invoice(Base):
             "tax_rate": str(self.tax_rate),
             "tax_label": self.tax_label,
             "tax_inclusive": self.tax_inclusive,
+            "tax_treatment": self.tax_treatment,
+            "tax_exemption_reason": self.tax_exemption_reason,
+            "template_key": self.template_key,
             "notes": self.notes,
             "share_token": self.share_token,
             "from_name": self.from_name,
@@ -436,17 +529,28 @@ class Invoice(Base):
             "from_address": self.from_address,
             "from_phone": self.from_phone,
             "from_business_number": self.from_business_number,
+            "from_tax_number": self.from_tax_number,
+            "from_vat_id": self.from_vat_id,
+            "client_vat_id": self.client_vat_id,
+            "client_name_snapshot": self.client_name_snapshot,
+            "client_email_snapshot": self.client_email_snapshot,
+            "client_address_snapshot": self.client_address_snapshot,
+            "invoice_title_snapshot": self.invoice_title_snapshot,
+            "payment_instructions_snapshot": self.payment_instructions_snapshot,
             "items": [item.to_dict() for item in self.items],
             "payments": [p.to_dict() for p in self.payments],
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "sent_at": self.sent_at.isoformat() if self.sent_at else None,
             "paid_at": self.paid_at.isoformat() if self.paid_at else None,
+            "issued_at": self.issued_at.isoformat() if self.issued_at else None,
+            "cancelled_at": self.cancelled_at.isoformat()
+            if self.cancelled_at
+            else None,
         }
 
     def from_dict(self, data):
         simple_fields = [
             "client_id",
-            "status",
             "terms",
             "notes",
             "discount_type",
@@ -460,6 +564,12 @@ class Invoice(Base):
             "from_address",
             "from_phone",
             "from_business_number",
+            "from_tax_number",
+            "from_vat_id",
+            "client_vat_id",
+            "tax_treatment",
+            "tax_exemption_reason",
+            "template_key",
         ]
         for f in simple_fields:
             if f in data:
@@ -469,6 +579,14 @@ class Invoice(Base):
             self.date = date.fromisoformat(data["date"])
         if "due_date" in data and data["due_date"]:
             self.due_date = date.fromisoformat(data["due_date"])
+        if "service_date_from" in data and data["service_date_from"]:
+            self.service_date_from = date.fromisoformat(data["service_date_from"])
+        if "service_date_to" in data:
+            self.service_date_to = (
+                date.fromisoformat(data["service_date_to"])
+                if data["service_date_to"]
+                else None
+            )
         if "tax_rate" in data:
             self.tax_rate = Decimal(str(data["tax_rate"]))
         if "discount_value" in data:

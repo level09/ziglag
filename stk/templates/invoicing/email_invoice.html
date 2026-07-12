@@ -12,14 +12,14 @@
     <!-- Header -->
     <tr>
         <td style="background:linear-gradient(135deg,#353aaf,#4e54c8);padding:32px 40px;">
-            <h1 style="margin:0;color:#ffffff;font-size:24px;font-weight:700;">{{ settings.business_name }}</h1>
+            <h1 style="margin:0;color:#ffffff;font-size:24px;font-weight:700;">{{ invoice.from_name }}</h1>
         </td>
     </tr>
 
     <!-- Body -->
     <tr>
         <td style="padding:40px;">
-            <h2 style="margin:0 0 8px;color:#1b1c1c;font-size:20px;">{{ settings.invoice_title or 'Invoice' }} {{ invoice.invoice_number }}</h2>
+            <h2 style="margin:0 0 8px;color:#1b1c1c;font-size:20px;">{{ invoice.invoice_title_snapshot or 'Invoice' }} {{ invoice.invoice_number }}</h2>
             <p style="margin:0 0 24px;color:#464653;font-size:14px;line-height:1.6;">
                 Date: {{ invoice.date }}<br>
                 {% if invoice.due_date %}Due: {{ invoice.due_date }}<br>{% endif %}
@@ -44,7 +44,7 @@
     <!-- Footer -->
     <tr>
         <td style="padding:24px 40px;border-top:1px solid #f0eded;color:#767685;font-size:12px;">
-            {{ settings.business_name }}{% if settings.email %} &middot; {{ settings.email }}{% endif %}
+            {{ invoice.from_name }}{% if invoice.from_email %} &middot; {{ invoice.from_email }}{% endif %}
         </td>
     </tr>
 

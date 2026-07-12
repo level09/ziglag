@@ -356,6 +356,19 @@ class Invoice(Base):
     )
 
     def snapshot_business(self, settings):
+        self.snapshot_supplier(settings)
+        self.currency_code = settings.currency_code
+        self.currency_symbol = settings.currency_symbol
+        self.tax_type = settings.tax_type
+        self.tax_rate = settings.tax_rate
+        self.tax_label = settings.tax_label
+        self.tax_inclusive = settings.tax_inclusive
+        self.tax_treatment = settings.default_tax_treatment
+        self.template_key = settings.default_invoice_template
+        if self.client:
+            self.client_vat_id = self.client.vat_id or ""
+
+    def snapshot_supplier(self, settings):
         self.from_name = settings.business_name
         self.from_email = settings.email
         self.from_address = "\n".join(
@@ -372,16 +385,6 @@ class Invoice(Base):
         self.from_business_number = settings.business_number
         self.from_tax_number = settings.tax_number
         self.from_vat_id = settings.vat_id
-        self.currency_code = settings.currency_code
-        self.currency_symbol = settings.currency_symbol
-        self.tax_type = settings.tax_type
-        self.tax_rate = settings.tax_rate
-        self.tax_label = settings.tax_label
-        self.tax_inclusive = settings.tax_inclusive
-        self.tax_treatment = settings.default_tax_treatment
-        self.template_key = settings.default_invoice_template
-        if self.client:
-            self.client_vat_id = self.client.vat_id or ""
 
     @property
     def is_issued(self):

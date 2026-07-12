@@ -50,6 +50,18 @@ class InvoiceValidationTests(unittest.TestCase):
         )
         self.assertEqual(business_profile_missing(settings), [])
 
+    def test_supplier_snapshot_refreshes_legacy_draft(self):
+        settings = BusinessSettings(
+            business_name="Mohab",
+            address_line1="Zimmerstraße 94",
+            tax_number="12/345/67890",
+        )
+        invoice = Invoice(from_name="", from_address="", from_tax_number="")
+        invoice.snapshot_supplier(settings)
+        self.assertEqual(invoice.from_name, "Mohab")
+        self.assertEqual(invoice.from_address, "Zimmerstraße 94")
+        self.assertEqual(invoice.from_tax_number, "12/345/67890")
+
     def test_next_invoice_number_is_editable_and_positive(self):
         settings = BusinessSettings(invoice_next_number=1)
         settings.from_dict({"invoice_next_number": "68"})

@@ -81,6 +81,8 @@ async def next_free_invoice_number(settings):
 async def _issue_invoice(invoice, status="sent"):
     if invoice.is_issued:
         return None
+    settings = await BusinessSettings.get_or_create(current_user.id)
+    invoice.snapshot_supplier(settings)
     if invoice.client:
         invoice.client_vat_id = invoice.client.vat_id or invoice.client_vat_id or ""
         invoice.client_name_snapshot = invoice.client.name or ""
@@ -100,7 +102,6 @@ async def _issue_invoice(invoice, status="sent"):
         return errors
     from stk.invoicing.pdf import generate_invoice_pdf
 
-    settings = await BusinessSettings.get_or_create(current_user.id)
     invoice.invoice_title_snapshot = settings.invoice_title or "Invoice"
     invoice.payment_instructions_snapshot = settings.payment_instructions or ""
     pdf_bytes = bytes(await generate_invoice_pdf(invoice, settings))

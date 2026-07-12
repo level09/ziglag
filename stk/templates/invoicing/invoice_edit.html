@@ -152,10 +152,12 @@
             <v-row>
                 <v-col cols="12" md="6">
                     <div class="text-subtitle-2 mb-2 font-weight-bold">From</div>
-                    <v-alert v-if="!businessProfileComplete" type="warning" variant="tonal" class="mb-3">
-                        Complete your business profile before issuing invoices.
+                    {% if profile_missing %}
+                    <v-alert type="warning" variant="tonal" class="mb-3">
+                        Missing from Business Settings: {{ profile_missing | join(', ') }}.
                         <v-btn href="/settings/business/" variant="text" size="small">Open Settings</v-btn>
                     </v-alert>
+                    {% endif %}
                     <v-card variant="outlined"><v-card-text>
                         <strong>${invoice.from_name || 'Business profile incomplete'}</strong>
                         <div class="text-body-2 text-medium-emphasis" style="white-space: pre-line;">${invoice.from_address}</div>
@@ -398,10 +400,6 @@
                 };
             },
             computed: {
-                businessProfileComplete() {
-                    const address = [settingsData.address_line1, settingsData.address_line2, settingsData.address_line3].filter(Boolean).join('');
-                    return !!(settingsData.business_name && address && (settingsData.tax_number || settingsData.vat_id));
-                },
                 totals() {
                     let subtotal = 0;
                     (this.invoice.items || []).forEach(item => { subtotal += parseFloat(item.amount) || 0; });

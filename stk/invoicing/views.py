@@ -33,6 +33,19 @@ invoicing = Blueprint("invoicing", __name__, static_folder="../static")
 PER_PAGE = 25
 
 
+def business_profile_missing(settings):
+    missing = []
+    if not settings.business_name:
+        missing.append("business name")
+    if not any(
+        (settings.address_line1, settings.address_line2, settings.address_line3)
+    ):
+        missing.append("business address")
+    if not settings.tax_number and not settings.vat_id:
+        missing.append("Steuernummer or VAT ID")
+    return missing
+
+
 def invoice_archive_relative_path(user_id, invoice_id):
     return Path("invoices", str(user_id), str(invoice_id), f"invoice-{invoice_id}.pdf")
 
@@ -148,6 +161,7 @@ async def invoice_new():
         "invoicing/invoice_edit.html",
         invoice_data=None,
         settings_data=settings.to_dict(),
+        profile_missing=business_profile_missing(settings),
     )
 
 
@@ -161,6 +175,7 @@ async def invoice_detail(id):
         "invoicing/invoice_edit.html",
         invoice_data=invoice.to_dict(),
         settings_data=settings.to_dict(),
+        profile_missing=business_profile_missing(settings),
     )
 
 

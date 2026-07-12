@@ -8,6 +8,7 @@ from stk.invoicing.models import BusinessSettings, Client, Invoice, InvoiceItem
 from stk.invoicing.pdf import _build_pdf
 from stk.invoicing.presentation import TEMPLATES, tax_statement
 from stk.invoicing.views import (
+    business_profile_missing,
     invoice_archive_path,
     invoice_archive_relative_path,
     resolve_invoice_archive,
@@ -41,6 +42,14 @@ def valid_invoice(treatment="standard"):
 
 
 class InvoiceValidationTests(unittest.TestCase):
+    def test_complete_business_profile_has_no_missing_fields(self):
+        settings = BusinessSettings(
+            business_name="Mohab",
+            address_line1="Zimmerstraße 94",
+            tax_number="12/345/67890",
+        )
+        self.assertEqual(business_profile_missing(settings), [])
+
     def test_next_invoice_number_is_editable_and_positive(self):
         settings = BusinessSettings(invoice_next_number=1)
         settings.from_dict({"invoice_next_number": "68"})

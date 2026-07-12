@@ -1,60 +1,39 @@
 ---
-title: "stk Framework"
-description: "An async Quart framework for developers who ship"
+title: "ZigLag"
+description: "Self-hosted PDF invoicing built on stk"
 sidebarTitle: "Introduction"
 ---
 
 ## Overview
 
-An async Quart framework for developers who ship. No build tools. No configuration maze. Just `./setup.sh && quart run`.
+ZigLag is a self-hosted invoicing application for freelancers and small businesses. It uses stk 13.4.1 for async Quart, authentication, database migrations, WebSockets, operational commands, and production deployment.
 
-stk combines Quart (async Python) with Vue 3 and Vuetify 3, without webpack, vite, or npm. Your AI assistant (Claude Code, Cursor) already knows the codebase thanks to built-in instructions.
+## Core Workflow
 
-## Key Features
+1. Store client contact and VAT details.
+2. Create a draft with line items, service period, and tax treatment.
+3. Choose Precision, Branded, or Editorial presentation.
+4. Issue or send the invoice.
+5. Preserve the generated PDF while tracking views and payments.
+6. Cancel incorrect issued invoices without deleting their record.
 
-- **Zero build step** - Vue 3 + Vuetify 3 run directly in browser. No node_modules
-- **Auth that works** - 2FA, WebAuthn, OAuth (Google/GitHub) — production code, not a tutorial
-- **SQLite by default** - Deploy anywhere. Add PostgreSQL when you need it
-- **Agent-operable** - Ships with `AGENTS.md`, structured context, and CLI verification commands
-- **Complexity is opt-in** - Redis, PostgreSQL are optional add-ons
+## Security and Operations
 
-## Documentation Sections
+stk supplies session authentication, TOTP, WebAuthn, OAuth, recovery codes, account lockout, rate limiting, Alembic, verification commands, browser smoke testing, and a production deploy script.
 
-- [Getting Started](/getting-started) - Installation and setup guide
-- [Authentication](/authentication) - User management and OAuth setup
-- [Development](/development) - Development guidelines and best practices
-- [Deployment](/deployment) - Production deployment guide
+Useful commands:
 
-## OAuth Integration
-
-Supports social login with:
-- Google (profile and email scope)
-- GitHub (user:email scope)
-
-Configure in `.env`:
 ```bash
-# Google OAuth
-GOOGLE_AUTH_ENABLED=true
-GOOGLE_OAUTH_CLIENT_ID=your_client_id
-GOOGLE_OAUTH_CLIENT_SECRET=your_client_secret
-
-# GitHub OAuth
-GITHUB_AUTH_ENABLED=true
-GITHUB_OAUTH_CLIENT_ID=your_client_id
-GITHUB_OAUTH_CLIENT_SECRET=your_client_secret
+uv run quart inspect context --json
+uv run quart verify --json
+uv run quart smoke --json
+uv run quart new <module>
 ```
 
-## Built for AI Agents
+## Documentation
 
-stk ships with `AGENTS.md` and structured context in `.stk/context/`, so AI assistants (Claude Code, Cursor, Copilot) understand the codebase instantly. Machine-readable introspection and verification close the loop:
-
-- `quart inspect context --json` reports routes and models in one contract
-- `quart verify --json` runs lint, sanity, and migration checks
-- `quart smoke --json` drives a real browser through login and the dashboard
-- `quart new <module>` scaffolds a complete module deterministically
-
-See [AI-Assisted Development](/cursor-rules) for details.
-
-## Source Code
-
-The source code is available on [GitHub](https://github.com/level09/stk). Issues and pull requests welcome.
+- [Quick Start](/getting-started)
+- [Invoicing and compliance](/invoicing-compliance)
+- [Authentication](/authentication)
+- [Development](/development)
+- [Deployment](/deployment)

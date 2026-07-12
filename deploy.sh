@@ -86,7 +86,7 @@ install_packages() {
     step "Installing system packages"
     export DEBIAN_FRONTEND=noninteractive
     apt-get update -qq >/dev/null
-    apt-get install -y -qq git curl wget >/dev/null 2>&1
+    apt-get install -y -qq git curl wget fonts-dejavu-core >/dev/null 2>&1
     step_done
 }
 
@@ -194,6 +194,7 @@ generate_env() {
 QUART_APP=run.py
 SECRET_KEY=$(openssl rand -hex 32)
 SECURITY_PASSWORD_SALT=$(openssl rand -hex 32)
+SECURITY_TOTP_SECRETS=$(openssl rand -hex 32)
 SESSION_COOKIE_SECURE=${cookie_secure}
 EOF
 

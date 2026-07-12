@@ -1,8 +1,8 @@
 {
   "$schema": "https://mintlify.com/schema.json",
   "theme": "mint",
-  "name": "stk Documentation",
-  "description": "An async Quart framework for developers who ship. No build tools. No configuration maze.",
+  "name": "ZigLag Documentation",
+  "description": "Self-hosted PDF invoicing built on stk.",
   "colors": {
     "primary": "#3B82F6",
     "light": "#60A5FA",
@@ -18,7 +18,8 @@
             "group": "Getting Started",
             "pages": [
               "introduction",
-              "getting-started"
+              "getting-started",
+              "invoicing-compliance"
             ]
           },
           {
@@ -47,7 +48,7 @@
     "primary": {
       "type": "github",
       "label": "GitHub",
-      "href": "https://github.com/level09/stk"
+      "href": "https://github.com/level09/ziglag"
     }
   }
 } 

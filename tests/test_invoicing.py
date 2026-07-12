@@ -2,11 +2,14 @@ import re
 import unittest
 from datetime import date
 from decimal import Decimal
+from pathlib import Path
 
 from stk.invoicing.models import Client, Invoice, InvoiceItem
 from stk.invoicing.pdf import _build_pdf
 from stk.invoicing.presentation import TEMPLATES, tax_statement
 from stk.invoicing.views import invoice_archive_path
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
 def valid_invoice(treatment="standard"):
@@ -123,6 +126,23 @@ class PdfTests(unittest.TestCase):
                 rendered.append(pdf)
                 self.assertEqual(len(re.findall(rb"/Type /Page\b", pdf)), 1)
         self.assertEqual(len(set(rendered)), 3)
+
+
+class ProductionConfigTests(unittest.TestCase):
+    def test_installers_generate_totp_secret(self):
+        for filename in ("setup.sh", "deploy.sh"):
+            with self.subTest(filename=filename):
+                content = (PROJECT_ROOT / filename).read_text()
+                self.assertIn("SECURITY_TOTP_SECRETS", content)
+
+    def test_deploy_installs_invoice_font(self):
+        content = (PROJECT_ROOT / "deploy.sh").read_text()
+        self.assertIn("fonts-dejavu-core", content)
+
+    def test_compose_persists_invoice_archive(self):
+        content = (PROJECT_ROOT / "docker-compose.yml").read_text()
+        self.assertIn("invoice-data:/app/instance", content)
+        self.assertIn("invoice-data:", content)
 
 
 if __name__ == "__main__":

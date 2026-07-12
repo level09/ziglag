@@ -1,0 +1,67 @@
+---
+title: "Invoicing and Compliance"
+description: "German PDF invoicing scope and E-Rechnung limits"
+sidebarTitle: "Invoicing"
+---
+
+## Current Scope
+
+ZigLag supports production PDF invoicing with safeguards designed for the owner's German and EU B2B workflow. The application stores supplier and customer identities, tax IDs, service periods, tax treatment, totals, payment details, lifecycle events, and the exact issued PDF.
+
+The application supports:
+
+- German domestic invoices with standard VAT.
+- Article 196 reverse-charge invoices for qualifying cross-border B2B services.
+- Tax-exempt invoices with an explicit exemption reason.
+- Separate Steuernummer, supplier USt-IdNr., and customer VAT ID.
+- Locked issued invoices and preserved original PDFs.
+- Cancellation without deletion or silent rewriting.
+
+## E-Rechnung Boundary
+
+ZigLag does not currently generate XRechnung, ZUGFeRD, or another EN 16931 structured invoice. A PDF is not a structured E-Rechnung under German law.
+
+Germany's transition rules permit other invoice formats during the applicable transition period. The general transition covers invoices issued through 2026. Businesses whose prior-year turnover does not exceed EUR 800,000 may use the extended transition through 2027. Confirm the rule that applies to the issuing business before relying on PDF delivery.
+
+German businesses must already be able to receive structured E-Rechnungen. ZigLag does not provide an inbound invoice-processing mailbox or accounting archive.
+
+ZigLag also lacks a credit-note or correction-invoice workflow. Cancellation preserves the original record, but businesses that need a formal credit note must create and account for that document outside ZigLag until the feature exists.
+
+Official references:
+
+- [Federal Ministry of Finance E-Rechnung FAQ](https://www.bundesfinanzministerium.de/Content/DE/FAQ/e-rechnung.html)
+- [German VAT Act, Section 14](https://www.gesetze-im-internet.de/ustg_1980/__14.html)
+
+## Invoice Issuance
+
+Draft invoices remain editable and deletable. Issuing, sending, or moving a draft into another issued state runs validation, freezes invoice snapshots, generates the final PDF, writes it to the archive, and records the issue event.
+
+Issued invoices cannot return to draft state. ZigLag rejects edits and deletion. Payment activity can continue until cancellation. A cancelled invoice becomes terminal and retains its original PDF.
+
+## Tax Treatments
+
+### Standard VAT
+
+Provide the VAT calculation type and a non-negative rate. The PDF shows the taxable subtotal, VAT rate, VAT amount, and total.
+
+### Reverse Charge
+
+Provide both supplier and customer VAT IDs. ZigLag sets the VAT amount to zero and prints the Article 196 reverse-charge statement. The application does not validate VAT IDs, countries, transaction type, place of supply, or whether Article 196 applies. Use this treatment only after the issuer or tax adviser confirms that the specific B2B service qualifies. It does not cover every EU cross-border supply.
+
+### Tax Exempt
+
+Provide the legal exemption reason. ZigLag sets the VAT amount to zero and prints that reason on the invoice.
+
+## Retention and Backups
+
+The database holds invoice records and lifecycle state. `instance/invoices/` holds issued PDFs. Back up and restore both together.
+
+ZigLag does not claim GoBD certification. Production use still requires documented operating procedures, controlled access, tested backups, retention management, and review by the business's Steuerberater.
+
+## Before Production Use
+
+1. Configure legal identity, VAT treatment, numbering, currency, and payment details.
+2. Reproduce one domestic VAT invoice and one reverse-charge invoice using non-production test values.
+3. Ask the Steuerberater to approve the fields and wording.
+4. Test issuance, repeated download, payment, cancellation, backup, and restore.
+5. Schedule structured E-Rechnung support before the applicable deadline.

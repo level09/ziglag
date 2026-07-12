@@ -1,167 +1,78 @@
 ---
 title: "Deployment"
-description: "Deploy your stk application to production"
+description: "Deploy ZigLag with stk's production installer"
 sidebarTitle: "Deployment"
 ---
 
-## Overview
+## stk Deploy Script
 
-stk provides multiple deployment options. Use the automated VPS deploy for quick Ubuntu setups, or follow the traditional process for other environments.
-
-## Automated VPS Deploy
-
-One command to deploy on any Ubuntu VPS (Hetzner, DigitalOcean, etc.):
+ZigLag uses the production deploy script maintained by stk. The script targets a fresh Ubuntu server and installs PostgreSQL, Redis, Caddy, Python, uv, systemd services, database migrations, and automatic TLS.
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/level09/ignite/main/ignite.sh | sudo DOMAIN=your-domain.com bash
+wget -qO /tmp/deploy.sh https://raw.githubusercontent.com/level09/stk/master/deploy.sh
+sudo DOMAIN=invoices.example.com REPO=level09/ziglag DB=postgres bash /tmp/deploy.sh
 ```
 
-Handles Caddy (auto SSL), Python 3.13, Redis, systemd services. See [Ignite](https://github.com/level09/ignite).
+Run the command on the target server as root. Set `DOMAIN` to the final hostname before installation. Set `REPO` to the GitHub owner and repository. The production example selects PostgreSQL explicitly.
 
-## Traditional Deployment
+The script prints generated credentials at the end and stores a copy on the server. Move the credentials to your password manager after installation.
 
-### Prerequisites
+## Required Production State
 
-1. Python 3.11+
-2. Nginx
-3. uv (fast Python package installer)
+- PostgreSQL stores application data.
+- Redis stores server-side sessions.
+- Caddy terminates TLS and proxies WebSockets.
+- systemd runs uvicorn and restarts it after failure or reboot.
+- `QUART_DEBUG` is disabled.
+- `SECRET_KEY`, `SECURITY_PASSWORD_SALT`, and `SECURITY_TOTP_SECRETS` contain independent random values.
 
-**Optional:**
-- PostgreSQL (SQLite works by default)
-- Redis (for session store)
+## Invoice Archive
 
-### Server Setup
+ZigLag stores the exact PDF created when an invoice is issued under `instance/invoices/`. Back up that directory with the database. A database-only backup cannot restore issued invoices.
+
+Use one backup job that captures:
+
+1. A consistent PostgreSQL dump.
+2. The complete `instance/invoices/` tree.
+3. The application `.env` through a separate secrets backup.
+
+Test restoration on another host before treating the installation as production-ready.
+
+## Updates
+
+Pull a reviewed release commit, synchronize locked dependencies, apply migrations, and restart the service:
 
 ```bash
-# Update system
-sudo apt update && sudo apt upgrade -y
-
-# Install core dependencies
-sudo apt install -y python3-pip nginx
-pip install uv
-
-# Optional: PostgreSQL
-sudo apt install -y postgresql postgresql-contrib
-
-# Optional: Redis (for sessions)
-sudo apt install -y redis-server
+cd /home/<app-user>/invoices.example.com
+sudo -u <app-user> git pull --ff-only
+sudo -u <app-user> uv sync --extra full --frozen
+sudo -u <app-user> uv run quart db upgrade
+sudo systemctl restart invoices.example.com.service
 ```
 
-### Application Setup
+Confirm the installation after each update:
 
 ```bash
-git clone https://github.com/level09/stk.git
-cd stk
-./setup.sh                # Install deps + generate secure .env
-uv sync --extra full      # Add asyncpg + Redis
-uv run quart create-db    # Setup database
-uv run quart install      # Create admin user
+sudo -u <app-user> uv run quart verify --json
+sudo systemctl status invoices.example.com.service
+curl -fsS https://invoices.example.com/health
 ```
 
-### Database Configuration
+## Docker
 
-#### SQLite (Default)
-Works out of the box, database created automatically in `instance/`.
-
-#### PostgreSQL
-```bash
-# Create database
-sudo -u postgres createuser -s myuser
-sudo -u postgres createdb mydb
-
-# Update .env
-SQLALCHEMY_DATABASE_URI=postgresql+asyncpg://myuser:password@localhost/mydb
-
-# Initialize
-uv run quart create-db
-uv run quart install
-```
-
-### Nginx Configuration
-
-```nginx
-server {
-    listen 80;
-    server_name yourdomain.com;
-
-    location / {
-        proxy_pass http://127.0.0.1:5000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-
-        # WebSocket support
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-    }
-
-    location /static {
-        alias /path/to/stk/stk/static;
-        expires 30d;
-    }
-}
-```
-
-### SSL Configuration
+For a container deployment:
 
 ```bash
-sudo apt install -y certbot python3-certbot-nginx
-sudo certbot --nginx -d yourdomain.com
+docker compose up --build -d
 ```
 
-### Systemd Service
+Persist the PostgreSQL, Redis, and application instance volumes. The runtime image installs the Unicode font used for invoice PDFs.
 
-Create `/etc/systemd/system/stk.service`:
+## Before Issuing Production Invoices
 
-```ini
-[Unit]
-Description=stk Web Application
-After=network.target
-
-[Service]
-User=your_user
-WorkingDirectory=/path/to/stk
-Environment="PATH=/path/to/stk/.venv/bin"
-ExecStart=/path/to/stk/.venv/bin/uvicorn run:app --host 127.0.0.1 --port 5000
-
-[Install]
-WantedBy=multi-user.target
-```
-
-```bash
-sudo systemctl enable stk
-sudo systemctl start stk
-```
-
-## Production Checklist
-
-- [ ] Set `QUART_DEBUG=0` in `.env`
-- [ ] Use a secure `SECRET_KEY` (generated by setup.sh)
-- [ ] Use `postgresql+asyncpg://` for database
-- [ ] Configure proper logging
-- [ ] Set up monitoring (e.g., Sentry)
-- [ ] Set secure cookie flags (`SESSION_COOKIE_SECURE=True`)
-- [ ] Enable HTTPS via Nginx + Certbot
-- [ ] Nginx serves `/static` directly
-
-## Troubleshooting
-
-1. **Static files not found (404)**
-   - Check Nginx static file path configuration
-   - Verify file permissions
-
-2. **Database connection errors**
-   - Verify database credentials in `.env`
-   - Ensure DSN uses `postgresql+asyncpg://` (not `postgresql://`)
-   - Check database service status
-
-3. **Application not starting**
-   - Check systemd service logs: `sudo journalctl -u stk`
-   - Verify environment variables
-   - Check application logs
-
-4. **WebSocket not connecting**
-   - Ensure Nginx has `proxy_http_version 1.1` and `Upgrade` headers
-   - Check that `/ws` path is proxied correctly
+- Apply all migrations and confirm one Alembic head.
+- Create a domestic German VAT invoice and a reverse-charge test invoice.
+- Confirm both PDFs remain one page for the normal one-line-item case.
+- Download an issued PDF twice and verify the bytes remain unchanged.
+- Cancel a test invoice and confirm it cannot be edited, deleted, paid, or sent.
+- Have the business's Steuerberater approve the invoice wording and tax configuration.

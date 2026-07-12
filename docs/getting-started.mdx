@@ -1,63 +1,56 @@
 ---
 title: "Quick Start"
-description: "Get up and running with stk"
+description: "Run ZigLag locally"
 sidebarTitle: "Quick Start"
 ---
 
 ## Prerequisites
 
-- Python 3.11+
-- [uv](https://docs.astral.sh/uv/) (fast Python package manager)
+- Python 3.11 or newer
+- [uv](https://docs.astral.sh/uv/)
 
-**Optional:**
-- Redis (for session store)
-- PostgreSQL (SQLite works by default)
+SQLite works locally without another service. PostgreSQL and Redis are recommended for production.
 
 ## Local Setup
 
 ```bash
-# Install uv
-pip install uv  # or: curl -sSf https://astral.sh/uv/install.sh | bash
-
-# Clone and setup
-git clone git@github.com:level09/stk.git
-cd stk
-./setup.sh                # Installs deps + generates secure .env
-uv run quart create-db    # Setup database
-uv run quart install      # Create admin user
-uv run quart run          # Start server
+git clone git@github.com:level09/ziglag.git
+cd ziglag
+./setup.sh
+uv run quart create-db
+uv run quart run --port 5001
 ```
 
-Visit `http://localhost:5000` to see your application.
+Open `http://localhost:5001`. The first visit opens `/setup` so you can create the administrator account.
 
-## Docker Setup
+You can also create the account from the CLI:
 
-Full production stack with one command:
+```bash
+uv run quart install -e admin@example.com -p 'replace-this-password'
+```
+
+## Verify the Checkout
+
+```bash
+uv sync --extra dev
+uv run ruff check .
+uv run ruff format --check .
+uv run python -m unittest discover -s tests -v
+uv run python checks.py
+uv run quart verify --json
+```
+
+## Docker
 
 ```bash
 docker compose up --build
 ```
 
-Includes Redis, PostgreSQL, and Nginx.
-
-## Environment Configuration
-
-Key variables in `.env`:
-
-```bash
-SECRET_KEY=your_secret_key
-QUART_APP=run.py
-QUART_DEBUG=1                    # 0 in production
-
-# PostgreSQL (optional - SQLite works by default)
-# SQLALCHEMY_DATABASE_URI=postgresql+asyncpg://user:pass@localhost/dbname
-
-# Redis session store (optional)
-# REDIS_URL=redis://localhost:6379/1
-```
+The compose stack includes PostgreSQL, Redis, Nginx, and the ZigLag application.
 
 ## Next Steps
 
-- [Authentication](/authentication) - User management and OAuth setup
-- [Deployment](/deployment) - Production deployment guide
-- [Development](/development) - Development guidelines and best practices
+- [Invoicing and compliance](/invoicing-compliance)
+- [Authentication](/authentication)
+- [Deployment](/deployment)
+- [Development](/development)

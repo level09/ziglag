@@ -22,3 +22,5 @@ __pycache__/
 .claude/settings.local.json
 *.skill
 .quartenv
+.superpowers/
+.worktrees/

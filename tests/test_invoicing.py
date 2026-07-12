@@ -199,6 +199,15 @@ class ProductionConfigTests(unittest.TestCase):
         layout = (PROJECT_ROOT / "stk/templates/layout.html").read_text()
         self.assertRegex(layout, r"navigation\.js\?v=")
 
+    def test_list_currency_and_editor_error_cleanup_are_wired(self):
+        views = (PROJECT_ROOT / "stk/invoicing/views.py").read_text()
+        editor = (
+            PROJECT_ROOT / "stk/templates/invoicing/invoice_edit.html"
+        ).read_text()
+        self.assertIn('"currency_code": inv.currency_code', views)
+        self.assertIn("this.issueErrors = [];", editor)
+        self.assertIn("Could not create client", editor)
+
     def test_installers_generate_totp_secret(self):
         for filename in ("setup.sh", "deploy.sh"):
             with self.subTest(filename=filename):

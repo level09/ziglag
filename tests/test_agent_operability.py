@@ -1,3 +1,4 @@
+import os
 import unittest
 from datetime import datetime
 from unittest.mock import patch
@@ -16,6 +17,7 @@ from stk.commands import (
     build_verify_report,
     smoke_exit_code,
 )
+from stk.settings import Config
 from stk.user.models import Role, User
 
 
@@ -134,7 +136,15 @@ class AgentOperabilityTests(unittest.TestCase):
 
 class AgentLoginConfigTests(unittest.TestCase):
     def test_agent_login_is_disabled_by_default(self):
-        app = create_app()
+        with (
+            patch.dict(
+                os.environ,
+                {"STK_ENV": "production", "STK_ENABLE_AGENT_LOGIN": "false"},
+            ),
+            patch.object(Config, "STK_ENV", "production"),
+            patch.object(Config, "STK_ENABLE_AGENT_LOGIN", False),
+        ):
+            app = create_app()
 
         self.assertFalse(app.config["STK_ENABLE_AGENT_LOGIN"])
         self.assertEqual(app.config["STK_ENV"], "production")
@@ -254,7 +264,15 @@ class AgentLoginSessionTests(unittest.IsolatedAsyncioTestCase):
 
 class AgentLoginVerificationTests(unittest.TestCase):
     def test_verify_report_marks_agent_login_disabled_as_safe(self):
-        app = create_app()
+        with (
+            patch.dict(
+                os.environ,
+                {"STK_ENV": "production", "STK_ENABLE_AGENT_LOGIN": "false"},
+            ),
+            patch.object(Config, "STK_ENV", "production"),
+            patch.object(Config, "STK_ENABLE_AGENT_LOGIN", False),
+        ):
+            app = create_app()
         routes = build_routes_report(app)
 
         self.assertNotIn("/_test/login", {route["rule"] for route in routes})

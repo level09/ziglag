@@ -431,7 +431,8 @@
                 },
                 async createClientInline() {
                     this.billTo.name = this.clientSearch.trim();
-                    await this.persistClient();
+                    try { await this.persistClient(); }
+                    catch (err) { this.showSnack(err.response?.data?.message || 'Could not create client'); }
                 },
                 async persistClient() {
                     const name = (this.billTo.name || this.selectedClient?.name || this.clientSearch || '').trim();
@@ -449,6 +450,7 @@
                 },
                 async saveInvoice() {
                     this.saving = true;
+                    this.issueErrors = [];
                     try { await this.persistClient(); }
                     catch (err) { this.showSnack(err.response?.data?.message || 'Could not save client'); this.saving = false; return; }
                     const payload = { ...this.invoice, items: this.invoice.items.map((item, i) => ({ ...item, sort_order: i, unit_price: parseFloat(item.unit_price) || 0, quantity: parseFloat(item.quantity) || 0 })) };

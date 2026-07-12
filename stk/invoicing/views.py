@@ -397,6 +397,7 @@ async def api_invoices():
                 "balance_due": str(inv.balance_due),
                 "status": inv.status,
                 "currency_symbol": inv.currency_symbol,
+                "currency_code": inv.currency_code,
             }
         )
 

@@ -178,6 +178,27 @@ class PdfTests(unittest.TestCase):
 
 
 class ProductionConfigTests(unittest.TestCase):
+    def test_invoice_editor_preserves_inline_client_and_item_detail(self):
+        editor = (
+            PROJECT_ROOT / "stk/templates/invoicing/invoice_edit.html"
+        ).read_text()
+        self.assertIn("async persistClient()", editor)
+        self.assertIn('v-model="item.detail"', editor)
+        self.assertIn("await this.persistClient()", editor)
+
+    def test_invoice_editor_has_guided_issue_state(self):
+        editor = (
+            PROJECT_ROOT / "stk/templates/invoicing/invoice_edit.html"
+        ).read_text()
+        self.assertIn("issueErrors", editor)
+        self.assertIn("confirmDialog", editor)
+        self.assertNotIn("confirm('", editor)
+        self.assertIn("invoice.issued_at && invoice.status !== 'paid'", editor)
+
+    def test_navigation_asset_is_cache_busted(self):
+        layout = (PROJECT_ROOT / "stk/templates/layout.html").read_text()
+        self.assertRegex(layout, r"navigation\.js\?v=")
+
     def test_installers_generate_totp_secret(self):
         for filename in ("setup.sh", "deploy.sh"):
             with self.subTest(filename=filename):

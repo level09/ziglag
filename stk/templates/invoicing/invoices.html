@@ -55,11 +55,15 @@
                 </template>
 
                 <template v-slot:item.balance_due="{ item }">
-                    ${item.currency_symbol}${item.balance_due}
+                    ${formatMoney(item.balance_due, item.currency_code)}
                 </template>
 
                 <template v-slot:item.total="{ item }">
-                    ${item.currency_symbol}${item.total}
+                    ${formatMoney(item.total, item.currency_code)}
+                </template>
+
+                <template v-slot:item.date="{ item }">
+                    ${formatDate(item.date)}
                 </template>
 
             </v-data-table-server>
@@ -126,6 +130,12 @@
                 statusColor(status) {
                     const map = {draft:'grey', sent:'info', viewed:'info', paid:'success', overdue:'error', cancelled:'warning'};
                     return map[status] || 'grey';
+                },
+                formatMoney(value, currency) {
+                    return new Intl.NumberFormat(navigator.language, {style: 'currency', currency: currency || 'EUR'}).format(parseFloat(value || 0));
+                },
+                formatDate(value) {
+                    return value ? new Intl.DateTimeFormat(navigator.language).format(new Date(value + 'T00:00:00')) : '';
                 }
             }
         });

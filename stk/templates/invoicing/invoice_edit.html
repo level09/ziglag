@@ -362,12 +362,23 @@
             };
         }
 
+        function applyBusinessSettings(invoice, settings) {
+            invoice.from_name = settings.business_name || '';
+            invoice.from_email = settings.email || '';
+            invoice.from_address = [settings.address_line1, settings.address_line2, settings.address_line3].filter(Boolean).join('\n');
+            invoice.from_phone = settings.phone || '';
+            invoice.from_business_number = settings.business_number || '';
+            invoice.from_tax_number = settings.tax_number || '';
+            invoice.from_vat_id = settings.vat_id || '';
+        }
+
         let _clientTimeout = null;
 
         window.app = createApp({
             mixins: [layoutMixin],
             data() {
                 const inv = invoiceData.id ? invoiceData : newInvoice(settingsData);
+                if (!inv.issued_at) applyBusinessSettings(inv, settingsData);
                 if (inv.items) inv.items.forEach(item => {
                     item.unit_price = parseFloat(item.unit_price) || 0;
                     item.quantity = parseFloat(item.quantity) || 1;
@@ -388,7 +399,8 @@
             },
             computed: {
                 businessProfileComplete() {
-                    return !!(this.invoice.from_name && this.invoice.from_address && (this.invoice.from_tax_number || this.invoice.from_vat_id));
+                    const address = [settingsData.address_line1, settingsData.address_line2, settingsData.address_line3].filter(Boolean).join('');
+                    return !!(settingsData.business_name && address && (settingsData.tax_number || settingsData.vat_id));
                 },
                 totals() {
                     let subtotal = 0;

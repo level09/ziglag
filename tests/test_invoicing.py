@@ -185,6 +185,7 @@ class ProductionConfigTests(unittest.TestCase):
         self.assertIn("async persistClient()", editor)
         self.assertIn('v-model="item.detail"', editor)
         self.assertIn("await this.persistClient()", editor)
+        self.assertIn("applyBusinessSettings(inv, settingsData)", editor)
 
     def test_invoice_editor_has_guided_issue_state(self):
         editor = (

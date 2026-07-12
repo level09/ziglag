@@ -28,7 +28,7 @@ dependencies = [
     "python-dotenv>=1.1.1",
     "qrcode>=8.2",
     "quart>=0.20.0",
-    "quart-security>=1.1.0",
+    "quart-security>=1.4.1",
     "quart-session>=3.0.0",
     "rich>=14.0.0",
     "sqlalchemy[asyncio]>=2.0.41",
@@ -36,6 +36,7 @@ dependencies = [
     "webauthn>=2.6.0",
     "wtforms>=3.2.1",
     "fpdf2>=2.8.0",
+    "quart-rate-limiter>=0.12.1",
 ]
 
 
@@ -47,6 +48,7 @@ full = [
 dev = [
     "ruff",
     "pre-commit",
+    "playwright",
 ]
 asgi = [
     "hypercorn>=0.17.0",
@@ -81,6 +83,7 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
+"alembic/versions/*.py" = ["E402"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["stk"]

@@ -1,13 +1,17 @@
 import asyncio
 import inspect
+from datetime import timedelta
 
 import click
 from quart import Quart, g, render_template, request
+from quart_rate_limiter import RateLimiter, limit_blueprint
 from quart_security import Security, SQLAlchemyUserDatastore
+from quart_security.views import _ensure_csrf_token
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 import stk.commands as commands
 import stk.extensions as ext
+from stk.agent_login import agent_login_enabled, bp_agent_login
 from stk.extensions import session
 from stk.portal.views import portal
 from stk.public.views import public
@@ -107,15 +111,15 @@ def register_extensions(app):
         session.init_app(app)
     # For non-redis, fall back to Quart's built-in cookie sessions
 
-    # Rate limit auth endpoints
-    from stk.utils.ratelimit import check_security_rate_limit
+    # Rate limiting (replaces custom in-memory limiter)
+    RateLimiter(app)
+    security_bp = app.blueprints.get("security")
+    if security_bp:
+        limit_blueprint(security_bp, 10, timedelta(minutes=1))
 
-    _auth_paths = frozenset({"/login", "/register", "/reset", "/confirm"})
-
-    @app.before_request
-    async def _rate_limit_auth():
-        if request.path in _auth_paths and request.method == "POST":
-            return await check_security_rate_limit()
+    # CSRF token for POSTs outside quart-security templates (e.g. logout form).
+    # Uses the library's own get-or-create so tokens stay in sync.
+    app.jinja_env.globals["csrf_token"] = _ensure_csrf_token
 
     return None
 
@@ -131,6 +135,8 @@ def register_blueprints(app):
 
     app.register_blueprint(invoicing)
     app.register_blueprint(public_invoice)
+    if agent_login_enabled(app):
+        app.register_blueprint(bp_agent_login)
     return None
 
 
@@ -150,6 +156,9 @@ def register_errorhandlers(app):
         db_session = g.pop("db_session", None)
         if db_session is not None:
             try:
+                # Detach loaded instances first so rollback doesn't expire them;
+                # error templates still read current_user after the session closes.
+                db_session.expunge_all()
                 await db_session.rollback()
             except Exception:
                 logger.warning(
@@ -164,7 +173,8 @@ def register_errorhandlers(app):
 
         if _is_api_request():
             return {"message": "Internal server error"}, code
-        return await render_template(f"{code}.html"), code
+        # Fall back to 500.html for codes without a dedicated template (405, 403, ...)
+        return await render_template([f"{code}.html", "500.html"]), code
 
     async def render_error(error):
         error_code = getattr(error, "code", 500)
@@ -172,7 +182,7 @@ def register_errorhandlers(app):
             return {
                 "message": error.name if hasattr(error, "name") else "Error"
             }, error_code
-        return await render_template(f"{error_code}.html"), error_code
+        return await render_template([f"{error_code}.html", "500.html"]), error_code
 
     for errcode in [401, 404, 500]:
         app.errorhandler(errcode)(render_error)

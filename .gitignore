@@ -24,3 +24,11 @@ __pycache__/
 .quartenv
 .superpowers/
 .worktrees/
+.agents/
+
+# Private planning docs (never publish)
+docs/plans/
+docs/superpowers/
+
+# Browser smoke artifacts
+.stk/smoke/

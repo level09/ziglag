@@ -111,7 +111,6 @@ def check_routes(app):
 @check("Security config is sane")
 def check_security_config(app):
     assert app.config["SECURITY_PASSWORD_LENGTH_MIN"] >= 8
-    assert app.config["SESSION_USE_SIGNER"] is True
 
 
 @check("Async session factory initialized")
@@ -262,7 +261,9 @@ def check_admin_reset_route(app):
 async def check_http_index(app):
     client = app.test_client()
     response = await client.get("/")
-    assert response.status_code == 302, f"Expected 302 redirect, got {response.status_code}"
+    assert response.status_code == 302, (
+        f"Expected 302 redirect, got {response.status_code}"
+    )
 
 
 @check("GET /dashboard/ requires auth")

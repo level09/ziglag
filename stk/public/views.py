@@ -69,8 +69,8 @@ async def health():
         async with ext.engine.connect() as conn:
             await conn.execute(text("SELECT 1"))
         status["checks"]["database"] = "ok"
-    except Exception as e:
-        status["checks"]["database"] = f"error: {e}"
+    except Exception:
+        status["checks"]["database"] = "error"
         status["status"] = "degraded"
 
     # Redis check (if configured)
@@ -80,8 +80,8 @@ async def health():
         try:
             await backend.ping()
             status["checks"]["redis"] = "ok"
-        except Exception as e:
-            status["checks"]["redis"] = f"error: {e}"
+        except Exception:
+            status["checks"]["redis"] = "error"
             status["status"] = "degraded"
 
     code = 200 if status["status"] == "ok" else 503
@@ -121,7 +121,9 @@ async def setup():
 
         min_len = current_app.config.get("SECURITY_PASSWORD_LENGTH_MIN", 12)
         if not email or not password or len(password) < min_len:
-            await flash(f"Email and password (min {min_len} chars) are required.", "error")
+            await flash(
+                f"Email and password (min {min_len} chars) are required.", "error"
+            )
             return redirect("/setup")
 
         from quart_security import hash_password
@@ -265,7 +267,7 @@ async def google_login():
     from secrets import token_urlsafe
 
     state = token_urlsafe(32)
-    session["oauth_state"] = state
+    session["oauth_state_google"] = state
 
     redirect_uri = url_for("public.google_callback", _external=True)
     authorization_url = google_config["authorization_endpoint"]
@@ -287,10 +289,9 @@ async def google_login():
 async def google_callback():
     try:
         state = request.args.get("state")
-        if state != session.get("oauth_state"):
+        if state != session.pop("oauth_state_google", None):
             await flash("Invalid state parameter.", category="error")
             return redirect(url_for("security.login"))
-        session.pop("oauth_state", None)
 
         code = request.args.get("code")
         if not code:
@@ -350,7 +351,7 @@ async def github_login():
     from secrets import token_urlsafe
 
     state = token_urlsafe(32)
-    session["oauth_state"] = state
+    session["oauth_state_github"] = state
 
     redirect_uri = url_for("public.github_callback", _external=True)
 
@@ -370,10 +371,9 @@ async def github_login():
 async def github_callback():
     try:
         state = request.args.get("state")
-        if state != session.get("oauth_state"):
+        if state != session.pop("oauth_state_github", None):
             await flash("Invalid state parameter.", category="error")
             return redirect(url_for("security.login"))
-        session.pop("oauth_state", None)
 
         code = request.args.get("code")
         if not code:

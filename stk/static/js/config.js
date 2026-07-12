@@ -1,6 +1,6 @@
 /**
- * ZigLag - Central Configuration
- * Neo-brutalist editorial design system
+ * stk Framework - Central Configuration
+ * Monochrome brutalist palette
  */
 
 const config = {
@@ -9,6 +9,66 @@ const config = {
 
     // Vuetify configuration
     vuetifyConfig: {
+        // Tabler icon set for Vuetify's internal component icons (data-table
+        // sort/pagination, select dropdown, checkboxes, alerts). Without this
+        // Vuetify defaults to mdi aliases, which render blank since we ship no
+        // MDI font. Pass-through any explicit "ti ti-*" string; prefix bare names.
+        icons: {
+            defaultSet: 'tabler',
+            sets: {
+                tabler: {
+                    component: (props) => {
+                        const icon = props.icon || '';
+                        const cls = (icon.startsWith('ti ') || icon.startsWith('ti-'))
+                            ? icon
+                            : `ti ti-${icon}`;
+                        return Vue.h(props.tag, { class: cls });
+                    }
+                }
+            },
+            aliases: {
+                complete: 'check',
+                cancel: 'circle-x',
+                close: 'x',
+                delete: 'x',
+                clear: 'circle-x',
+                success: 'circle-check',
+                info: 'info-circle',
+                warning: 'alert-triangle',
+                error: 'alert-circle',
+                prev: 'chevron-left',
+                next: 'chevron-right',
+                checkboxOn: 'square-check',
+                checkboxOff: 'square',
+                checkboxIndeterminate: 'square-minus',
+                delimiter: 'circle',
+                sortAsc: 'arrow-up',
+                sortDesc: 'arrow-down',
+                expand: 'chevron-down',
+                menu: 'menu-2',
+                subgroup: 'chevron-down',
+                dropdown: 'chevron-down',
+                radioOn: 'circle-check',
+                radioOff: 'circle',
+                edit: 'pencil',
+                ratingEmpty: 'star',
+                ratingFull: 'star-filled',
+                ratingHalf: 'star-half-filled',
+                loading: 'loader-2',
+                first: 'chevrons-left',
+                last: 'chevrons-right',
+                unfold: 'arrows-sort',
+                file: 'paperclip',
+                plus: 'plus',
+                minus: 'minus',
+                calendar: 'calendar',
+                treeviewCollapse: 'chevron-down',
+                treeviewExpand: 'chevron-right',
+                eyeDropper: 'color-picker',
+                upload: 'upload',
+                color: 'palette'
+            }
+        },
         defaults: {
             VTextField: {
                 variant: 'outlined'
@@ -20,9 +80,6 @@ const config = {
                 variant: 'outlined'
             },
             VCombobox: {
-                variant: 'outlined'
-            },
-            VAutocomplete: {
                 variant: 'outlined'
             },
             VChip: {
@@ -53,84 +110,38 @@ const config = {
             }
         },
         theme: {
-            defaultTheme: 'light',
+            defaultTheme: window.__settings__?.dark ? 'dark' : 'light',
             themes: {
                 light: {
                     dark: false,
                     colors: {
-                        primary: '#353aaf',
-                        'primary-container': '#4e54c8',
-                        secondary: '#4f53b6',
-                        'secondary-container': '#9297fe',
-                        tertiary: '#59454a',
-                        'tertiary-container': '#725c62',
-                        error: '#ba1a1a',
-                        'error-container': '#ffdad6',
-                        background: '#fbf9f8',
-                        surface: '#fbf9f8',
-                        'surface-bright': '#fbf9f8',
-                        'surface-dim': '#dcd9d9',
-                        'surface-container-lowest': '#ffffff',
-                        'surface-container-low': '#f6f3f2',
-                        'surface-container': '#f0eded',
-                        'surface-container-high': '#eae8e7',
-                        'surface-container-highest': '#e4e2e1',
-                        'surface-variant': '#e4e2e1',
-                        'on-surface': '#1b1c1c',
-                        'on-surface-variant': '#464653',
-                        'on-primary': '#ffffff',
-                        'on-primary-container': '#dbdbff',
-                        'on-secondary': '#ffffff',
-                        'on-tertiary': '#ffffff',
-                        'on-error': '#ffffff',
-                        'on-background': '#1b1c1c',
-                        'outline': '#767685',
-                        'outline-variant': '#c6c5d5',
-                        'inverse-surface': '#303030',
-                        'inverse-on-surface': '#f3f0f0',
-                        'inverse-primary': '#bfc2ff',
-                        info: '#353aaf',
-                        success: '#16A34A',
-                        warning: '#EAB308',
+                        primary: '#1a1a1a',
+                        secondary: '#555555',
+                        accent: '#333333',
+                        error: '#b91c1c',
+                        info: '#1a1a1a',
+                        success: '#166534',
+                        warning: '#a16207',
+                        background: '#fafafa',
+                        surface: '#fafafa',
+                        'surface-light': '#f0f0f0',
+                        'on-surface': '#1a1a1a',
                     }
                 },
                 dark: {
                     dark: true,
                     colors: {
-                        primary: '#bfc2ff',
-                        'primary-container': '#353aaf',
-                        secondary: '#bfc1ff',
-                        'secondary-container': '#363a9c',
-                        tertiary: '#dbc0c6',
-                        'tertiary-container': '#554247',
-                        error: '#ffb4ab',
-                        'error-container': '#93000a',
-                        background: '#131314',
-                        surface: '#131314',
-                        'surface-bright': '#3a3a3c',
-                        'surface-dim': '#131314',
-                        'surface-container-lowest': '#0e0e0f',
-                        'surface-container-low': '#1b1c1c',
-                        'surface-container': '#1f2020',
-                        'surface-container-high': '#2a2a2b',
-                        'surface-container-highest': '#353536',
-                        'surface-variant': '#464653',
-                        'on-surface': '#e5e2e1',
-                        'on-surface-variant': '#c6c5d5',
-                        'on-primary': '#1b1f90',
-                        'on-primary-container': '#dbdbff',
-                        'on-secondary': '#1c2090',
-                        'on-tertiary': '#3e2b30',
-                        'on-error': '#690005',
-                        'on-background': '#e5e2e1',
-                        'outline': '#908f9f',
-                        'outline-variant': '#464653',
-                        'inverse-surface': '#e5e2e1',
-                        'inverse-on-surface': '#303030',
-                        'inverse-primary': '#4a50c4',
-                        info: '#bfc2ff',
-                        success: '#4ade80',
+                        primary: '#e5e5e5',
+                        secondary: '#a3a3a3',
+                        accent: '#d4d4d4',
+                        error: '#fca5a5',
+                        info: '#e5e5e5',
+                        success: '#86efac',
                         warning: '#fde047',
+                        background: '#0a0a0a',
+                        surface: '#141414',
+                        'surface-light': '#262626',
+                        'on-surface': '#e5e5e5',
                     }
                 }
             }

@@ -57,7 +57,9 @@ class Config:
 
     SECURITY_FRESHNESS = timedelta(minutes=60)
     SECURITY_FRESHNESS_GRACE_PERIOD = timedelta(minutes=60)
-    SECURITY_PASSWORD_LENGTH_MIN = int(os.environ.get("SECURITY_PASSWORD_LENGTH_MIN", 12))
+    SECURITY_PASSWORD_LENGTH_MIN = int(
+        os.environ.get("SECURITY_PASSWORD_LENGTH_MIN", 12)
+    )
 
     SECURITY_TOTP_SECRETS = {"1": os.environ.get("SECURITY_TOTP_SECRETS")}
     SECURITY_TOTP_ISSUER = "ZigLag"
@@ -70,7 +72,9 @@ class Config:
     SESSION_TYPE = _SESSION_TYPE
     SESSION_URI = _redis_url  # quart-session auto-creates async redis from URI
     SESSION_KEY_PREFIX = "session:"
-    SESSION_USE_SIGNER = True
+    # quart-session's signer emits a bytes cookie value that modern werkzeug
+    # rejects (500 on login); random session ids don't need signing
+    SESSION_USE_SIGNER = False
     PERMANENT_SESSION_LIFETIME = 3600
     SESSION_COOKIE_SECURE = (
         os.environ.get("SESSION_COOKIE_SECURE", "False").lower() == "true"
@@ -83,6 +87,15 @@ class Config:
     # Session management
     DISABLE_MULTIPLE_SESSIONS = (
         os.environ.get("DISABLE_MULTIPLE_SESSIONS", "False").lower() == "true"
+    )
+    # Test-only browser session handoff for agent-driven development.
+    STK_ENV = os.environ.get("STK_ENV", "production")
+    STK_ENABLE_AGENT_LOGIN = (
+        os.environ.get("STK_ENABLE_AGENT_LOGIN", "False").lower() == "true"
+        or os.environ.get("STK_ENABLE_AGENT_LOGIN") == "1"
+    )
+    STK_AGENT_LOGIN_MAX_TTL_SECONDS = int(
+        os.environ.get("STK_AGENT_LOGIN_MAX_TTL_SECONDS", "60")
     )
 
     # Email settings (used by aiosmtplib via AsyncMailUtil)

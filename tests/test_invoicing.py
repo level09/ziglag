@@ -59,6 +59,25 @@ class InvoiceValidationTests(unittest.TestCase):
         invoice.revoke_share_token()
         self.assertFalse(invoice.share_is_active(now))
 
+    def test_ensure_share_token_reuses_active_link(self):
+        invoice = Invoice()
+        now = datetime.now()
+        first = invoice.ensure_share_token(now)
+        self.assertEqual(invoice.ensure_share_token(now + timedelta(days=1)), first)
+        self.assertNotEqual(invoice.ensure_share_token(now + timedelta(days=31)), first)
+
+    def test_manual_invoice_number_via_from_dict(self):
+        invoice = Invoice()
+        invoice.from_dict({"invoice_number": " RSN0068 "})
+        self.assertEqual(invoice.invoice_number, "RSN0068")
+        invoice.from_dict({"invoice_number": ""})
+        self.assertEqual(invoice.invoice_number, "RSN0068")
+
+    def test_service_period_end_without_start_is_validation_error(self):
+        invoice = valid_invoice()
+        invoice.service_date_from = None
+        self.assertIn("Service date is required", invoice.validate_for_issue())
+
     def test_archive_paths_are_relative_and_contained(self):
         self.assertEqual(
             invoice_archive_relative_path(1, 2),

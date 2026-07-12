@@ -37,7 +37,7 @@ uv run quart backup create --output backups/ziglag-$(date +%Y%m%d).tar.gz
 uv run quart backup verify backups/ziglag-$(date +%Y%m%d).tar.gz
 ```
 
-Test restoration into an empty staging installation with `uv run quart backup restore ARCHIVE`. Restore refuses non-empty targets unless `--force` is supplied. PostgreSQL requires compatible `pg_dump` and `pg_restore` executables. Back up `.env` separately as a secret.
+Test restoration into an empty staging installation with `uv run quart backup restore ARCHIVE`. Restore refuses non-empty SQLite targets unless `--force` is supplied; PostgreSQL restores always require `--force` because `pg_restore --clean` overwrites the target database. PostgreSQL requires compatible `pg_dump` and `pg_restore` executables. Back up `.env` separately as a secret.
 
 A bundle on the application server is not an offsite backup. Copy it to independent storage, monitor transfers, and test restoration periodically.
 

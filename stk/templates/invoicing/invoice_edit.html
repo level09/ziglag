@@ -48,7 +48,7 @@
                     <v-btn v-bind="props" icon variant="text" size="small" class="ml-1"><i class="ti ti-dots-vertical"></i></v-btn>
                 </template>
                 <v-list density="compact">
-                    <v-list-item @click="shareInvoice"><v-list-item-title>Get Share Link</v-list-item-title></v-list-item>
+                    <v-list-item v-if="invoice.issued_at" @click="shareInvoice"><v-list-item-title>Get Share Link</v-list-item-title></v-list-item>
                     <v-list-item :href="'/api/invoice/' + invoice.id + '/pdf'" target="_blank"><v-list-item-title>Download PDF</v-list-item-title></v-list-item>
                     <v-list-item v-if="!invoice.issued_at" @click="deleteInvoice"><v-list-item-title class="text-error">Delete Invoice</v-list-item-title></v-list-item>
                 </v-list>
@@ -197,7 +197,7 @@
                 <v-row>
                     <v-col cols="12"><v-select label="Tax Treatment" v-model="invoice.tax_treatment" density="compact" :items="[{title:'Standard VAT',value:'standard'},{title:'Reverse Charge',value:'reverse_charge'},{title:'Tax Exempt',value:'exempt'}]"></v-select></v-col>
                 <v-col cols="12" sm="4">
-                    <v-text-field label="Invoice Number" :model-value="invoice.invoice_number || 'Assigned when issued'" density="compact" readonly></v-text-field>
+                    <v-text-field label="Invoice Number" v-model="invoice.invoice_number" density="compact" :readonly="!!invoice.issued_at" placeholder="Auto"></v-text-field>
                 </v-col>
                 <v-col cols="12" sm="4">
                     <v-text-field label="Date" v-model="invoice.date" type="date" density="compact"></v-text-field>

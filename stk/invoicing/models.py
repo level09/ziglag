@@ -280,7 +280,7 @@ class Invoice(Base):
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("user.id"), nullable=False)
     client_id = Column(Integer, ForeignKey("client.id"), nullable=True)
-    invoice_number = Column(String(50), nullable=True, unique=True)
+    invoice_number = Column(String(50), nullable=False, unique=True)
     status = Column(String(20), default="draft")
     date = Column(Date, default=date.today)
     due_date = Column(Date, nullable=True)
@@ -399,7 +399,7 @@ class Invoice(Base):
             errors.append("Every line item needs a description")
         if not self.service_date_from:
             errors.append("Service date is required")
-        if self.service_date_to and self.service_date_to < self.service_date_from:
+        elif self.service_date_to and self.service_date_to < self.service_date_from:
             errors.append("Service period end cannot precede its start")
         if self.tax_treatment == "reverse_charge":
             if not self.from_vat_id or not self.client_vat_id:
@@ -487,6 +487,11 @@ class Invoice(Base):
         now = now or datetime.now()
         self.share_token = secrets.token_urlsafe(32)
         self.share_token_expires_at = now + lifetime
+        return self.share_token
+
+    def ensure_share_token(self, now=None, lifetime=timedelta(days=30)):
+        if not self.share_is_active(now):
+            self.rotate_share_token(now, lifetime)
         return self.share_token
 
     def revoke_share_token(self):
@@ -602,6 +607,8 @@ class Invoice(Base):
             if f in data:
                 setattr(self, f, data[f])
 
+        if data.get("invoice_number"):
+            self.invoice_number = str(data["invoice_number"]).strip()
         if "date" in data and data["date"]:
             self.date = date.fromisoformat(data["date"])
         if "due_date" in data and data["due_date"]:

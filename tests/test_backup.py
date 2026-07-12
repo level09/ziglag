@@ -57,6 +57,35 @@ class BackupTests(unittest.TestCase):
                 self.root / "instance",
             )
 
+    def test_restore_into_empty_invoices_dir_succeeds(self):
+        archive = create_backup(
+            f"sqlite+aiosqlite:///{self.db}",
+            self.root / "instance",
+            self.root / "backup.tar.gz",
+        )
+        restored = self.root / "restored.db"
+        restored_instance = self.root / "restored-instance"
+        (restored_instance / "invoices").mkdir(parents=True)
+        restore_backup(
+            archive,
+            f"sqlite+aiosqlite:///{restored}",
+            restored_instance,
+        )
+        self.assertTrue((restored_instance / "invoices/1/2/invoice-2.pdf").is_file())
+
+    def test_postgres_restore_requires_force(self):
+        archive = create_backup(
+            f"sqlite+aiosqlite:///{self.db}",
+            self.root / "instance",
+            self.root / "backup.tar.gz",
+        )
+        with self.assertRaisesRegex(BackupError, "not empty"):
+            restore_backup(
+                archive,
+                "postgresql+asyncpg://user:pass@localhost/app",
+                self.root / "fresh-instance",
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

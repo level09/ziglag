@@ -118,8 +118,12 @@ def restore_backup(archive, database_url, instance_path, *, force=False):
     instance_path = Path(instance_path)
     sqlite_path = _sqlite_path(database_url)
     invoices = instance_path / "invoices"
-    occupied = (sqlite_path and sqlite_path.exists()) or (
-        invoices.exists() and any(invoices.rglob("*"))
+    # pg_restore --clean is destructive and we cannot cheaply prove the target
+    # database is empty, so PostgreSQL restores always require --force.
+    occupied = (
+        sqlite_path is None
+        or sqlite_path.exists()
+        or (invoices.exists() and any(invoices.rglob("*")))
     )
     if occupied and not force:
         raise BackupError("Restore target is not empty")
@@ -158,4 +162,4 @@ def restore_backup(archive, database_url, instance_path, *, force=False):
                 raise BackupError(f"PostgreSQL restore failed: {exc}") from exc
         if (root / "invoices").exists():
             invoices.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copytree(root / "invoices", invoices)
+            shutil.copytree(root / "invoices", invoices, dirs_exist_ok=True)

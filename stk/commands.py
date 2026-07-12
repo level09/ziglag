@@ -12,7 +12,7 @@ import subprocess
 import sys
 import tempfile
 import time
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 import click
@@ -45,7 +45,7 @@ def backup_create(output):
     from stk.backup import BackupError, create_backup
 
     target = (
-        output or Path("backups") / f"ziglag-{datetime.utcnow():%Y%m%dT%H%M%SZ}.tar.gz"
+        output or Path("backups") / f"ziglag-{datetime.now(UTC):%Y%m%dT%H%M%SZ}.tar.gz"
     )
     try:
         archive = create_backup(

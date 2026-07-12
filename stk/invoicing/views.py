@@ -15,6 +15,7 @@ from quart import (
 )
 from quart_security import auth_required, current_user
 from sqlalchemy import extract, func, select
+from sqlalchemy.exc import IntegrityError
 
 from stk.invoicing.models import (
     BusinessSettings,
@@ -54,6 +55,16 @@ def resolve_invoice_archive(instance_path, stored_path):
     return candidate
 
 
+async def next_free_invoice_number(settings):
+    while True:
+        number = settings.generate_invoice_number()
+        exists = await g.db_session.scalar(
+            select(Invoice.id).where(Invoice.invoice_number == number)
+        )
+        if not exists:
+            return number
+
+
 async def _issue_invoice(invoice, status="sent"):
     if invoice.is_issued:
         return None
@@ -77,8 +88,6 @@ async def _issue_invoice(invoice, status="sent"):
     from stk.invoicing.pdf import generate_invoice_pdf
 
     settings = await BusinessSettings.get_or_create(current_user.id)
-    if not invoice.invoice_number:
-        invoice.invoice_number = settings.generate_invoice_number()
     invoice.invoice_title_snapshot = settings.invoice_title or "Invoice"
     invoice.payment_instructions_snapshot = settings.payment_instructions or ""
     pdf_bytes = bytes(await generate_invoice_pdf(invoice, settings))
@@ -185,26 +194,12 @@ async def api_settings_update():
     settings = await BusinessSettings.get_or_create(current_user.id)
     data = await request.json
     try:
-        prefix = data.get("invoice_prefix", settings.invoice_prefix) or ""
-        if "invoice_next_number" in data:
-            next_number = int(data["invoice_next_number"])
-            result = await g.db_session.execute(
-                select(Invoice.invoice_number).where(
-                    Invoice.user_id == current_user.id,
-                    Invoice.issued_at.is_not(None),
-                    Invoice.invoice_number.startswith(prefix),
-                )
-            )
-            used = [
-                int(number[len(prefix) :])
-                for number in result.scalars()
-                if number and number[len(prefix) :].isdigit()
-            ]
-            if used and next_number <= max(used):
-                return {"message": f"Next number must be greater than {max(used)}"}, 400
         settings.from_dict(data)
         await g.db_session.commit()
         return {"message": "Settings saved"}
+    except ValueError as exc:
+        await g.db_session.rollback()
+        return {"message": str(exc)}, 400
     except Exception:
         await g.db_session.rollback()
         log.exception("Error saving settings")
@@ -431,6 +426,9 @@ async def api_invoice_create():
         item.from_dict(item_data)
         invoice.items.append(item)
 
+    if not invoice.invoice_number:
+        invoice.invoice_number = await next_free_invoice_number(settings)
+
     invoice.recalculate()
     g.db_session.add(invoice)
     try:
@@ -440,6 +438,9 @@ async def api_invoice_create():
         )
         await g.db_session.commit()
         return {"message": "Invoice created", "id": invoice.id}
+    except IntegrityError:
+        await g.db_session.rollback()
+        return {"message": "Invoice number already in use"}, 409
     except Exception:
         await g.db_session.rollback()
         log.exception("Error creating invoice")
@@ -476,6 +477,9 @@ async def api_invoice_update(id):
     try:
         await g.db_session.commit()
         return {"message": "Invoice updated"}
+    except IntegrityError:
+        await g.db_session.rollback()
+        return {"message": "Invoice number already in use"}, 409
     except Exception:
         await g.db_session.rollback()
         log.exception("Error updating invoice")
@@ -651,7 +655,9 @@ async def api_invoice_share(id):
     invoice = await g.db_session.get(Invoice, id)
     if not invoice or invoice.user_id != current_user.id:
         return {"message": "Not found"}, 404
-    token = invoice.rotate_share_token()
+    if not invoice.is_issued:
+        return {"message": "Only issued invoices can be shared"}, 409
+    token = invoice.ensure_share_token()
     await g.db_session.commit()
     return {
         "token": token,
@@ -697,7 +703,7 @@ async def api_invoice_send(id):
         pdf_bytes = archive.read()
 
     # Build share link
-    token = invoice.rotate_share_token()
+    token = invoice.ensure_share_token()
     share_url = request.host_url.rstrip("/") + f"/i/{token}"
 
     invoice_title = invoice.invoice_title_snapshot or "Invoice"

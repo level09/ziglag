@@ -8,7 +8,13 @@ Release A is implemented locally. Shared styling, the dashboard, invoice list, r
 
 Verification: 113 unit tests, 26 sanity checks, Ruff, and the invoice-editor and workspace browser flows pass. Browser checks cover search races, retry, URL state, keyboard links, dark/light themes, narrow layouts, long unbroken text, mocked email feedback, reports, login, and issued PDF regression. Desktop and phone screenshots were inspected. Layouts were checked at 390, 720, and 1440 CSS pixels; a separate browser zoom-control test was not run.
 
-Release B remains planned: setup guidance, customer/settings form recovery, public invoice escaping and snapshot behavior, and the recipient page redesign. The AI draft experiment and durable email history remain separate.
+Release B is implemented locally. Setup guidance uses the same required fields as issue validation. Customer and settings forms retain failed and in-flight edits. Customer paid totals stay separate by currency. Settings now have four sections and a visible save state. The recipient page puts payment details and PDF download together, escapes user text, and retains empty issued snapshots. Missing issued archives return an error in both public and authenticated downloads.
+
+Email preferences now apply to both message variants and support a private account copy. Partial SMTP rejection identifies whether the customer or only the private copy failed. Tests mock all email transport. No delivery claim is made.
+
+Release B verification: 124 unit tests, 26 sanity checks, Ruff, and all three browser flows pass (`browser_invoice_editor`, `browser_product_workspace`, `browser_release_b`). Checks include failed saves, edits during saves, navigation protection, setup through the UI, issue, partial and full payment, currency separation, public templates, link expiry/revocation, ownership, escaped text, and exact archived PDF bytes. Desktop and phone screenshots were inspected in light and dark modes. Actual browser zoom controls remain untested; narrowed 720 CSS-pixel layouts are covered.
+
+Settings audit: date format, PayPal/other payment fields, and the quantity visibility switch had no active consumer. Their controls were removed; stored values remain intact. The supported payment instructions field remains available. No schema or dependency change is needed. The AI draft experiment and durable email history remain separate.
 
 ## Product direction
 

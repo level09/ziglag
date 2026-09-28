@@ -2,7 +2,7 @@
 
 > **For agentic workers:** Use superpowers:executing-plans to implement this plan task by task. Steps use checkbox syntax for tracking. This document is a plan, not authorization to deploy, migrate a live database, or send email to real customers.
 
-**Execution status (2026-09-28):** Release A implemented and verified locally; Release B remains planned. Tests are consolidated in `tests/test_product_workspace.py`. Paid includes non-positive balances to match the model, including overpayments. See `docs/product-review-2026-09-27.md` for verification and limits.
+**Execution status (2026-09-28):** Releases A and B implemented and verified locally. Actual browser zoom remains an explicit verification limit. Route tests are consolidated in `tests/test_product_workspace.py`; Release B browser coverage is in `tests/browser_release_b.py`, instead of duplicating the original fixture. Paid includes non-positive balances to match the model, including overpayments. See `docs/product-review-2026-09-27.md` for verification and limits.
 
 **Goal:** Make the full path from business setup to a paid invoice clear, consistent, and dependable.
 
@@ -10,7 +10,7 @@
 
 **Tech stack:** Python with uv, Quart, SQLAlchemy 2, Alembic, Vue 3, Vuetify 3, fpdf2, unittest, Playwright.
 
-**Spec:** [Product review](../../product-review-2026-09-27.md), informed by the [UX scout](../../ux-edge-scout-2026-09-27.md). Source review completed on 2026-09-27; the proposed changes below are not yet implemented.
+**Spec:** [Product review](../../product-review-2026-09-27.md), informed by the [UX scout](../../ux-edge-scout-2026-09-27.md). Source review completed on 2026-09-27; the implementation status above records the completed scope.
 
 ## Global constraints
 
@@ -24,7 +24,7 @@
 
 ## Design decisions
 
-The visual direction is a quiet document workspace: warm neutral background, white document surfaces, dark ink, and one primary action style. Keep the current logo. Use Plus Jakarta Sans, already loaded, as the shared interface font with a system fallback. Use tabular numerals for money. Start with the existing neutral primary colour; status colours communicate state rather than decorate cards.
+The visual direction is a quiet document workspace: warm neutral background, white document surfaces, dark ink, and one primary action style. Keep the current logo. Use Plus Jakarta Sans, already loaded, as the shared interface font with a system fallback. Use tabular numerals for money. Use the accepted navy navigation and teal primary colour, with distinct blue drafts, amber overdue, green paid, and cyan issued states. See `docs/color-direction-2026-09-28.md` for the colour pass.
 
 Use 4, 8, 12, 16, 24, and 32 px spacing; 1 px borders; 8 px control and panel corners; and shadows only for floating menus or dialogs. Use 14-16 px body text, 24-28 px page titles, and at least 44 px touch targets for primary mobile controls. Keep the invoice document visually distinct from surrounding controls. Check contrast in the rendered themes before accepting colours.
 
@@ -179,12 +179,12 @@ self.assertEqual(report["yearly_total"], "0.30")
 
 **Interfaces:** keep existing create/update routes and business profile validation. Replace the customer list's misleading single “Total billed” figure with paid-invoice totals grouped by currency, labelled “Paid invoices”; expose them as `paid_totals_by_currency` rows with `currency_code` and decimal-string `amount`. Preserve `total_billed` in API responses for compatibility during this release, but stop using it in the UI.
 
-- [ ] Keep the customer dialog open while saving and on failure. Disable duplicate submission, show the server error beside the form, and close only after success. Use real labelled buttons for edit/delete. Add loading, no-results, and Retry states to customer search.
-- [ ] Apply issued, paid, non-cancelled predicates to customer totals and group by invoice currency. Verify EUR and USD render separately. Do not change customer records when only searching in the invoice editor.
-- [ ] Group settings into Business identity, Invoice defaults, Payment instructions, and Email preferences. Keep primary save feedback visible, track dirty state from a stable snapshot, and warn before leaving unsaved edits. Restore pending controls after failed saves.
-- [ ] Use `default_email_message` as the plain-text introduction in both email variants, followed by the existing invoice link. Escape it in HTML and preserve line breaks. When `send_copy_to_self` is enabled, include the authenticated account email as an additional envelope recipient without exposing it in recipient headers; deduplicate it if it matches the customer. Mock SMTP and assert the introduction, escaping, and recipient list. Audit the remaining settings controls against their read paths and report unsupported behavior before expanding scope. Avoid changing invoice numbering, tax, or currency defaults during presentation work.
-- [ ] Add a dashboard setup checklist backed by the existing `business_profile_missing` validation. Required fields block issue as before; optional payment details remain optional. Each item links to its settings section. Once the profile is ready, link directly to creating the first invoice.
-- [ ] Browser checks: reject customer save with 503 and assert typed values remain; retry successfully; edit settings and test navigation protection; complete required setup through the UI and issue through the normal editor. Assert the checklist and issue validation agree.
+- [x] Keep the customer dialog open while saving and on failure. Disable duplicate submission, show the server error beside the form, and close only after success. Use real labelled buttons for edit/delete. Add loading, no-results, and Retry states to customer search.
+- [x] Apply issued, paid, non-cancelled predicates to customer totals and group by invoice currency. Verify EUR and USD render separately. Do not change customer records when only searching in the invoice editor.
+- [x] Group settings into Business identity, Invoice defaults, Payment instructions, and Email preferences. Keep primary save feedback visible, track dirty state from a stable snapshot, and warn before leaving unsaved edits. Restore pending controls after failed saves.
+- [x] Use `default_email_message` as the plain-text introduction in both email variants, followed by the existing invoice link. Escape it in HTML and preserve line breaks. When `send_copy_to_self` is enabled, include the authenticated account email as an additional envelope recipient without exposing it in recipient headers; deduplicate it if it matches the customer. Mock SMTP and assert the introduction, escaping, and recipient list. Audit the remaining settings controls against their read paths and report unsupported behavior before expanding scope. Avoid changing invoice numbering, tax, or currency defaults during presentation work.
+- [x] Add a dashboard setup checklist backed by the existing `business_profile_missing` validation. Required fields block issue as before; optional payment details remain optional. Each item links to its settings section. Once the profile is ready, link directly to creating the first invoice.
+- [x] Browser checks: reject customer save with 503 and assert typed values remain; retry successfully; edit settings and test navigation protection; complete required setup through the UI and issue through the normal editor. Assert the checklist and issue validation agree.
 
 ### Task 7: safe, clear recipient experience
 
@@ -192,17 +192,17 @@ self.assertEqual(report["yearly_total"], "0.30")
 
 **Interfaces:** keep `/i/<token>` and `/i/<token>/pdf`. Preserve the same generic 404 result for invalid, expired, and revoked tokens. The page may explain that the link is unavailable without revealing invoice identity or customer information.
 
-- [ ] Render addresses, notes, and payment instructions as escaped text with CSS line-break handling. Remove `safe` from plain user text. Test an HTML-shaped value and assert it is visible text, not an element.
+- [x] Render addresses, notes, and payment instructions as escaped text with CSS line-break handling. Remove `safe` from plain user text. Test an HTML-shaped value and assert it is visible text, not an element.
 
 ```html
 <div class="invoice-text">{{ invoice.notes }}</div>
 <style>.invoice-text { white-space: pre-line; overflow-wrap: anywhere; }</style>
 ```
 
-- [ ] Lead with invoice reference, amount due, currency code, due date, and Download PDF. Keep payment instructions next to these details. Retain template variants but align spacing, focus states, and responsive behavior with the product direction.
-- [ ] For issued invoices, use snapshots even when a snapshot is intentionally empty. Do not substitute current customer data for empty issued fields. Keep draft fallback behavior separate. Never regenerate an issued PDF to recover from a missing archive; report an error without leaking its path.
-- [ ] Use the generic unavailable template for link failures. Test invalid, expired, and revoked tokens, archived PDF bytes, missing archive, long addresses, empty optional fields, and markup-shaped notes.
-- [ ] Browser check at 390 px in light/dark system settings: no page overflow, payment details remain readable, download works, keyboard focus is visible. Verify another user's authenticated endpoints remain unavailable even when a public token is known.
+- [x] Lead with invoice reference, amount due, currency code, due date, and Download PDF. Keep payment instructions next to these details. Retain template variants but align spacing, focus states, and responsive behavior with the product direction.
+- [x] For issued invoices, use snapshots even when a snapshot is intentionally empty. Do not substitute current customer data for empty issued fields. Keep draft fallback behavior separate. Never regenerate an issued PDF to recover from a missing archive; report an error without leaking its path.
+- [x] Use the generic unavailable template for link failures. Test invalid, expired, and revoked tokens, archived PDF bytes, missing archive, long addresses, empty optional fields, and markup-shaped notes.
+- [x] Browser check at 390 px in light/dark system settings: no page overflow, payment details remain readable, download works, keyboard focus is visible. Verify another user's authenticated endpoints remain unavailable even when a public token is known.
 
 ## Release gate
 
@@ -210,24 +210,25 @@ self.assertEqual(report["yearly_total"], "0.30")
 
 **Files:** extend `tests/browser_product_workspace.py`, update `docs/product-review-2026-09-27.md` with actual completed scope, and update the project run documentation if a new command is needed.
 
-- [ ] Use temporary SQLite and an isolated instance directory, following `tests/browser_invoice_editor.py`. Create the business and customer through their normal UI/API paths. Issue invoices through normal validation so snapshots, access state, and archived PDFs exist. Send only mocked email; never contact real recipients.
-- [ ] Exercise setup, customer creation, draft editing, review/issue, list search, recorded partial/full payment, dashboard filters, reports, and public PDF. Assert real amounts and state transitions. Include the failure cases assigned above; do not rely on row counts or source-string checks alone.
-- [ ] Run the existing editor browser test to protect autosave, in-flight edits, retry, and issued locks. Capture desktop/mobile screenshots of changed screens and inspect them; screenshots alone are not a pass.
+- [x] Use temporary SQLite and an isolated instance directory, following `tests/browser_invoice_editor.py`. Create the business and customer through their normal UI/API paths. Issue invoices through normal validation so snapshots, access state, and archived PDFs exist. Send only mocked email; never contact real recipients.
+- [x] Exercise setup, customer creation, draft editing, review/issue, list search, recorded partial/full payment, dashboard filters, reports, and public PDF. Assert real amounts and state transitions. Include the failure cases assigned above; do not rely on row counts or source-string checks alone.
+- [x] Run the existing editor browser test to protect autosave, in-flight edits, retry, and issued locks. Capture desktop/mobile screenshots of changed screens and inspect them; screenshots alone are not a pass.
 
 ```bash
-uv run ruff check stk/invoicing/models.py stk/invoicing/views.py stk/invoicing/public.py stk/invoicing/queries.py stk/portal/views.py tests/test_invoice_queries.py tests/test_invoice_email.py tests/test_invoice_reports.py tests/test_public_invoice.py tests/browser_product_workspace.py
-uv run ruff format --check stk/invoicing/models.py stk/invoicing/views.py stk/invoicing/public.py stk/invoicing/queries.py stk/portal/views.py tests/test_invoice_queries.py tests/test_invoice_email.py tests/test_invoice_reports.py tests/test_public_invoice.py tests/browser_product_workspace.py
+uv run ruff check .
+uv run ruff format --check stk/invoicing/models.py stk/invoicing/views.py stk/invoicing/public.py stk/invoicing/queries.py stk/portal/views.py tests/test_product_workspace.py tests/browser_product_workspace.py tests/browser_release_b.py
 uv run python -m unittest discover -s tests -v
 uv run python checks.py
 uv run python -m tests.browser_invoice_editor
 uv run python -m tests.browser_product_workspace
+uv run python -m tests.browser_release_b
 git diff --check
 ```
 
 Local tests may use `UV_CACHE_DIR=/tmp/ziglag-uv-cache` if needed. Check current migration heads before any migration proposal; do not rely on the older chain in project notes. These releases do not require a planned schema change.
 
 - [ ] Confirm no browser console errors, no horizontal page overflow at 390 px, and useful focus order at 200% zoom. Confirm role restrictions, both themes, and the server-owned date/currency values.
-- [ ] Review the diff against task scope, record the commands actually run and any unverified areas, then present the release for review. No production deployment or external publication is part of this gate.
+- [x] Review the diff against task scope, record the commands actually run and any unverified areas, then present the release for review. No production deployment or external publication is part of this gate.
 
 ## Finish line and later work
 

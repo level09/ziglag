@@ -205,7 +205,15 @@ async def settings_page():
 async def api_settings_get():
     settings = await BusinessSettings.get_or_create(current_user.id)
     await g.db_session.commit()
-    return Response(json.dumps(settings.to_dict()), content_type="application/json")
+    return Response(
+        json.dumps(
+            {
+                **settings.to_dict(),
+                "profile_missing": business_profile_missing(settings),
+            }
+        ),
+        content_type="application/json",
+    )
 
 
 @invoicing.post("/api/settings")
@@ -215,7 +223,11 @@ async def api_settings_update():
     try:
         settings.from_dict(data)
         await g.db_session.commit()
-        return {"message": "Settings saved"}
+        return {
+            "message": "Settings saved",
+            "settings": settings.to_dict(),
+            "profile_missing": business_profile_missing(settings),
+        }
     except ValueError as exc:
         await g.db_session.rollback()
         return {"message": str(exc)}, 400
@@ -271,6 +283,9 @@ async def api_clients():
     per_page = request.args.get("per_page", PER_PAGE, type=int)
     search = request.args.get("search", "").strip()
 
+    if page < 1 or per_page < 1 or per_page > 100:
+        return {"message": "Invalid pagination"}, 400
+
     query = select(Client).where(Client.user_id == current_user.id)
     count_query = (
         select(func.count())
@@ -279,8 +294,8 @@ async def api_clients():
     )
 
     if search:
-        query = query.where(Client.name.ilike(f"%{search}%"))
-        count_query = count_query.where(Client.name.ilike(f"%{search}%"))
+        query = query.where(Client.name.icontains(search, autoescape=True))
+        count_query = count_query.where(Client.name.icontains(search, autoescape=True))
 
     total = (await g.db_session.execute(count_query)).scalar()
     result = await g.db_session.execute(
@@ -319,6 +334,11 @@ async def api_client_search():
 async def api_client_create():
     data = await request.json
     client_data = data.get("item", {})
+    if not (client_data.get("name") or "").strip():
+        return {
+            "message": "Customer name is required",
+            "field_errors": {"name": "Enter a customer name"},
+        }, 400
     client = Client(user_id=current_user.id)
     client.from_dict(client_data)
     g.db_session.add(client)
@@ -342,6 +362,11 @@ async def api_client_update(id):
         return {"message": "Not found"}, 404
     data = await request.json
     client_data = data.get("item", {})
+    if not (client_data.get("name") or "").strip():
+        return {
+            "message": "Customer name is required",
+            "field_errors": {"name": "Enter a customer name"},
+        }, 400
     try:
         client.from_dict(client_data)
         await g.db_session.commit()
@@ -560,11 +585,21 @@ async def api_invoice_pdf(id):
     invoice = await g.db_session.get(Invoice, id)
     if not invoice or invoice.user_id != current_user.id:
         return {"message": "Not found"}, 404
-    if invoice.is_issued and invoice.archived_pdf_path:
+    if invoice.is_issued:
+        path = None
+        if invoice.archived_pdf_path:
+            try:
+                path = resolve_invoice_archive(
+                    current_app.instance_path, invoice.archived_pdf_path
+                )
+            except ValueError:
+                current_app.logger.error(
+                    "Invalid archived PDF path for invoice %s", invoice.id
+                )
+        if path is None or not Path(path).is_file():
+            return {"message": "The archived invoice PDF is unavailable"}, 503
         return await send_file(
-            resolve_invoice_archive(
-                current_app.instance_path, invoice.archived_pdf_path
-            ),
+            path,
             mimetype="application/pdf",
             as_attachment=False,
             attachment_filename=f"{invoice.invoice_number}.pdf",
@@ -750,16 +785,27 @@ async def api_invoice_send(id):
 
     invoice_title = invoice.invoice_title_snapshot or "Invoice"
     subject = f"{invoice_title} {invoice.invoice_number} from {invoice.from_name}"
-    body = f"Please find attached {invoice_title} {invoice.invoice_number}.\n\nView online: {share_url}"
+    introduction = (
+        settings.default_email_message
+        or f"Please find attached {invoice_title} {invoice.invoice_number}."
+    )
+    body = f"{introduction}\n\nView online: {share_url}"
 
     html_body = await render_template(
         "invoicing/email_invoice.html",
         invoice=invoice,
         settings=settings,
         share_url=share_url,
+        introduction=introduction,
     )
 
     recipient = invoice.client.email
+    recipients = [recipient]
+    if (
+        settings.send_copy_to_self
+        and current_user.email.casefold() != recipient.casefold()
+    ):
+        recipients.append(current_user.email)
     sender = settings.email or None
 
     async def _send():
@@ -782,8 +828,9 @@ async def api_invoice_send(id):
             subtype="pdf",
             filename=f"{invoice.invoice_number}.pdf",
         )
-        await aiosmtplib.send(
+        return await aiosmtplib.send(
             msg,
+            recipients=recipients,
             hostname=app.config.get("MAIL_SERVER", "localhost"),
             port=app.config.get("MAIL_PORT", 465),
             username=app.config.get("MAIL_USERNAME"),
@@ -795,7 +842,7 @@ async def api_invoice_send(id):
     # Persist the share link before handing it to an external mail server.
     await g.db_session.commit()
     try:
-        await asyncio.wait_for(_send(), timeout=30)
+        refused, _ = await asyncio.wait_for(_send(), timeout=30)
     except (TimeoutError, SMTPTimeoutError, OSError):
         log.warning("Invoice email outcome unknown", exc_info=True)
         return {
@@ -806,6 +853,14 @@ async def api_invoice_send(id):
         return {
             "message": "The mail server could not accept this email. Check email settings and try again."
         }, 502
+    if recipient.casefold() in {address.casefold() for address in refused}:
+        return {
+            "message": "The mail server rejected the customer email. Your private copy was accepted. Check the customer address before trying again."
+        }, 502
+    if refused:
+        return {
+            "message": "Customer email accepted by the mail server, but your private copy was rejected. Do not resend the customer email for this."
+        }
     return {"message": "Email accepted by the mail server"}
 
 

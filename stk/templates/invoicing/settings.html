@@ -1,18 +1,17 @@
-{% extends 'layout.html' %} {% block css %} {% endblock %} {% block sidebar %}
-{% endblock %} {% block layout_classes %} align-center {% endblock %}
+{% extends 'layout.html' %}
+{% block title %}Business settings | ZigLag{% endblock %}
 {% block content %}
-
-    <v-card class="ma-2 mt-12 w-100" style="max-width: 800px;">
-        <v-toolbar>
-            <v-toolbar-title class="font-weight-bold">Business Settings</v-toolbar-title>
-            <v-spacer></v-spacer>
-            <v-btn color="primary" @click="save" variant="elevated" :loading="saving">Save</v-btn>
-        </v-toolbar>
-
-        <v-card-text v-if="loaded">
-
-            <!-- Business Details -->
-            <div class="text-h6 mb-4 mt-2">Business Details</div>
+<section class="workspace settings-workspace">
+    <header class="page-header"><div><h1>Business settings</h1><p>Your identity, invoice defaults, and payment details.</p></div></header>
+    <div class="settings-savebar"><span role="status" aria-live="polite">${saving ? 'Saving…' : dirty ? 'Unsaved changes' : loaded ? 'All changes saved' : 'Loading settings…'}</span><v-spacer></v-spacer><v-btn color="primary" @click="save" :loading="saving" :disabled="!loaded || !dirty || saving">Save changes</v-btn></div>
+    <v-alert v-if="loadError" type="warning" variant="tonal" role="alert" class="mb-4">${loadError}<v-btn variant="text" @click="load">Retry</v-btn></v-alert>
+    <v-alert v-if="saveError" type="error" variant="tonal" role="alert" class="mb-4">${saveError}</v-alert>
+    <div v-if="loaded" class="settings-layout">
+        <nav class="settings-nav" aria-label="Settings sections"><a href="#identity">Business identity</a><a href="#defaults">Invoice defaults</a><a href="#payment">Payment instructions</a><a href="#email">Email preferences</a>
+        <div class="settings-readiness"><strong>${profileMissing.length ? 'Complete your saved profile' : 'Business profile ready'}</strong><p class="mt-2">${profileMissing.length ? 'Still needed: ' + profileMissing.join(', ') + '.' : 'You can start your first invoice.'}</p><v-btn v-if="!profileMissing.length" href="/invoices/new" color="primary" variant="text" class="mt-2">New invoice</v-btn></div></nav>
+        <v-card class="pa-6 settings-fields">
+            <section id="identity" class="settings-section">
+            <h2 class="text-h6 mb-4 mt-2">Business identity</h2>
 
             <div class="mb-4">
                 <div class="text-body-2 mb-2">Logo</div>
@@ -51,6 +50,9 @@
 
             <v-divider class="my-6"></v-divider>
 
+            </section>
+            <section id="defaults" class="settings-section">
+            <h2 class="text-h6 mb-2">Invoice defaults</h2><p class="text-body-2 text-medium-emphasis mb-5">Applied to new drafts. Issued invoices keep their saved details.</p>
             <!-- Tax -->
             <div class="text-h6 mb-4">Tax</div>
             <v-row>
@@ -102,9 +104,7 @@
                     <v-text-field label="Currency Symbol" v-model="s.currency_symbol"></v-text-field>
                 </v-col>
                 <v-col>
-                    <v-select label="Date Format" v-model="s.date_format"
-                        :items="['YYYY-MM-DD','MM/DD/YYYY','DD/MM/YYYY','DD.MM.YYYY']"
-                    ></v-select>
+                    <p class="text-body-2 text-medium-emphasis">Dates in the workspace follow your browser language.</p>
                 </v-col>
             </v-row>
 
@@ -120,34 +120,31 @@
                 <v-col><v-text-field label="Quantity Label" v-model="s.quantity_label"></v-text-field></v-col>
                 <v-col><v-text-field label="Unit Cost Label" v-model="s.unit_cost_label"></v-text-field></v-col>
             </v-row>
-            <v-checkbox label="Show Quantity and Unit Cost" v-model="s.show_quantity_unit_cost" hide-details color="primary"></v-checkbox>
+
 
             <v-divider class="my-6"></v-divider>
 
-            <!-- Email -->
-            <div class="text-h6 mb-4">Email</div>
-            <v-textarea label="Default Email Message" v-model="s.default_email_message" rows="3"></v-textarea>
-            <v-checkbox label="Send me a copy of emails" v-model="s.send_copy_to_self" hide-details color="primary"></v-checkbox>
+</section>
+            <section id="payment" class="settings-section">
+            <h2 class="text-h6 mb-4">Payment instructions</h2>
+            <p class="text-body-2 text-medium-emphasis mb-4">Add your bank details, payment reference guidance, or payment link here. These details are saved with each issued invoice.</p>
+            <v-textarea label="Payment instructions" v-model="s.payment_instructions" rows="3"></v-textarea>
+
+</section>
+            <section id="email" class="settings-section">
+            <h2 class="text-h6 mb-4">Email preferences</h2>
+            <v-textarea label="Email introduction" v-model="s.default_email_message" rows="3"></v-textarea>
+            <v-checkbox label="Send a private copy to my account email" v-model="s.send_copy_to_self" hide-details color="primary"></v-checkbox>
 
             <v-divider class="my-6"></v-divider>
 
-            <!-- Payment Methods -->
-            <div class="text-h6 mb-4">Payment Methods</div>
-            <v-text-field label="PayPal Address" v-model="s.payment_paypal"></v-text-field>
-            <v-textarea label="Payment Instructions" v-model="s.payment_instructions" rows="3"></v-textarea>
-            <v-textarea label="Other" v-model="s.payment_other" rows="2"></v-textarea>
-
-        </v-card-text>
-    </v-card>
-
-    <v-snackbar v-model="snackBar" rounded="pill" elevation="25">
-        ${snackMessage}
-        <template v-slot:actions>
-            <v-btn @click="snackBar=false" icon="ti ti-x" size="small" variant="text"></v-btn>
-        </template>
-    </v-snackbar>
-
-{% endblock %} {% block js %}
+            </section>
+        </v-card>
+    </div>
+    <v-snackbar v-model="snackBar">${snackMessage}</v-snackbar>
+</section>
+{% endblock %}
+{% block js %}
 
     <script>
         const {createApp} = Vue;
@@ -162,24 +159,41 @@
                     snackMessage: "",
                     loaded: false,
                     saving: false,
-                    s: {}
+                    s: {}, savedState:'', profileMissing:[], loadError:'', saveError:''
                 };
             },
+            computed: {dirty() {return this.loaded && JSON.stringify(this.s)!==this.savedState;}},
             delimiters: config.delimiters,
             mounted() {
-                axios.get('/api/settings').then(res => {
-                    this.s = res.data;
-                    this.loaded = true;
-                });
+                this.load();
+                this._leave=event=>{if(this.dirty || this.saving){event.preventDefault();event.returnValue='';}};
+                window.addEventListener('beforeunload',this._leave);
             },
+            beforeUnmount(){window.removeEventListener('beforeunload',this._leave);},
             methods: {
-                showSnack(msg) { this.snackMessage = msg; this.snackBar = true; },
-                save() {
-                    this.saving = true;
-                    axios.post('/api/settings', this.s)
-                        .then(res => { this.showSnack(res.data?.message); })
-                        .catch(err => this.showSnack(err.response?.data?.message || 'Error'))
-                        .finally(() => { this.saving = false; });
+                showSnack(msg){this.snackMessage=msg;this.snackBar=true;},
+                async load(){
+                    this.loadError='';
+                    try {
+                        const response=await axios.get('/api/settings');
+                        const {profile_missing,...settings}=response.data;
+                        this.s=settings;this.profileMissing=profile_missing;this.savedState=JSON.stringify(settings);this.loaded=true;
+                    }catch(error){this.loadError='Settings could not be loaded. Try again.';}
+                },
+                async save(){
+                    if(this.saving || !this.loaded) return;
+                    const snapshot=JSON.stringify(this.s);this.saving=true;this.saveError='';
+                    try {
+                        const response=await axios.post('/api/settings',JSON.parse(snapshot));
+                        if(JSON.stringify(this.s)===snapshot){this.s=response.data.settings;this.savedState=JSON.stringify(this.s);}
+                        else this.savedState=snapshot;
+                        this.profileMissing=response.data.profile_missing;this.showSnack(response.data.message);
+                    }catch(error){this.saveError=error.response?.data?.message || 'Settings could not be saved. Your changes are still here.';}
+                    finally{this.saving=false;}
+                },
+                acceptLogo(path){
+                    this.s.logo_path=path;
+                    const saved=JSON.parse(this.savedState);saved.logo_path=path;this.savedState=JSON.stringify(saved);
                 },
                 uploadLogo(e) {
                     const file = e.target?.files?.[0];
@@ -188,7 +202,7 @@
                     fd.append('logo', file);
                     axios.post('/api/settings/logo', fd)
                         .then(res => {
-                            this.s.logo_path = res.data.logo_path;
+                            this.acceptLogo(res.data.logo_path);
                             this.showSnack(res.data?.message);
                         })
                         .catch(err => this.showSnack('Upload failed'));
@@ -196,7 +210,7 @@
                 removeLogo() {
                     axios.post('/api/settings/logo/remove')
                         .then(res => {
-                            this.s.logo_path = null;
+                            this.acceptLogo(null);
                             this.showSnack(res.data?.message);
                         })
                         .catch(err => this.showSnack('Error'));

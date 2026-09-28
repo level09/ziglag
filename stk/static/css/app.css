@@ -102,3 +102,22 @@ a.summary-card.summary-due { background: rgb(var(--v-theme-due-surface)); color:
         transition-duration: 0s !important; animation-duration: 0s !important;
     }
 }
+
+.settings-savebar { position: sticky; top: 64px; z-index: 5; display: flex; align-items: center; gap: 16px; padding: 14px 18px; margin-bottom: 20px; border: 1px solid rgba(var(--v-theme-primary), .25); border-radius: 10px; background: rgb(var(--v-theme-surface)); box-shadow: 0 4px 16px rgba(20,50,60,.06); }
+.settings-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 24px; align-items: start; }
+.settings-nav { position: sticky; top: 156px; }
+.settings-nav > a { display: flex; align-items: center; min-height: 44px; padding: 10px 14px; color: rgb(var(--v-theme-on-surface)); text-decoration: none; border-radius: 8px; }
+.settings-nav > a:hover, .settings-nav > a:focus-visible { background: rgba(var(--v-theme-primary), .1); color: rgb(var(--v-theme-primary)); }
+.settings-readiness { margin-top: 24px; padding: 16px; border-radius: 10px; background: rgb(var(--v-theme-issued-surface)); color: rgb(var(--v-theme-issued-ink)); font-size: 13px; }
+.settings-section { scroll-margin-top: 160px; }
+.settings-section + .settings-section { padding-top: 24px; }
+.setup-guidance { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 20px; margin-bottom: 24px; border-radius: 12px; background: rgb(var(--v-theme-issued-surface)); color: rgb(var(--v-theme-issued-ink)); }
+.setup-guidance p { font-size: 13px; margin-top: 4px; }
+@media (max-width: 700px) {
+    .settings-layout { grid-template-columns: 1fr; }
+    .settings-nav { position: static; }
+    .settings-nav > a { display: inline-flex; }
+    .settings-readiness { margin-top: 12px; }
+    .settings-fields .v-row { flex-direction: column; gap: 0; }
+    .setup-guidance { align-items: flex-start; flex-direction: column; }
+}

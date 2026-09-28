@@ -1,0 +1,4 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Invoice unavailable</title>
+<style>body{font:16px/1.6 system-ui,sans-serif;background:#eff4f5;color:#19323c;margin:0;padding:24px}main{max-width:520px;margin:15vh auto;background:white;padding:32px;border-radius:16px;border-top:6px solid #116b59}h1{font-size:28px;line-height:1.2}p{color:#465c67}@media(prefers-color-scheme:dark){body{background:#10232c;color:#e2edf1}main{background:#19323c}p{color:#c4d5dd}}</style></head>
+<body><main><h1>{{ 'The invoice PDF is unavailable' if pdf_missing else 'This invoice link is unavailable' }}</h1><p>{{ 'Please contact the sender for a copy of the issued invoice.' if pdf_missing else 'The link may have expired or been replaced. Please ask the sender for a new link.' }}</p></main></body></html>

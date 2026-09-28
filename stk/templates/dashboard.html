@@ -7,6 +7,9 @@
         <v-spacer></v-spacer>
         <v-btn href="/invoices/new" color="primary">New invoice <i class="ti ti-plus ml-2"></i></v-btn>
     </header>
+    {% if profile_missing %}
+    <div class="setup-guidance"><div><strong>Get ready to issue invoices</strong><p>{% for field in profile_missing %}<a href="/settings/business/#identity">Add {{ field }}</a>{% if not loop.last %} · {% endif %}{% endfor %}</p></div><v-btn href="/settings/business/#identity" color="primary" variant="tonal">Complete profile</v-btn></div>
+    {% endif %}
     <div class="summary-grid">
         <a class="summary-card summary-money" href="/invoices/?status=outstanding">
             <h2><i class="ti ti-wallet summary-icon" aria-hidden="true"></i> Unpaid invoices</h2>
@@ -41,7 +44,7 @@
             {% endfor %}
         </v-list>
         {% else %}
-        <div class="empty-state"><h2>Your first invoice starts here</h2><p class="mb-5">Add your business details, then create a draft.</p><v-btn href="/settings/business/" variant="outlined">Set up your business</v-btn></div>
+        <div class="empty-state"><h2>Your first invoice starts here</h2><p class="mb-5">{{ "Add your business details, then create a draft." if profile_missing else "Your business profile is ready. Create a draft to begin." }}</p><v-btn href="{{ '/settings/business/' if profile_missing else '/invoices/new' }}" variant="outlined">{{ "Set up your business" if profile_missing else "Create your first invoice" }}</v-btn></div>
         {% endif %}
     </v-card>
 </section>

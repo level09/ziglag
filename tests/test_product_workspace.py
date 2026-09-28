@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, patch
 
 from aiosmtplib.errors import SMTPResponseException, SMTPServerDisconnected
 from quart_security import hash_password
+from sqlalchemy import select
 
 import stk.extensions as ext
 from stk.agent_login import create_agent_login_token
@@ -238,7 +239,9 @@ class ProductWorkspaceTests(unittest.IsolatedAsyncioTestCase):
             )
 
     async def test_send_waits_for_smtp_and_preserves_paid_status(self):
-        with patch("aiosmtplib.send", new_callable=AsyncMock) as send:
+        with patch(
+            "aiosmtplib.send", new_callable=AsyncMock, return_value=({}, "OK")
+        ) as send:
             response = await self.client.post(f"/api/invoice/{self.ids['PAID']}/send")
             self.assertEqual(response.status_code, 200)
             self.assertEqual(
@@ -276,3 +279,217 @@ class ProductWorkspaceTests(unittest.IsolatedAsyncioTestCase):
         for key, code in [("OTHER", 404), ("CANCELLED", 409)]:
             response = await self.client.post(f"/api/invoice/{self.ids[key]}/send")
             self.assertEqual(response.status_code, code)
+
+    async def test_customer_paid_totals_separate_currencies(self):
+        async with ext.async_session_factory() as session:
+            paid = await session.get(Invoice, self.ids["PAID"])
+            session.add(
+                Invoice(
+                    user_id=self.uid,
+                    client_id=paid.client_id,
+                    invoice_number="PAID-USD",
+                    status="paid",
+                    issued_at=datetime.now(),
+                    total=Decimal("15.25"),
+                    balance_due=0,
+                    currency_code="USD",
+                )
+            )
+            await session.commit()
+        response = await self.client.get("/api/clients")
+        customer = (await response.get_json())["items"][0]
+        self.assertEqual(
+            customer["paid_totals_by_currency"],
+            [
+                {"currency_code": "EUR", "amount": "400.00"},
+                {"currency_code": "USD", "amount": "15.25"},
+            ],
+        )
+
+    async def test_email_preferences_apply_to_both_bodies_and_private_copy(self):
+        async with ext.async_session_factory() as session:
+            settings = await session.scalar(
+                select(BusinessSettings).where(BusinessSettings.user_id == self.uid)
+            )
+            settings.default_email_message = "Hello <b>team</b>\nPlease review."
+            settings.send_copy_to_self = True
+            await session.commit()
+        with patch(
+            "aiosmtplib.send", new_callable=AsyncMock, return_value=({}, "OK")
+        ) as send:
+            response = await self.client.post(f"/api/invoice/{self.ids['PAID']}/send")
+        self.assertEqual(response.status_code, 200)
+        msg = send.call_args.args[0]
+        self.assertIn(
+            "Hello <b>team</b>\nPlease review.",
+            msg.get_body(preferencelist=("plain",)).get_content(),
+        )
+        self.assertIn(
+            "Hello &lt;b&gt;team&lt;/b&gt;",
+            msg.get_body(preferencelist=("html",)).get_content(),
+        )
+        self.assertCountEqual(
+            send.call_args.kwargs["recipients"],
+            ["customer@example.test", "owner@example.com"],
+        )
+        self.assertIsNone(msg["Bcc"])
+        self.assertIsNone(msg["Cc"])
+
+    async def share_fixture(self, **fields):
+        async with ext.async_session_factory() as session:
+            invoice = await session.get(Invoice, self.ids["PAID"])
+            token = invoice.ensure_share_token()
+            for key, value in fields.items():
+                setattr(invoice, key, value)
+            await session.commit()
+            return token
+
+    async def test_public_text_is_escaped_and_empty_snapshots_stay_empty(self):
+        token = await self.share_fixture(
+            notes="<script>window.bad=true</script>",
+            from_address="<img src=x onerror=alert(1)>",
+            client_email_snapshot="",
+            client_address_snapshot="",
+            payment_instructions_snapshot="<b>Pay by bank</b>",
+        )
+        response = await self.app.test_client().get("/i/" + token)
+        html = await response.get_data(as_text=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("&lt;script&gt;", html)
+        self.assertIn("&lt;img", html)
+        self.assertIn("&lt;b&gt;Pay by bank&lt;/b&gt;", html)
+        self.assertNotIn("customer@example.test", html)
+        self.assertNotIn("<script>window.bad", html)
+
+    async def test_public_pdf_is_archive_and_missing_archive_never_regenerates(self):
+        token = await self.share_fixture()
+        public = self.app.test_client()
+        response = await public.get("/i/" + token + "/pdf")
+        self.assertEqual(await response.get_data(), b"%PDF-test-archive")
+        await self.share_fixture(archived_pdf_path=None)
+        with patch(
+            "stk.invoicing.pdf.generate_invoice_pdf", new_callable=AsyncMock
+        ) as generate:
+            response = await public.get("/i/" + token + "/pdf")
+            self.assertEqual(response.status_code, 503)
+            generate.assert_not_awaited()
+            response = await self.client.get(f"/api/invoice/{self.ids['PAID']}/pdf")
+            self.assertEqual(response.status_code, 503)
+            generate.assert_not_awaited()
+
+    async def test_unavailable_links_are_generic(self):
+        public = self.app.test_client()
+        token = await self.share_fixture(
+            share_token_expires_at=datetime.now() - timedelta(days=1)
+        )
+        for suffix in ["", "/pdf"]:
+            expired = await public.get("/i/" + token + suffix)
+            invalid = await public.get("/i/not-a-real-token" + suffix)
+            self.assertEqual(expired.status_code, 404)
+            self.assertEqual(await expired.get_data(), await invalid.get_data())
+            self.assertIn(
+                "This invoice link is unavailable", await expired.get_data(as_text=True)
+            )
+
+    async def test_setup_checklist_uses_business_validation(self):
+        response = await self.client.get("/api/settings")
+        self.assertEqual(
+            (await response.get_json())["profile_missing"],
+            ["business name", "business address", "Steuernummer or VAT ID"],
+        )
+        response = await self.client.post(
+            "/api/settings",
+            json={
+                "business_name": "North",
+                "address_line1": "Example street",
+                "tax_number": "123",
+            },
+        )
+        self.assertEqual((await response.get_json())["profile_missing"], [])
+
+    async def test_partial_smtp_rejection_reports_the_correct_recipient(self):
+        async with ext.async_session_factory() as session:
+            settings = await session.scalar(
+                select(BusinessSettings).where(BusinessSettings.user_id == self.uid)
+            )
+            settings.send_copy_to_self = True
+            await session.commit()
+        for recipient, code, message in [
+            ("customer@example.test", 502, "customer email"),
+            ("owner@example.com", 200, "private copy was rejected"),
+        ]:
+            with (
+                self.subTest(recipient=recipient),
+                patch(
+                    "aiosmtplib.send",
+                    new_callable=AsyncMock,
+                    return_value=({recipient: "private SMTP detail"}, "OK"),
+                ),
+            ):
+                response = await self.client.post(
+                    f"/api/invoice/{self.ids['PAID']}/send"
+                )
+                self.assertEqual(response.status_code, code)
+                body = (await response.get_json())["message"]
+                self.assertIn(message, body)
+                self.assertNotIn("private SMTP detail", body)
+
+    async def test_private_copy_deduplicates_the_customer_address(self):
+        async with ext.async_session_factory() as session:
+            settings = await session.scalar(
+                select(BusinessSettings).where(BusinessSettings.user_id == self.uid)
+            )
+            settings.send_copy_to_self = True
+            invoice = await session.get(Invoice, self.ids["PAID"])
+            invoice.client.email = "OWNER@example.com"
+            await session.commit()
+        with patch(
+            "aiosmtplib.send", new_callable=AsyncMock, return_value=({}, "OK")
+        ) as send:
+            response = await self.client.post(f"/api/invoice/{self.ids['PAID']}/send")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(send.call_args.kwargs["recipients"], ["OWNER@example.com"])
+
+    async def test_public_revoked_link_and_missing_file(self):
+        token = await self.share_fixture(archived_pdf_path="invoices/missing.pdf")
+        public = self.app.test_client()
+        with patch(
+            "stk.invoicing.pdf.generate_invoice_pdf", new_callable=AsyncMock
+        ) as generate:
+            response = await public.get("/i/" + token + "/pdf")
+            self.assertEqual(response.status_code, 503)
+            self.assertNotIn(
+                "invoices/missing.pdf", await response.get_data(as_text=True)
+            )
+            generate.assert_not_awaited()
+        await self.client.delete(f"/api/invoice/{self.ids['PAID']}/share")
+        for suffix in ["", "/pdf"]:
+            response = await public.get("/i/" + token + suffix)
+            invalid = await public.get("/i/not-a-real-token" + suffix)
+            self.assertEqual(response.status_code, 404)
+            self.assertEqual(await response.get_data(), await invalid.get_data())
+
+    async def test_public_empty_payment_snapshot_does_not_use_live_settings(self):
+        async with ext.async_session_factory() as session:
+            settings = await session.scalar(
+                select(BusinessSettings).where(BusinessSettings.user_id == self.uid)
+            )
+            settings.payment_instructions = "New live bank account"
+            await session.commit()
+        token = await self.share_fixture(payment_instructions_snapshot="")
+        response = await self.app.test_client().get("/i/" + token)
+        self.assertNotIn("New live bank account", await response.get_data(as_text=True))
+
+    async def test_public_share_does_not_grant_authenticated_owner_access(self):
+        token = await self.share_fixture()
+        other = self.app.test_client()
+        async with self.app.app_context():
+            login = create_agent_login_token("other@example.com", "/dashboard/")
+        await other.get("/_test/login", query_string={"token": login})
+        self.assertEqual((await other.get("/i/" + token)).status_code, 200)
+        invoice_id = self.ids["PAID"]
+        for path in [f"/api/invoice/{invoice_id}", f"/api/invoice/{invoice_id}/pdf"]:
+            self.assertEqual((await other.get(path)).status_code, 404)
+        self.assertEqual(
+            (await other.post(f"/api/invoice/{invoice_id}/share")).status_code, 404
+        )

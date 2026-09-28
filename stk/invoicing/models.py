@@ -243,8 +243,27 @@ class Client(Base):
             "notes": self.notes,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "total_billed": str(self.total_billed),
+            "paid_totals_by_currency": self.paid_totals_by_currency,
             "invoice_count": len(self.invoices) if self.invoices else 0,
         }
+
+    @property
+    def paid_totals_by_currency(self):
+        totals = {}
+        for invoice in self.invoices:
+            if (
+                invoice.user_id == self.user_id
+                and invoice.is_issued
+                and invoice.status == "paid"
+                and invoice.balance_due <= 0
+            ):
+                totals[invoice.currency_code] = (
+                    totals.get(invoice.currency_code, Decimal("0.00")) + invoice.total
+                )
+        return [
+            {"currency_code": code, "amount": str(amount)}
+            for code, amount in sorted(totals.items())
+        ]
 
     @property
     def total_billed(self):

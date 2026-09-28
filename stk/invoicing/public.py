@@ -1,4 +1,5 @@
 from datetime import datetime
+from pathlib import Path
 
 from quart import Blueprint, Response, current_app, g, render_template, send_file
 from sqlalchemy import select
@@ -17,7 +18,9 @@ async def view_invoice(token):
     )
     invoice = result.scalar_one_or_none()
     if not invoice or not invoice.share_is_active():
-        return "Invoice not found", 404
+        return await render_template(
+            "invoicing/invoice_unavailable.html", pdf_missing=False
+        ), 404
 
     # Mark as viewed on first access
     if invoice.status == "sent" and not invoice.viewed_at:
@@ -29,12 +32,17 @@ async def view_invoice(token):
     await g.db_session.commit()
 
     bill_to = None
-    if invoice.client:
+    if invoice.is_issued:
         bill_to = {
-            "name": invoice.client_name_snapshot or invoice.client.name,
-            "email": invoice.client_email_snapshot or invoice.client.email,
-            "address": invoice.client_address_snapshot
-            or "\n".join(
+            "name": invoice.client_name_snapshot,
+            "email": invoice.client_email_snapshot,
+            "address": invoice.client_address_snapshot,
+        }
+    elif invoice.client:
+        bill_to = {
+            "name": invoice.client.name,
+            "email": invoice.client.email,
+            "address": "\n".join(
                 filter(
                     None,
                     [
@@ -63,13 +71,27 @@ async def public_pdf(token):
     )
     invoice = result.scalar_one_or_none()
     if not invoice or not invoice.share_is_active():
-        return "Invoice not found", 404
+        return await render_template(
+            "invoicing/invoice_unavailable.html", pdf_missing=False
+        ), 404
 
-    if invoice.is_issued and invoice.archived_pdf_path:
+    if invoice.is_issued:
+        path = None
+        if invoice.archived_pdf_path:
+            try:
+                path = resolve_invoice_archive(
+                    current_app.instance_path, invoice.archived_pdf_path
+                )
+            except ValueError:
+                current_app.logger.error(
+                    "Invalid archived PDF path for invoice %s", invoice.id
+                )
+        if path is None or not Path(path).is_file():
+            return await render_template(
+                "invoicing/invoice_unavailable.html", pdf_missing=True
+            ), 503
         return await send_file(
-            resolve_invoice_archive(
-                current_app.instance_path, invoice.archived_pdf_path
-            ),
+            path,
             mimetype="application/pdf",
             as_attachment=False,
             attachment_filename=f"{invoice.invoice_number}.pdf",

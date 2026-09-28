@@ -1,71 +1,34 @@
-{% extends 'layout.html' %} {% block css %} {% endblock %} {% block sidebar %}
+{% extends 'layout.html' %} {% block title %}Customers | ZigLag{% endblock %} {% block css %}<style>.customer-name {height:auto!important;min-height:44px;white-space:normal;text-align:left;}.customer-name .v-btn__content {white-space:normal;overflow-wrap:anywhere;}</style>{% endblock %} {% block sidebar %}
 {% endblock %} {% block layout_classes %} align-center {% endblock %}
 {% block content %}
 
-    <v-card class="ma-2 mt-12 w-100 h-100">
-        <v-toolbar>
-            <v-toolbar-title class="font-weight-bold">Customers</v-toolbar-title>
-            <v-spacer></v-spacer>
-        </v-toolbar>
-        <v-card-text>
-
-            <v-data-table-server
-            :items="items"
-            :items-length="itemsLength"
-            :headers="headers"
-            :page="options.page"
-            :items-per-page="options.itemsPerPage"
-            @update:options="refresh"
-            hover
-            >
-
-                <template v-slot:top>
-                    <v-toolbar dense elevation="0" color="transparent">
-                        <v-text-field
-                            v-model="search"
-                            prepend-inner-icon="ti ti-search"
-                            label="Search customers"
-                            single-line
-                            hide-details
-                            density="compact"
-                            style="max-width: 300px;"
-                            @input="debouncedRefresh"
-                        ></v-text-field>
-                        <v-spacer></v-spacer>
-                        <v-btn @click="createItem" size="small" color="primary" variant="elevated">
-                            <template v-slot:prepend><i class="ti ti-plus"></i></template>
-                            New Customer
-                        </v-btn>
-                    </v-toolbar>
-                </template>
-
-                <template v-slot:item.total_billed="{ item }">
-                    ${item.total_billed}
-                </template>
-
-                <template v-slot:item.actions="{ item }">
-                    <v-icon small class="mr-2" @click="editItem(item)">ti ti-pencil</v-icon>
-                    <v-icon small @click="deleteItem(item)">ti ti-trash</v-icon>
-                </template>
-
+    <section class="workspace">
+        <header class="page-header"><div><h1>Customers</h1><p>Contact details and paid invoices, in one place.</p></div><v-spacer></v-spacer><v-btn @click="createItem" color="primary">New customer <i class="ti ti-plus ml-2"></i></v-btn></header>
+        <v-text-field v-model="search" label="Search customers" prepend-inner-icon="ti ti-search" hide-details density="compact" class="mb-5" style="max-width:480px;" @update:model-value="debouncedRefresh"></v-text-field>
+        <v-alert v-if="loadError" type="warning" variant="tonal" class="mb-4" role="alert">${loadError}<v-btn variant="text" @click="refresh()">Retry</v-btn></v-alert>
+        <v-card>
+            <v-data-table-server :items-per-page-options="[10, 25, 50, 100]" :items="items" :items-length="itemsLength" :headers="headers" :page="options.page" :items-per-page="options.itemsPerPage" :loading="loading" @update:options="refresh" hover>
+                <template v-slot:no-data><div class="empty-state"><h2>${search ? 'No matching customers' : 'No customers yet'}</h2><p>${search ? 'Try another name.' : 'Add the first customer for your next invoice.'}</p></div></template>
+                <template v-slot:item.name="{item}"><v-btn variant="text" class="customer-name" @click="editItem(item)">${item.name}</v-btn></template>
+                <template v-slot:item.paid_totals_by_currency="{item}"><div v-for="total in item.paid_totals_by_currency" :key="total.currency_code" class="money">${formatMoney(total.amount, total.currency_code)}</div><span v-if="!item.paid_totals_by_currency.length" class="text-medium-emphasis">No paid invoices</span></template>
+                <template v-slot:item.actions="{item}"><v-btn icon="ti ti-pencil" variant="text" size="small" :aria-label="'Edit ' + item.name" @click="editItem(item)"></v-btn><v-btn icon="ti ti-trash" variant="text" size="small" :aria-label="'Delete ' + item.name" @click="deleteItem(item)"></v-btn></template>
             </v-data-table-server>
-
-        </v-card-text>
-    </v-card>
-
+        </v-card>
+    </section>
 
     <!--Edit Dialog-->
-    <v-dialog v-model="edialog" width="660">
+    <v-dialog v-model="edialog" width="660" :persistent="saving || editDirty">
         <v-card v-if="edialog">
             <v-toolbar>
                 <v-toolbar-title>${eitem.id ? 'Edit' : 'New'} Customer</v-toolbar-title>
                 <template v-slot:append>
-                    <v-btn @click="edialog=false" size="small" icon="ti ti-x" variant="text"></v-btn>
+                    <v-btn @click="closeEditor" :disabled="saving" aria-label="Close customer editor" size="small" icon="ti ti-x" variant="text"></v-btn>
                 </template>
             </v-toolbar>
 
             <v-card-text>
-                <v-text-field label="Name" v-model="eitem.name"></v-text-field>
+                <v-alert v-if="saveError" type="error" variant="tonal" role="alert" class="mb-4">${saveError}</v-alert>
+                <v-text-field ref="customerName" label="Name" v-model="eitem.name" :error-messages="nameError" :disabled="saving"></v-text-field>
                 <v-text-field label="Email" v-model="eitem.email"></v-text-field>
                 <v-text-field label="VAT ID" v-model="eitem.vat_id"></v-text-field>
                 <v-text-field label="Address Line 1" v-model="eitem.address_line1"></v-text-field>
@@ -80,7 +43,7 @@
 
             <v-card-actions>
                 <v-spacer></v-spacer>
-                <v-btn color="primary" @click="saveItem" variant="elevated">Save</v-btn>
+                <v-btn color="primary" @click="saveItem" :loading="saving" :disabled="saving" variant="elevated">Save</v-btn>
             </v-card-actions>
         </v-card>
     </v-dialog>
@@ -105,60 +68,74 @@
             mixins: [layoutMixin],
             data() {
                 return {
-                    snackBar: false,
+                    snackBar: false, saving:false, loading:false, loadError:'', saveError:'', nameError:'', requestId:0, editState:'',
                     snackMessage: "",
                     search: "",
                     items: [],
                     itemsLength: 0,
                     options: { page: 1, itemsPerPage: 25 },
                     headers: [
-                        {title: 'Name', value: 'name'},
-                        {title: 'Email', value: 'email'},
-                        {title: 'Phone', value: 'phone'},
-                        {title: 'Total Billed', value: 'total_billed', sortable: false},
+                        {title: 'Name', value: 'name', sortable:false},
+                        {title: 'Email', value: 'email', sortable:false},
+                        {title: 'Phone', value: 'phone', sortable:false},
+                        {title: 'Paid invoices', value: 'paid_totals_by_currency', sortable: false},
                         {title: 'Actions', value: 'actions', sortable: false}
                     ],
                     edialog: false,
                     eitem: {}
                 };
             },
+            computed: {editDirty() { return this.edialog && JSON.stringify(this.eitem) !== this.editState; }},
+            mounted() {
+                this._leave = event => {if (this.editDirty || this.saving) {event.preventDefault(); event.returnValue='';}};
+                window.addEventListener('beforeunload', this._leave);
+            },
+            beforeUnmount() {clearTimeout(_searchTimeout); window.removeEventListener('beforeunload', this._leave);},
             delimiters: config.delimiters,
             methods: {
                 showSnack(message) {
                     this.snackMessage = message;
                     this.snackBar = true;
                 },
+                formatMoney(amount, currency) { return new Intl.NumberFormat(navigator.language,{style:'currency',currency,currencyDisplay:'code'}).format(Number(amount)); },
                 debouncedRefresh() {
-                    clearTimeout(_searchTimeout);
-                    _searchTimeout = setTimeout(() => this.refresh(), 300);
+                    clearTimeout(_searchTimeout); ++this.requestId; this.options.page=1; this.loading=true;
+                    _searchTimeout=setTimeout(() => this.refresh(),300);
                 },
-                refresh(options) {
-                    if (options) {
-                        this.options = { ...this.options, page: options.page, itemsPerPage: options.itemsPerPage };
-                    }
-                    axios.get(`/api/clients?page=${this.options.page}&per_page=${this.options.itemsPerPage}&search=${this.search}`)
-                        .then(res => {
-                            this.items = res.data.items;
-                            this.itemsLength = res.data.total;
-                        });
+                async refresh(options) {
+                    if(options) this.options={...this.options,page:options.page,itemsPerPage:options.itemsPerPage};
+                    const requestId=++this.requestId; this.loading=true; this.loadError='';
+                    try {
+                        const response=await axios.get('/api/clients',{params:{page:this.options.page,per_page:this.options.itemsPerPage,search:this.search}});
+                        if(requestId!==this.requestId) return;
+                        this.items=response.data.items; this.itemsLength=response.data.total;
+                        const lastPage=Math.max(1,Math.ceil(this.itemsLength/this.options.itemsPerPage));
+                        if(this.options.page>lastPage) {this.options.page=lastPage; return this.refresh();}
+                    } catch(error) {
+                        if(requestId===this.requestId) this.loadError='Customers could not be updated. Previous results may not match your search.';
+                    } finally {if(requestId===this.requestId) this.loading=false;}
                 },
-                createItem() {
-                    this.eitem = {};
-                    this.edialog = true;
-                },
-                editItem(item) {
-                    this.eitem = {...toRaw(item)};
-                    this.edialog = true;
-                },
-                saveItem() {
-                    const url = this.eitem.id ? `/api/client/${this.eitem.id}` : '/api/client/';
-                    axios.post(url, {item: this.eitem})
-                        .then(res => {
-                            this.showSnack(res.data?.message);
-                            this.refresh();
-                        })
-                        .catch(err => this.showSnack(err.response?.data?.message || 'Error'));
-                    this.edialog = false;
+                createItem() {this.openEditor({});},
+                editItem(item) {this.openEditor({...toRaw(item)});},
+                openEditor(item) {this.eitem=item; this.editState=JSON.stringify(item); this.saveError='';this.nameError='';this.edialog=true;},
+                closeEditor() {if(!this.saving && (!this.editDirty || confirm('Discard unsaved customer changes?'))) this.edialog=false;},
+                async saveItem() {
+                    if(this.saving) return;
+                    this.nameError='';this.saveError='';
+                    if(!this.eitem.name?.trim()) {this.nameError='Enter a customer name';this.$refs.customerName.focus();return;}
+                    const snapshot=JSON.parse(JSON.stringify(this.eitem));
+                    const url=snapshot.id ? `/api/client/${snapshot.id}` : '/api/client/';
+                    this.saving=true;
+                    try {
+                        const response=await axios.post(url,{item:snapshot});
+                        if(JSON.stringify(this.eitem)===JSON.stringify(snapshot)) this.edialog=false;
+                        else {this.eitem.id=response.data.id || snapshot.id;this.editState=JSON.stringify({...snapshot,id:this.eitem.id});}
+                        this.showSnack(response.data.message);this.refresh();
+                    } catch(error) {
+                        this.saveError=error.response?.data?.message || 'Customer could not be saved. Your changes are still here.';
+                        this.nameError=error.response?.data?.field_errors?.name || '';
+                        if(this.nameError) this.$refs.customerName.focus();
+                    } finally {this.saving=false;}
                 },
                 deleteItem(item) {
                     if (confirm('Delete this customer?')) {

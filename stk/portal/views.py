@@ -4,8 +4,9 @@ from quart import Blueprint, g, render_template
 from quart_security import auth_required, current_user
 from sqlalchemy import func, select
 
-from stk.invoicing.models import Invoice
+from stk.invoicing.models import BusinessSettings, Invoice
 from stk.invoicing.queries import invoice_conditions
+from stk.invoicing.views import business_profile_missing
 
 portal = Blueprint("portal", __name__, static_folder="../static")
 
@@ -65,4 +66,11 @@ async def dashboard():
             .limit(5)
         )
     ).all()
-    return await render_template("dashboard.html", stats=stats, recent=recent)
+    settings = await BusinessSettings.get_or_create(uid)
+    await g.db_session.commit()
+    return await render_template(
+        "dashboard.html",
+        stats=stats,
+        recent=recent,
+        profile_missing=business_profile_missing(settings),
+    )

@@ -1,8 +1,11 @@
+from datetime import date
+
 from quart import Blueprint, g, render_template
 from quart_security import auth_required, current_user
 from sqlalchemy import func, select
 
-from stk.invoicing.models import BusinessSettings, Client, Invoice
+from stk.invoicing.models import Invoice
+from stk.invoicing.queries import invoice_conditions
 
 portal = Blueprint("portal", __name__, static_folder="../static")
 
@@ -23,64 +26,43 @@ async def add_header(response):
 async def dashboard():
     uid = current_user.id
 
-    # Invoice stats
-    total_invoices = (
-        await g.db_session.execute(
-            select(func.count()).select_from(Invoice).where(Invoice.user_id == uid)
+    today = date.today()
+
+    async def count(status):
+        return await g.db_session.scalar(
+            select(func.count())
+            .select_from(Invoice)
+            .where(*invoice_conditions(uid, status, today))
         )
-    ).scalar()
 
-    outstanding = (
-        await g.db_session.execute(
-            select(func.coalesce(func.sum(Invoice.balance_due), 0)).where(
-                Invoice.user_id == uid,
-                Invoice.status.in_(["draft", "sent", "viewed", "overdue"]),
-            )
+    balances = await g.db_session.execute(
+        select(
+            Invoice.currency_code,
+            func.sum(Invoice.balance_due).label("amount"),
+            func.count().label("count"),
         )
-    ).scalar()
-
-    total_paid = (
-        await g.db_session.execute(
-            select(func.coalesce(func.sum(Invoice.total), 0)).where(
-                Invoice.user_id == uid, Invoice.status == "paid"
-            )
-        )
-    ).scalar()
-
-    clients_count = (
-        await g.db_session.execute(
-            select(func.count()).select_from(Client).where(Client.user_id == uid)
-        )
-    ).scalar()
-
-    settings = await BusinessSettings.get_or_create(uid)
-    await g.db_session.commit()
-
-    # Recent invoices
-    result = await g.db_session.execute(
-        select(Invoice)
-        .where(Invoice.user_id == uid)
-        .order_by(Invoice.date.desc())
-        .limit(5)
+        .where(*invoice_conditions(uid, "outstanding", today))
+        .group_by(Invoice.currency_code)
+        .order_by(Invoice.currency_code)
     )
-    recent = []
-    for inv in result.scalars().all():
-        recent.append(
-            {
-                "id": inv.id,
-                "invoice_number": inv.invoice_number,
-                "client_name": inv.client.name if inv.client else "",
-                "date": inv.date.isoformat() if inv.date else "",
-                "total": str(inv.total),
-                "status": inv.status,
-            }
-        )
-
     stats = {
-        "total_invoices": total_invoices,
-        "outstanding": str(outstanding),
-        "total_paid": str(total_paid),
-        "clients": clients_count,
-        "currency_symbol": settings.currency_symbol,
+        "draft_count": await count("draft"),
+        "overdue_count": await count("overdue"),
+        "outstanding_by_currency": [
+            {
+                "currency_code": row.currency_code,
+                "amount": str(row.amount),
+                "count": row.count,
+            }
+            for row in balances
+        ],
     }
+    recent = (
+        await g.db_session.scalars(
+            select(Invoice)
+            .where(Invoice.user_id == uid)
+            .order_by(Invoice.date.desc(), Invoice.id.desc())
+            .limit(5)
+        )
+    ).all()
     return await render_template("dashboard.html", stats=stats, recent=recent)

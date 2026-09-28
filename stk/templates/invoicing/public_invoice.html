@@ -220,7 +220,7 @@
                 Date: {{ invoice.date }}<br>
                 {% if invoice.due_date %}Due: {{ invoice.due_date }}<br>{% endif %}
                 {% if service_period %}Service: {{ service_period }}<br>{% endif %}
-                Status: <span class="status-badge status-{{ invoice.status }}">{{ invoice.status }}</span>
+                Status: <span class="status-badge status-{{ invoice.status }}">{{ {'sent': 'Issued', 'viewed': 'Link opened'}.get(invoice.status, invoice.status|capitalize) }}</span>
             </div>
         </div>
     </div>

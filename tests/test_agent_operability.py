@@ -10,6 +10,7 @@ from stk.agent_login import create_agent_login_token, read_agent_login_token
 from stk.app import create_app
 from stk.commands import (
     _command_runner,
+    _guards,
     build_context_report,
     build_project_report_html,
     build_routes_report,
@@ -35,6 +36,26 @@ class AgentOperabilityTests(unittest.TestCase):
         self.assertIn("source", by_rule["/dashboard/"])
         self.assertTrue(by_rule["/users/"]["auth"]["required"])
         self.assertEqual(by_rule["/users/"]["auth"]["source"], "blueprint")
+        self.assertTrue(by_rule["/change"]["auth"]["required"])
+        self.assertEqual(by_rule["/change"]["auth"]["source"], "route")
+        self.assertFalse(by_rule["/login"]["auth"]["required"])
+        self.assertTrue(by_rule["/invoices/"]["auth"]["required"])
+        self.assertEqual(by_rule["/invoices/"]["auth"]["source"], "blueprint")
+
+    def test_guard_detection_survives_quart_security(self):
+        """If upstream renames its decorator internals, fail here, not silently."""
+        from quart_security import auth_required, roles_required
+
+        @auth_required("session")
+        @roles_required("admin")
+        async def guarded():
+            return "ok"
+
+        async def open_view():
+            return "ok"
+
+        self.assertEqual(_guards(guarded), ["auth_required", "roles_required"])
+        self.assertEqual(_guards(open_view), [])
 
     def test_context_report_exposes_routes_and_models(self):
         report = build_context_report(create_app())
@@ -131,6 +152,28 @@ class AgentOperabilityTests(unittest.TestCase):
         self.assertIn(
             "request failed: http://127.0.0.1/static/missing.js 404",
             report["pages"][1]["problems"],
+        )
+
+    def test_smoke_report_fails_on_invisible_text(self):
+        """Text the same colour as its background raises no console error."""
+        report = build_smoke_report(
+            [
+                {
+                    "name": "home",
+                    "path": "/",
+                    "status": 200,
+                    "console": [],
+                    "failed_requests": [],
+                    "low_contrast": [{"label": "GO TO DASHBOARD", "ratio": 1.0}],
+                }
+            ],
+            dashboard_screenshot=".stk/smoke/dashboard.png",
+        )
+
+        self.assertEqual(report["status"], "failed")
+        self.assertIn(
+            'invisible text: "GO TO DASHBOARD" contrast 1.0:1',
+            report["pages"][0]["problems"],
         )
 
 
@@ -235,6 +278,17 @@ class AgentLoginSessionTests(unittest.IsolatedAsyncioTestCase):
 
     async def asyncTearDown(self):
         await ext.engine.dispose()
+
+    async def test_recovery_page_renders_security_form(self):
+        async with self.app.test_request_context("/"):
+            from quart_security.utils import url_for_security
+
+            path = url_for_security("mf_recovery")
+
+        response = await self.app.test_client().get(path)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('name="code"', await response.get_data(as_text=True))
 
     async def test_agent_login_creates_authenticated_session(self):
         async with ext.async_session_factory() as session:

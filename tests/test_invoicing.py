@@ -99,6 +99,14 @@ class InvoiceValidationTests(unittest.TestCase):
         invoice.service_date_from = None
         self.assertIn("Service date is required", invoice.validate_for_issue())
 
+    def test_draft_dates_can_be_cleared(self):
+        invoice = valid_invoice()
+        invoice.due_date = date(2026, 8, 15)
+        invoice.from_dict({"service_date_from": "", "due_date": None})
+        self.assertIsNone(invoice.service_date_from)
+        self.assertIsNone(invoice.due_date)
+        self.assertIn("Service date is required", invoice.validate_for_issue())
+
     def test_archive_paths_are_relative_and_contained(self):
         self.assertEqual(
             invoice_archive_relative_path(1, 2),
@@ -203,9 +211,9 @@ class ProductionConfigTests(unittest.TestCase):
         editor = (
             PROJECT_ROOT / "stk/templates/invoicing/invoice_edit.html"
         ).read_text()
-        self.assertIn("async persistClient()", editor)
+        self.assertIn("async persistClient(snapshot)", editor)
         self.assertIn('v-model="item.detail"', editor)
-        self.assertIn("await this.persistClient()", editor)
+        self.assertIn("await this.persistClient(snapshot)", editor)
         self.assertIn("applyBusinessSettings(inv, settingsData)", editor)
 
     def test_invoice_editor_has_guided_issue_state(self):

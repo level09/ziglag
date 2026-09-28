@@ -616,10 +616,16 @@ class Invoice(Base):
             self.invoice_number = str(data["invoice_number"]).strip()
         if "date" in data and data["date"]:
             self.date = date.fromisoformat(data["date"])
-        if "due_date" in data and data["due_date"]:
-            self.due_date = date.fromisoformat(data["due_date"])
-        if "service_date_from" in data and data["service_date_from"]:
-            self.service_date_from = date.fromisoformat(data["service_date_from"])
+        if "due_date" in data:
+            self.due_date = (
+                date.fromisoformat(data["due_date"]) if data["due_date"] else None
+            )
+        if "service_date_from" in data:
+            self.service_date_from = (
+                date.fromisoformat(data["service_date_from"])
+                if data["service_date_from"]
+                else None
+            )
         if "service_date_to" in data:
             self.service_date_to = (
                 date.fromisoformat(data["service_date_to"])

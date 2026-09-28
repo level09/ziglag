@@ -3,12 +3,12 @@
 
 <head>
     <meta charset="utf-8">
-    <title>ZigLag</title>
+    <title>{% block title %}ZigLag{% endblock %}</title>
     <meta name="description" content="Self-hosted invoicing">
     <meta name="author" content="ZigLag">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&family=Be+Vietnam+Pro:wght@400;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" href="/static/img/favicon.ico" type="image/x-icon">
 
@@ -16,9 +16,9 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@7/css/materialdesignicons.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
     <link rel="stylesheet" href="/static/css/layout.css">
-    <link rel="stylesheet" href="/static/css/app.css">
+    <link rel="stylesheet" href="/static/css/app.css?v=20260928-color">
 
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&family=Be+Vietnam+Pro:wght@400;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>[v-cloak] { display: none !important; }</style>
 
     {% block css %}{% endblock %}
@@ -30,17 +30,17 @@
 <v-app id="app" v-cloak>
     <v-layout class="rounded rounded-md">
         <!-- App Bar -->
-        <v-app-bar color="surface" density="comfortable" elevation="1">
+        <v-app-bar color="surface" density="comfortable" elevation="0">
             {% if current_user.is_authenticated %}
-            <v-btn icon variant="text" @click="drawer = !drawer" class="d-md-none">
+            <v-btn icon variant="text" @click="drawer = !drawer" aria-label="Toggle navigation" class="d-md-none">
                 <i class="ti ti-menu-2" style="font-size: 24px;"></i>
             </v-btn>
             {% endif %}
 
             <v-app-bar-title>
                 <a href="/" class="d-flex align-center text-decoration-none" style="gap: 8px;">
-                    <img class="logo-adaptive" style="height: 32px;" src="/static/img/ziglag.svg">
-                    <span style="font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; font-size: 18px; letter-spacing: -0.03em; text-transform: uppercase; color: rgb(var(--v-theme-on-surface));">ziglag</span>
+                    <img alt="ZigLag" class="logo-adaptive" style="height: 32px;" src="/static/img/ziglag.svg">
+                    <span class="d-none d-sm-inline" style="font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; font-size: 18px; letter-spacing: -0.03em; text-transform: uppercase; color: rgb(var(--v-theme-on-surface));">ziglag</span>
                 </a>
             </v-app-bar-title>
 
@@ -71,7 +71,7 @@
             <!-- User Menu -->
             <v-menu :close-on-content-click="false" location="bottom end" transition="fade-transition">
                 <template v-slot:activator="{ props }">
-                    <v-btn v-bind="props" icon variant="text" size="small" class="ml-1">
+                    <v-btn v-bind="props" icon variant="text" size="small" class="ml-1" aria-label="Account menu">
                         <v-avatar color="primary" size="32">
                             <span class="text-body-2">{{ current_user.name[:2]|upper if current_user.name else 'U' }}</span>
                         </v-avatar>
@@ -93,15 +93,15 @@
                     <v-list density="compact">
                         <v-list-item href="/dashboard">
                             <template v-slot:prepend><i class="ti ti-layout-dashboard mr-3" style="font-size: 18px;"></i></template>
-                            <v-list-item-title>My Account</v-list-item-title>
+                            <v-list-item-title>Dashboard</v-list-item-title>
                         </v-list-item>
                         <v-list-item href="/change">
                             <template v-slot:prepend><i class="ti ti-key mr-3" style="font-size: 18px;"></i></template>
-                            <v-list-item-title>Change Password</v-list-item-title>
+                            <v-list-item-title>Change password</v-list-item-title>
                         </v-list-item>
                         <v-list-item href="/tf-setup">
                             <template v-slot:prepend><i class="ti ti-shield-lock mr-3" style="font-size: 18px;"></i></template>
-                            <v-list-item-title>Two-Factor Auth</v-list-item-title>
+                            <v-list-item-title>Two-factor authentication</v-list-item-title>
                         </v-list-item>
                     </v-list>
 
@@ -110,7 +110,7 @@
                     <v-list density="compact">
                         <v-list-item @click="logout" base-color="error">
                             <template v-slot:prepend><i class="ti ti-logout mr-3" style="font-size: 18px;"></i></template>
-                            <v-list-item-title>Logout</v-list-item-title>
+                            <v-list-item-title>Sign out</v-list-item-title>
                         </v-list-item>
                     </v-list>
                 </v-card>
@@ -194,12 +194,12 @@
 
 <!-- Core Scripts -->
 <script src="/static/js/vue.min.js"></script>
-<script src="/static/js/config.js"></script>
+<script src="/static/js/config.js?v=20260928-color"></script>
 <script src="/static/js/vuetify.min.js"></script>
 <script src="/static/js/axios.min.js"></script>
 
 <!-- Navigation Data -->
-<script src="/static/js/navigation.js?v=13.4.2"></script>
+<script src="/static/js/navigation.js?v=20260928"></script>
 
 <!-- stk Components -->
 <script src="/static/js/components/TransitionExpand.js"></script>
@@ -219,7 +219,7 @@
     const layoutMixin = {
         data() {
             return {
-                drawer: true,
+                drawer: window.innerWidth >= 960,
                 isNavCollapsed: false,
                 isMobile: window.innerWidth < 960,
                 navItems: typeof stkNavigation !== 'undefined' ? stkNavigation : [],
@@ -244,7 +244,9 @@
                 localStorage.setItem('ziglag-nav-collapsed', this.isNavCollapsed);
             },
             handleResize() {
-                this.isMobile = window.innerWidth < 960;
+                const mobile = window.innerWidth < 960;
+                if (mobile !== this.isMobile) this.drawer = !mobile;
+                this.isMobile = mobile;
                 if (this.isMobile) {
                     this.isNavCollapsed = false;
                 }

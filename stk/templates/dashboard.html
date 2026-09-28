@@ -1,124 +1,51 @@
 {% extends 'layout.html' %}
+{% block title %}Dashboard | ZigLag{% endblock %}
 {% block content %}
-    <v-container class="py-6">
-        <!-- Stats Row -->
-        <v-row class="mb-6">
-            <v-col cols="12" sm="6" md="3">
-                <v-card class="pa-4">
-                    <div class="d-flex align-center">
-                        <i class="ti ti-file-invoice mr-4" style="font-size: 32px; color: #353aaf;"></i>
-                        <div>
-                            <div class="text-h4 font-weight-bold">{{ stats.total_invoices }}</div>
-                            <div class="text-medium-emphasis">Invoices</div>
-                        </div>
-                    </div>
-                </v-card>
-            </v-col>
-            <v-col cols="12" sm="6" md="3">
-                <v-card class="pa-4">
-                    <div class="d-flex align-center">
-                        <i class="ti ti-clock-dollar mr-4" style="font-size: 32px; color: #EAB308;"></i>
-                        <div>
-                            <div class="text-h5 font-weight-bold">{{ stats.currency_symbol }}{{ stats.outstanding }}</div>
-                            <div class="text-medium-emphasis">Outstanding</div>
-                        </div>
-                    </div>
-                </v-card>
-            </v-col>
-            <v-col cols="12" sm="6" md="3">
-                <v-card class="pa-4">
-                    <div class="d-flex align-center">
-                        <i class="ti ti-cash mr-4" style="font-size: 32px; color: #16A34A;"></i>
-                        <div>
-                            <div class="text-h5 font-weight-bold">{{ stats.currency_symbol }}{{ stats.total_paid }}</div>
-                            <div class="text-medium-emphasis">Total Paid</div>
-                        </div>
-                    </div>
-                </v-card>
-            </v-col>
-            <v-col cols="12" sm="6" md="3">
-                <v-card class="pa-4">
-                    <div class="d-flex align-center">
-                        <i class="ti ti-users mr-4" style="font-size: 32px; color: #4e54c8;"></i>
-                        <div>
-                            <div class="text-h4 font-weight-bold">{{ stats.clients }}</div>
-                            <div class="text-medium-emphasis">Customers</div>
-                        </div>
-                    </div>
-                </v-card>
-            </v-col>
-        </v-row>
-
-        <v-row>
-            <!-- Recent Invoices -->
-            <v-col cols="12" md="8">
-                <v-card>
-                    <v-card-title class="pa-6 pb-2 d-flex align-center">
-                        Recent Invoices
-                        <v-spacer></v-spacer>
-                        <v-btn href="/invoices/" variant="text" size="small">View All</v-btn>
-                    </v-card-title>
-                    <v-list class="pa-2">
-                        {% for inv in recent %}
-                        <v-list-item href="/invoices/{{ inv.id }}" class="rounded-lg mb-1">
-                            <template v-slot:prepend>
-                                <i class="ti ti-file-invoice mr-3 text-medium-emphasis" style="font-size: 20px;"></i>
-                            </template>
-                            <v-list-item-title>{{ inv.invoice_number }} - {{ inv.client_name }}</v-list-item-title>
-                            <v-list-item-subtitle>{{ inv.date }} &middot; {{ stats.currency_symbol }}{{ inv.total }}</v-list-item-subtitle>
-                            <template v-slot:append>
-                                <v-chip size="x-small" variant="tonal"
-                                    color="{% if inv.status == 'paid' %}success{% elif inv.status == 'overdue' %}error{% elif inv.status in ['sent','viewed'] %}info{% else %}grey{% endif %}">
-                                    {{ inv.status }}
-                                </v-chip>
-                            </template>
-                        </v-list-item>
-                        {% endfor %}
-                        {% if not recent %}
-                        <v-list-item>
-                            <v-list-item-title class="text-medium-emphasis">No invoices yet</v-list-item-title>
-                        </v-list-item>
-                        {% endif %}
-                    </v-list>
-                </v-card>
-            </v-col>
-
-            <!-- Quick Actions -->
-            <v-col cols="12" md="4">
-                <v-card>
-                    <v-card-title class="pa-6 pb-2">Quick Actions</v-card-title>
-                    <v-list class="pa-2">
-                        <v-list-item href="/invoices/new" class="rounded-lg mb-1">
-                            <template v-slot:prepend>
-                                <i class="ti ti-plus mr-3" style="font-size: 20px; color: #353aaf;"></i>
-                            </template>
-                            <v-list-item-title>New Invoice</v-list-item-title>
-                        </v-list-item>
-                        <v-list-item href="/clients/" class="rounded-lg mb-1">
-                            <template v-slot:prepend>
-                                <i class="ti ti-user-plus mr-3" style="font-size: 20px; color: #4e54c8;"></i>
-                            </template>
-                            <v-list-item-title>New Customer</v-list-item-title>
-                        </v-list-item>
-                        <v-list-item href="/reports/" class="rounded-lg mb-1">
-                            <template v-slot:prepend>
-                                <i class="ti ti-chart-bar mr-3" style="font-size: 20px; color: #16A34A;"></i>
-                            </template>
-                            <v-list-item-title>View Reports</v-list-item-title>
-                        </v-list-item>
-                        <v-list-item href="/settings/business/" class="rounded-lg">
-                            <template v-slot:prepend>
-                                <i class="ti ti-settings mr-3" style="font-size: 20px; color: #767685;"></i>
-                            </template>
-                            <v-list-item-title>Business Settings</v-list-item-title>
-                        </v-list-item>
-                    </v-list>
-                </v-card>
-            </v-col>
-        </v-row>
-    </v-container>
+<section class="workspace">
+    <header class="page-header">
+        <div><h1>Your workspace</h1><p>A clear view of what needs your attention.</p></div>
+        <v-spacer></v-spacer>
+        <v-btn href="/invoices/new" color="primary">New invoice <i class="ti ti-plus ml-2"></i></v-btn>
+    </header>
+    <div class="summary-grid">
+        <a class="summary-card summary-money" href="/invoices/?status=outstanding">
+            <h2><i class="ti ti-wallet summary-icon" aria-hidden="true"></i> Unpaid invoices</h2>
+            {% for row in stats.outstanding_by_currency %}
+            <div class="figure money">{{ row.currency_code }} {{ row.amount }}</div>
+            {% else %}<div class="figure">All clear</div>{% endfor %}
+            <small>Issued balances, by currency</small>
+            <span class="summary-link">View unpaid invoices <i class="ti ti-arrow-up-right" aria-hidden="true"></i></span>
+        </a>
+        <a class="summary-card summary-drafts" href="/invoices/?status=draft">
+            <h2><i class="ti ti-pencil summary-icon" aria-hidden="true"></i> Drafts to finish</h2>
+            <div class="figure">{{ stats.draft_count }}</div><small>Ready when you are</small>
+            <span class="summary-link">Review and issue <i class="ti ti-arrow-up-right" aria-hidden="true"></i></span>
+        </a>
+        <a class="summary-card summary-due" href="/invoices/?status=overdue">
+            <h2><i class="ti ti-clock-exclamation summary-icon" aria-hidden="true"></i> Overdue</h2>
+            <div class="figure">{{ stats.overdue_count }}</div><small>Past due with a balance remaining</small>
+            <span class="summary-link">Review overdue invoices <i class="ti ti-arrow-up-right" aria-hidden="true"></i></span>
+        </a>
+    </div>
+    <v-card>
+        <v-card-title class="d-flex align-center pa-5">Recent invoices<v-spacer></v-spacer><v-btn href="/invoices/" variant="text">View all</v-btn></v-card-title>
+        {% if recent %}
+        <v-list class="px-2 pb-3">
+            {% for inv in recent %}
+            <v-list-item href="/invoices/{{ inv.id }}" class="py-3">
+                <template v-slot:prepend><span class="recent-icon"><i class="ti ti-file-invoice" aria-hidden="true"></i></span></template>
+                <v-list-item-title>{{ inv.invoice_number }}</v-list-item-title>
+                <v-list-item-subtitle>{{ inv.client_name_snapshot if inv.is_issued else (inv.client.name if inv.client else 'No customer yet') }}{% if inv.due_date %} · Due {{ inv.due_date }}{% endif %}</v-list-item-subtitle>
+                <template v-slot:append><div class="text-right"><div class="money">{{ inv.currency_code }} {{ inv.total }}</div><div class="mt-2"><span class="status-pill status-{{ inv.status }}">{{ {'sent': 'Issued', 'viewed': 'Link opened'}.get(inv.status, inv.status|capitalize) }}</span></div></div></template>
+            </v-list-item>
+            {% endfor %}
+        </v-list>
+        {% else %}
+        <div class="empty-state"><h2>Your first invoice starts here</h2><p class="mb-5">Add your business details, then create a draft.</p><v-btn href="/settings/business/" variant="outlined">Set up your business</v-btn></div>
+        {% endif %}
+    </v-card>
+</section>
 {% endblock %}
-
 {% block js %}
     <script>
         const {createApp} = Vue;

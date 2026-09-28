@@ -3,18 +3,18 @@
 {% block css %}
 <style>
     html, body { height: 100%; margin: 0; }
-    body { background: #fbf9f8; display: flex; align-items: center; justify-content: center; }
+    body { background: #f6f5f2; display: flex; align-items: center; justify-content: center; }
     #app, .v-application, .v-application__wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
 </style>
 {% endblock %}
 
 {% block content %}
     <div id="app">
-        <v-card width="440" elevation="0" style="border: 3px solid #1b1c1c; box-shadow: 8px 8px 0 0 rgba(0,0,0,1);" class="pa-2">
+        <v-card width="440" elevation="0" style="max-width: calc(100vw - 32px);" class="pa-2">
             <v-card-title class="pb-0">
                 <div class="d-flex align-center mb-4" style="gap: 10px;">
                     <img src="/static/img/ziglag.svg" alt="Logo" height="32">
-                    <span style="font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; font-size: 16px; letter-spacing: -0.02em; text-transform: uppercase;">Log in to your account</span>
+                    <span style="font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; font-size: 16px; letter-spacing: -0.02em; white-space: normal;">Sign in to ZigLag</span>
                 </div>
             </v-card-title>
 
@@ -35,7 +35,7 @@
                         <v-alert type="error" density="compact" class="mb-3">Invalid email or password!</v-alert>
                     {% endif %}
 
-                    <v-btn block color="primary" size="large" @click="submit" class="mb-3">Log In</v-btn>
+                    <v-btn block color="primary" size="large" @click="submit" class="mb-3">Sign in</v-btn>
                 </v-form>
 
                 {% if security.webauthn and security.wan_allow_as_first_factor or config.GOOGLE_AUTH_ENABLED or config.GITHUB_AUTH_ENABLED %}

@@ -15,7 +15,7 @@ const VerticalNavLink = {
 
   template: `
     <li class="nav-link" :class="{ 'active': isActive }">
-      <a :href="item.to" :target="item.target || '_self'">
+      <a :href="item.to" :aria-label="item.title" :aria-current="isActive ? 'page' : undefined" :target="item.target || '_self'">
         <i v-if="item.icon" :class="item.icon" class="nav-item-icon"></i>
         <span class="nav-item-title">{{ item.title }}</span>
         <span v-if="item.badge" class="nav-item-badge" :class="item.badgeClass || ''">

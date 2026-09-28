@@ -30,23 +30,16 @@ const stkNavigation = [
     heading: 'Settings'
   },
   {
-    title: 'Business Settings',
+    title: 'Business settings',
     icon: 'ti ti-settings',
     to: '/settings/business'
   },
   {
-    heading: 'Account'
+    heading: 'Administration',
+    role: 'admin'
   },
   {
-    title: 'Change Password',
-    icon: 'ti ti-key',
-    to: '/change'
-  },
-  {
-    heading: 'Administration'
-  },
-  {
-    title: 'User Management',
+    title: 'User management',
     icon: 'ti ti-users-group',
     role: 'admin',
     children: [
@@ -63,7 +56,7 @@ const stkNavigation = [
     ]
   },
   {
-    title: 'Activity Logs',
+    title: 'Activity logs',
     icon: 'ti ti-history',
     to: '/activities',
     role: 'admin'

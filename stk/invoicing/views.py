@@ -1,6 +1,8 @@
+import asyncio
 import logging
 import os
-from datetime import datetime
+from datetime import date, datetime
+from decimal import Decimal
 from pathlib import Path
 
 import orjson as json
@@ -14,7 +16,7 @@ from quart import (
     send_file,
 )
 from quart_security import auth_required, current_user
-from sqlalchemy import extract, func, select
+from sqlalchemy import case, extract, func, or_, select
 from sqlalchemy.exc import IntegrityError
 
 from stk.invoicing.models import (
@@ -24,6 +26,7 @@ from stk.invoicing.models import (
     InvoiceItem,
     Payment,
 )
+from stk.invoicing.queries import invoice_conditions
 from stk.user.models import Activity
 
 log = logging.getLogger(__name__)
@@ -375,25 +378,27 @@ async def api_invoices():
     status = request.args.get("status", "all")
     search = request.args.get("search", "").strip()
 
-    query = select(Invoice).where(Invoice.user_id == current_user.id)
-    count_query = (
-        select(func.count())
-        .select_from(Invoice)
-        .where(Invoice.user_id == current_user.id)
-    )
-
-    if status == "outstanding":
-        query = query.where(Invoice.status.in_(["draft", "sent", "viewed", "overdue"]))
-        count_query = count_query.where(
-            Invoice.status.in_(["draft", "sent", "viewed", "overdue"])
-        )
-    elif status == "paid":
-        query = query.where(Invoice.status == "paid")
-        count_query = count_query.where(Invoice.status == "paid")
-
+    if page < 1 or per_page < 1 or per_page > 100:
+        return {"message": "Invalid pagination"}, 400
+    try:
+        conditions = invoice_conditions(current_user.id, status, date.today())
+    except ValueError as error:
+        return {"message": str(error)}, 400
+    query = select(Invoice).outerjoin(Client)
+    count_query = select(func.count()).select_from(Invoice).outerjoin(Client)
     if search:
-        query = query.join(Client).where(Client.name.ilike(f"%{search}%"))
-        count_query = count_query.join(Client).where(Client.name.ilike(f"%{search}%"))
+        customer_name = case(
+            (Invoice.issued_at.is_not(None), Invoice.client_name_snapshot),
+            else_=Client.name,
+        )
+        conditions.append(
+            or_(
+                Invoice.invoice_number.icontains(search, autoescape=True),
+                customer_name.icontains(search, autoescape=True),
+            )
+        )
+    query = query.where(*conditions)
+    count_query = count_query.where(*conditions)
 
     total = (await g.db_session.execute(count_query)).scalar()
     result = await g.db_session.execute(
@@ -407,8 +412,12 @@ async def api_invoices():
             {
                 "id": inv.id,
                 "invoice_number": inv.invoice_number,
-                "client_name": inv.client.name if inv.client else "",
+                "client_name": inv.client_name_snapshot
+                if inv.is_issued
+                else (inv.client.name if inv.client else ""),
                 "date": inv.date.isoformat() if inv.date else "",
+                "due_date": inv.due_date.isoformat() if inv.due_date else None,
+                "issued_at": inv.issued_at.isoformat() if inv.issued_at else None,
                 "total": str(inv.total),
                 "balance_due": str(inv.balance_due),
                 "status": inv.status,
@@ -453,8 +462,15 @@ async def api_invoice_create():
         await Activity.register(
             current_user.id, "Invoice Create", {"number": invoice.invoice_number}
         )
+        await g.db_session.refresh(invoice)
+        response = {
+            "message": "Invoice created",
+            "id": invoice.id,
+            "invoice": invoice.to_dict(),
+            "issue_errors": invoice.validate_for_issue(),
+        }
         await g.db_session.commit()
-        return {"message": "Invoice created", "id": invoice.id}
+        return response
     except IntegrityError:
         await g.db_session.rollback()
         return {"message": "Invoice number already in use"}, 409
@@ -480,6 +496,8 @@ async def api_invoice_update(id):
             return {"message": "Customer not found"}, 400
         invoice.client = client
         invoice.client_vat_id = client.vat_id or invoice.client_vat_id or ""
+    else:
+        invoice.client = None
 
     # replace line items
     if "items" in data:
@@ -492,8 +510,15 @@ async def api_invoice_update(id):
 
     invoice.recalculate()
     try:
+        await g.db_session.flush()
+        await g.db_session.refresh(invoice)
+        response = {
+            "message": "Invoice updated",
+            "invoice": invoice.to_dict(),
+            "issue_errors": invoice.validate_for_issue(),
+        }
         await g.db_session.commit()
-        return {"message": "Invoice updated"}
+        return response
     except IntegrityError:
         await g.db_session.rollback()
         return {"message": "Invoice number already in use"}, 409
@@ -695,7 +720,7 @@ async def api_invoice_share_revoke(id):
 
 @invoicing.post("/api/invoice/<int:id>/send")
 async def api_invoice_send(id):
-    from stk.tasks import run_in_background
+    from aiosmtplib.errors import SMTPException, SMTPTimeoutError
 
     invoice = await g.db_session.get(Invoice, id)
     if not invoice or invoice.user_id != current_user.id:
@@ -767,11 +792,21 @@ async def api_invoice_send(id):
             start_tls=app.config.get("MAIL_USE_TLS", False),
         )
 
-    await run_in_background(_send())
-
-    invoice.status = "sent"
+    # Persist the share link before handing it to an external mail server.
     await g.db_session.commit()
-    return {"message": f"Invoice sent to {recipient}"}
+    try:
+        await asyncio.wait_for(_send(), timeout=30)
+    except (TimeoutError, SMTPTimeoutError, OSError):
+        log.warning("Invoice email outcome unknown", exc_info=True)
+        return {
+            "message": "Email status could not be confirmed. Check before sending again."
+        }, 504
+    except SMTPException:
+        log.warning("Invoice email rejected", exc_info=True)
+        return {
+            "message": "The mail server could not accept this email. Check email settings and try again."
+        }, 502
+    return {"message": "Email accepted by the mail server"}
 
 
 # ── Reports API ──
@@ -779,15 +814,30 @@ async def api_invoice_send(id):
 
 @invoicing.route("/api/reports/monthly")
 async def api_reports_monthly():
-    year = request.args.get("year", None, type=int)
-    if not year:
-        from datetime import date
-
-        year = date.today().year
-
+    year = request.args.get("year", date.today().year, type=int)
+    if not 1 <= year <= 9999:
+        return {"message": "Invalid year"}, 400
     settings = await BusinessSettings.get_or_create(current_user.id)
     await g.db_session.commit()
-
+    conditions = invoice_conditions(current_user.id, "paid", date.today())
+    conditions.append(extract("year", Invoice.date) == year)
+    currencies = list(
+        (
+            await g.db_session.scalars(
+                select(Invoice.currency_code)
+                .where(*conditions)
+                .distinct()
+                .order_by(Invoice.currency_code)
+            )
+        ).all()
+    )
+    currency = request.args.get("currency")
+    if currency not in currencies:
+        currency = (
+            settings.currency_code
+            if settings.currency_code in currencies or not currencies
+            else currencies[0]
+        )
     result = await g.db_session.execute(
         select(
             extract("month", Invoice.date).label("month"),
@@ -795,12 +845,9 @@ async def api_reports_monthly():
             func.count(Invoice.id).label("invoices"),
             func.coalesce(func.sum(Invoice.total), 0).label("total"),
         )
-        .where(Invoice.user_id == current_user.id)
-        .where(Invoice.status == "paid")
-        .where(extract("year", Invoice.date) == year)
+        .where(*conditions, Invoice.currency_code == currency)
         .group_by(extract("month", Invoice.date))
     )
-
     monthly = {
         int(r.month): {
             "clients": r.clients,
@@ -809,25 +856,20 @@ async def api_reports_monthly():
         }
         for r in result.all()
     }
-
-    months = []
-    for m in range(1, 13):
-        data = monthly.get(m, {"clients": 0, "invoices": 0, "total": "0"})
-        months.append({"month": m, **data})
-
-    # yearly totals
-    yearly_total = sum(float(monthly.get(m, {}).get("total", 0)) for m in range(1, 13))
-    yearly_invoices = sum(monthly.get(m, {}).get("invoices", 0) for m in range(1, 13))
-
-    return Response(
-        json.dumps(
-            {
-                "year": year,
-                "months": months,
-                "currency_symbol": settings.currency_symbol,
-                "yearly_total": str(yearly_total),
-                "yearly_invoices": yearly_invoices,
-            }
+    months = [
+        {
+            "month": month,
+            **monthly.get(month, {"clients": 0, "invoices": 0, "total": "0.00"}),
+        }
+        for month in range(1, 13)
+    ]
+    return {
+        "year": year,
+        "months": months,
+        "currencies": currencies,
+        "currency_code": currency,
+        "yearly_total": str(
+            sum((Decimal(row["total"]) for row in months), Decimal("0.00"))
         ),
-        content_type="application/json",
-    )
+        "yearly_invoices": sum(row["invoices"] for row in months),
+    }

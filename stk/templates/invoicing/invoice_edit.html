@@ -1,73 +1,90 @@
-{% extends 'layout.html' %} {% block css %}
+{% extends 'layout.html' %} {% block title %}Invoice | ZigLag{% endblock %} {% block css %}
 <style>
-    .line-item-row { display: flex; gap: 8px; align-items: center; margin-bottom: 4px; }
     .summary-row { display: flex; justify-content: flex-end; gap: 16px; padding: 4px 0; font-variant-numeric: tabular-nums; }
     .summary-label { text-align: right; min-width: 120px; font-weight: 500; }
     .summary-value { min-width: 120px; text-align: right; }
     .summary-total { font-weight: 700; font-size: 1.1rem; }
-    /* Preview mode styles */
-    .preview-section { font-family: 'Be Vietnam Pro', sans-serif; }
-    .preview-header { display: flex; justify-content: space-between; padding-bottom: 16px; border-bottom: 3px solid #353aaf; margin-bottom: 24px; }
-    .preview-label { font-family: 'Inter', sans-serif; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: #767685; margin-bottom: 4px; }
+    .invoice-workspace { overflow-wrap: anywhere; max-width: 1040px; margin: 28px auto 64px; width: calc(100% - 32px); }
+    .workspace-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding: 12px 0 20px; }
+    .save-status { font-size: 12px; color: rgb(var(--v-theme-on-surface)); opacity: .75; }
+    .invoice-paper { padding: 40px; border: 1px solid rgba(var(--v-theme-on-surface), .18); background: rgb(var(--v-theme-surface)); }
+    .document-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 24px; padding-bottom: 24px; margin-bottom: 24px; border-bottom: 2px solid rgb(var(--v-theme-primary)); }
+    .document-heading h1 { font: 800 36px/1.1 'Plus Jakarta Sans', sans-serif; letter-spacing: -.04em; }
+    .document-caption { font-size: 11px; text-transform: uppercase; letter-spacing: .12em; opacity: .7; }
+    .document-parties { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; margin-bottom: 28px; }
+    .invoice-paper .v-field { background: transparent; }
+    .invoice-paper .v-field--variant-outlined .v-field__outline { --v-field-border-opacity: .15; }
+    .invoice-paper .v-field--focused .v-field__outline { --v-field-border-opacity: 1; }
+    .invoice-paper .v-input { min-width: 0; }
+    .document-dates { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+    .document-items { margin-top: 28px; }
+    .document-item { display: grid; grid-template-columns: minmax(160px, 1fr) 112px 80px 112px 32px; gap: 12px; align-items: start; padding: 16px 0; border-bottom: 1px solid rgba(var(--v-theme-on-surface), .12); }
+    .item-amount { padding-top: 12px; text-align: right; font-variant-numeric: tabular-nums; }
+    .document-footer { display: grid; grid-template-columns: 1fr 300px; gap: 40px; margin-top: 32px; }
+    .document-options { margin-top: 28px; border-top: 1px solid rgba(var(--v-theme-on-surface), .15); padding-top: 16px; }
+    .document-options summary { cursor: pointer; padding: 8px 0 16px; font-size: 13px; font-weight: 500; }
+    .document-error { color: rgb(var(--v-theme-error)); font-size: 12px; margin: 4px 0 12px; }
+    .review-total { font: 700 32px/1.3 'Plus Jakarta Sans', sans-serif; font-variant-numeric: tabular-nums; margin: 12px 0; }
+    @media (max-width: 700px) {
+        .invoice-workspace { width: calc(100% - 20px); margin-top: 12px; }
+        .invoice-paper { padding: 20px 16px; }
+        .document-parties, .document-footer { grid-template-columns: 1fr; gap: 24px; }
+        .document-dates { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .document-item { grid-template-columns: 1fr 1fr 1fr 32px; gap: 8px; }
+        .item-description { grid-column: 1 / -1; }
+        .document-heading h1 { font-size: 30px; }
+    }
+
+    .preview-section { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
+    .preview-header { display: flex; justify-content: space-between; padding-bottom: 16px; border-bottom: 3px solid rgb(var(--v-theme-primary)); margin-bottom: 24px; }
+    .preview-label { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: rgba(var(--v-theme-on-surface), .7); margin-bottom: 4px; }
     .preview-value { font-size: 14px; line-height: 1.5; }
-    .preview-client { background: #f6f3f2; padding: 16px 20px; border-radius: 4px; margin-bottom: 24px; }
+    .preview-client { background: rgba(var(--v-theme-on-surface), .04); padding: 16px 20px; border-radius: 4px; margin-bottom: 24px; }
     .preview-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
-    .preview-table th { font-family: 'Inter', sans-serif; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: #767685; padding: 8px 0; text-align: left; border-bottom: 2px solid #1b1c1c; }
+    .preview-table th { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: rgba(var(--v-theme-on-surface), .7); padding: 8px 0; text-align: left; border-bottom: 1px solid rgba(var(--v-theme-on-surface), .18); }
     .preview-table th.right { text-align: right; }
-    .preview-table td { padding: 8px 0; font-size: 14px; border-bottom: 1px solid #f0eded; }
+    .preview-table td { padding: 8px 0; font-size: 14px; border-bottom: 1px solid rgba(var(--v-theme-on-surface), .12); }
     .preview-table td.right { text-align: right; font-variant-numeric: tabular-nums; }
-    .preview-notes { background: #f6f3f2; padding: 12px 16px; border-radius: 4px; margin-top: 24px; font-size: 13px; color: #464653; white-space: pre-line; }
+    .preview-notes { background: rgba(var(--v-theme-on-surface), .04); padding: 12px 16px; border-radius: 4px; margin-top: 24px; font-size: 13px; color: rgb(var(--v-theme-on-surface)); white-space: pre-line; }
 </style>
 {% endblock %} {% block sidebar %}
 {% endblock %} {% block layout_classes %} align-center {% endblock %}
 {% block content %}
 
-    <v-card class="ma-2 mt-12 w-100" style="max-width: 960px;">
-        <v-toolbar>
-            <v-btn icon variant="text" href="/invoices/">
-                <i class="ti ti-arrow-left"></i>
-            </v-btn>
-            <v-toolbar-title>
-                ${invoice.id ? invoice.invoice_number : 'New Invoice'}
-            </v-toolbar-title>
+    <section class="invoice-workspace">
+        <header class="workspace-toolbar">
+            <v-btn icon variant="text" href="/invoices/" aria-label="Back to invoices"><i class="ti ti-arrow-left"></i></v-btn>
+            <span class="text-body-2">${invoice.id ? invoice.invoice_number : 'New invoice'}</span>
+            <span class="status-pill" :class="'status-' + invoice.status">${statusLabel(invoice.status)}</span>
             <v-spacer></v-spacer>
-            <v-chip v-if="invoice.id" :color="statusColor(invoice.status)" size="small" class="mr-2" variant="tonal">
-                ${invoice.status}
-            </v-chip>
-
-            <!-- Mode toggle -->
-            <v-btn-toggle v-if="invoice.id" v-model="mode" mandatory density="compact" class="mr-2">
-                <v-btn value="preview" size="small"><i class="ti ti-eye mr-1"></i> Preview</v-btn>
-                <v-btn value="edit" size="small"><i class="ti ti-pencil mr-1"></i> Edit</v-btn>
-            </v-btn-toggle>
-
-            <v-btn v-if="mode === 'edit' && !invoice.issued_at" color="primary" @click="saveInvoice" variant="elevated" :loading="saving">Save</v-btn>
-
+            <span v-if="!invoice.issued_at" class="save-status" role="status" aria-live="polite">${saveStatus}</span>
+            <v-btn v-if="saveError" variant="text" @click="saveInvoice">Retry save</v-btn>
+            <v-btn v-if="!invoice.issued_at" color="primary" variant="elevated" @click="reviewInvoice" :loading="reviewing" :disabled="issuing">Review and issue <i class="ti ti-arrow-right ml-2"></i></v-btn>
             <v-menu v-if="invoice.id">
                 <template v-slot:activator="{ props }">
-                    <v-btn v-bind="props" icon variant="text" size="small" class="ml-1"><i class="ti ti-dots-vertical"></i></v-btn>
+                    <v-btn v-bind="props" icon variant="text" aria-label="Invoice actions"><i class="ti ti-dots-vertical"></i></v-btn>
                 </template>
                 <v-list density="compact">
                     <v-list-item v-if="invoice.issued_at" @click="shareInvoice"><v-list-item-title>Get Share Link</v-list-item-title></v-list-item>
-                    <v-list-item :href="'/api/invoice/' + invoice.id + '/pdf'" target="_blank"><v-list-item-title>Download PDF</v-list-item-title></v-list-item>
-                    <v-list-item v-if="!invoice.issued_at" @click="deleteInvoice"><v-list-item-title class="text-error">Delete Invoice</v-list-item-title></v-list-item>
+                    <v-list-item v-if="invoice.issued_at" :href="'/api/invoice/' + invoice.id + '/pdf'" target="_blank"><v-list-item-title>Download PDF</v-list-item-title></v-list-item>
+                    <v-list-item v-if="!invoice.issued_at" :disabled="saving" @click="deleteInvoice"><v-list-item-title class="text-error">Delete draft</v-list-item-title></v-list-item>
                 </v-list>
             </v-menu>
-        </v-toolbar>
-
-        <!-- ═══ PREVIEW MODE ═══ -->
-        <v-card-text v-if="mode === 'preview'" class="preview-section" style="background: #fff; color: #1b1c1c;">
+        </header>
+        <v-alert v-if="saveError" type="error" variant="tonal" class="mb-4" role="alert">${saveError} Your changes are still on this page.</v-alert>
+        <!-- Issued invoice -->
+        <v-card-text v-if="invoice.issued_at" class="preview-section" style="background: rgb(var(--v-theme-surface)); color: rgb(var(--v-theme-on-surface));">
             <div class="preview-header">
                 <div>
                     <div style="font-family: 'Plus Jakarta Sans'; font-weight: 800; font-size: 18px;">${invoice.from_name}</div>
-                    <div class="preview-value" style="color: #464653; white-space: pre-line; margin-top: 4px;">${invoice.from_address}</div>
-                    <div v-if="invoice.from_phone" style="color: #464653; font-size: 13px;">${invoice.from_phone}</div>
-                    <div v-if="invoice.from_email" style="color: #464653; font-size: 13px;">${invoice.from_email}</div>
-                    <div v-if="invoice.from_business_number" style="color: #464653; font-size: 13px;">${invoice.from_business_number}</div>
+                    <div class="preview-value" style="color: rgb(var(--v-theme-on-surface)); white-space: pre-line; margin-top: 4px;">${invoice.from_address}</div>
+                    <div v-if="invoice.from_phone" style="color: rgb(var(--v-theme-on-surface)); font-size: 13px;">${invoice.from_phone}</div>
+                    <div v-if="invoice.from_email" style="color: rgb(var(--v-theme-on-surface)); font-size: 13px;">${invoice.from_email}</div>
+                    <div v-if="invoice.from_business_number" style="color: rgb(var(--v-theme-on-surface)); font-size: 13px;">${invoice.from_business_number}</div>
                 </div>
                 <div style="text-align: right;">
-                    <div style="font-family: 'Plus Jakarta Sans'; font-weight: 800; font-size: 28px; color: #353aaf; text-transform: uppercase;">Invoice</div>
-                    <div style="font-family: 'Inter'; font-size: 13px; color: #464653; margin-top: 8px;">
+                    <div style="font-family: 'Plus Jakarta Sans'; font-weight: 800; font-size: 28px; color: rgb(var(--v-theme-primary)); text-transform: uppercase;">Invoice</div>
+                    <div style="font-family: 'Plus Jakarta Sans'; font-size: 13px; color: rgb(var(--v-theme-on-surface)); margin-top: 8px;">
                         <strong>${invoice.invoice_number || 'Draft'}</strong><br>
                         Date: ${invoice.date}<br>
                         <span v-if="invoice.due_date">Due: ${invoice.due_date}<br></span>
@@ -80,10 +97,10 @@
             <div v-if="invoice.client" class="preview-client">
                 <div class="preview-label">Bill To</div>
                 <div style="font-weight: 700; font-size: 16px;">${invoice.client.name || invoice.client_name}</div>
-                <div v-if="billTo.email" style="color: #464653; font-size: 13px;">${billTo.email}</div>
-                <div v-if="billTo.address_line1" style="color: #464653; font-size: 13px;">${billTo.address_line1}</div>
-                <div v-if="billTo.address_line2" style="color: #464653; font-size: 13px;">${billTo.address_line2}</div>
-                <div v-if="billTo.phone" style="color: #464653; font-size: 13px;">${billTo.phone}</div>
+                <div v-if="billTo.email" style="color: rgb(var(--v-theme-on-surface)); font-size: 13px;">${billTo.email}</div>
+                <div v-if="billTo.address_line1" style="color: rgb(var(--v-theme-on-surface)); font-size: 13px;">${billTo.address_line1}</div>
+                <div v-if="billTo.address_line2" style="color: rgb(var(--v-theme-on-surface)); font-size: 13px;">${billTo.address_line2}</div>
+                <div v-if="billTo.phone" style="color: rgb(var(--v-theme-on-surface)); font-size: 13px;">${billTo.phone}</div>
             </div>
 
             <!-- Items table -->
@@ -100,7 +117,7 @@
                     <tr v-for="item in invoice.items" :key="item.id || item.description">
                         <td>
                             ${item.description}
-                            <div v-if="item.detail" style="font-size: 12px; color: #767685;">${item.detail}</div>
+                            <div v-if="item.detail" style="font-size: 12px; color: rgba(var(--v-theme-on-surface), .7);">${item.detail}</div>
                         </td>
                         <td class="right">${formatMoney(item.unit_price)}</td>
                         <td class="right">${item.quantity}</td>
@@ -114,7 +131,7 @@
                 <div class="summary-row"><span class="summary-label">Subtotal</span><span class="summary-value">${formatMoney(totals.subtotal)}</span></div>
                 <div class="summary-row" v-if="invoice.tax_rate > 0"><span class="summary-label">${invoice.tax_label} (${invoice.tax_rate}%)</span><span class="summary-value">${formatMoney(totals.tax)}</span></div>
                 <div class="summary-row" v-if="totals.discount > 0"><span class="summary-label">Discount</span><span class="summary-value">-${formatMoney(totals.discount)}</span></div>
-                <v-divider class="my-1" style="max-width: 280px; margin-left: auto; border-width: 2px; border-color: #353aaf;"></v-divider>
+                <v-divider class="my-1" style="max-width: 280px; margin-left: auto; border-width: 2px; border-color: rgb(var(--v-theme-primary));"></v-divider>
                 <div class="summary-row summary-total"><span class="summary-label">Total</span><span class="summary-value">${formatMoney(totals.total)}</span></div>
                 <div class="summary-row" v-if="totals.paid > 0"><span class="summary-label">Paid</span><span class="summary-value">-${formatMoney(totals.paid)}</span></div>
                 <div class="summary-row summary-total" v-if="totals.paid > 0"><span class="summary-label">Balance Due</span><span class="summary-value">${formatMoney(totals.balance)}</span></div>
@@ -135,153 +152,128 @@
                 </v-list>
             </template>
 
+            <v-alert v-if="emailMessage" :type="emailError ? 'warning' : 'success'" variant="tonal" class="mt-4" role="status">${emailMessage}</v-alert>
             <!-- Quick actions in preview -->
             <div class="d-flex ga-2 mt-6 flex-wrap">
-                <v-btn v-if="!invoice.issued_at" @click="mode = 'edit'" variant="tonal" size="small"><i class="ti ti-pencil mr-1"></i> Edit</v-btn>
-                <v-btn v-if="!invoice.issued_at" @click="issueInvoice" color="primary" variant="elevated" size="small"><i class="ti ti-lock mr-1"></i> Issue</v-btn>
+                <v-btn v-if="invoice.issued_at && invoice.status !== 'cancelled'" :loading="sending" :disabled="sending" @click="confirmSend" variant="outlined">Email invoice</v-btn>
                 <v-btn v-if="invoice.issued_at && invoice.status !== 'cancelled'" @click="cancelInvoice" color="error" variant="tonal" size="small"><i class="ti ti-ban mr-1"></i> Cancel</v-btn>
                 <v-btn v-if="invoice.issued_at && invoice.status !== 'paid' && invoice.status !== 'cancelled'" @click="markPaid" color="success" variant="tonal" size="small"><i class="ti ti-check mr-1"></i> Mark Paid</v-btn>
-                <v-btn v-if="invoice.status === 'paid' && !invoice.issued_at" @click="setStatus('draft')" variant="tonal" size="small"><i class="ti ti-arrow-back mr-1"></i> Reopen</v-btn>
                 <v-btn v-if="invoice.issued_at && invoice.status !== 'cancelled'" @click="openPaymentDialog" variant="tonal" size="small"><i class="ti ti-cash mr-1"></i> Record Payment</v-btn>
                 <v-btn :href="'/api/invoice/' + invoice.id + '/pdf'" target="_blank" variant="tonal" size="small"><i class="ti ti-file-type-pdf mr-1"></i> PDF</v-btn>
             </div>
         </v-card-text>
 
-        <!-- ═══ EDIT MODE ═══ -->
-        <v-card-text v-if="mode === 'edit'">
-            <v-row>
-                <v-col cols="12" md="6">
-                    <div class="text-subtitle-2 mb-2 font-weight-bold">From</div>
+        <form v-else class="invoice-paper" @submit.prevent="reviewInvoice" novalidate>
+            <div class="document-heading">
+                <div><div class="document-caption mb-2">Draft / ${invoice.currency_code}</div><h1>Invoice</h1></div>
+                <span class="text-caption text-medium-emphasis">Edit directly. Changes save automatically.</span>
+            </div>
+            <div class="document-parties">
+                <section>
+                    <div class="document-caption mb-3">From</div>
+                    <strong>${invoice.from_name || 'Business profile incomplete'}</strong>
+                    <div class="text-body-2 text-medium-emphasis mt-2" style="white-space: pre-line;">${invoice.from_address}</div>
+                    <div class="text-caption mt-2">${invoice.from_email}</div>
+                    <div class="text-caption">${invoice.from_tax_number || invoice.from_vat_id}</div>
                     {% if profile_missing %}
-                    <v-alert type="warning" variant="tonal" class="mb-3">
-                        Missing from Business Settings: {{ profile_missing | join(', ') }}.
-                        <v-btn href="/settings/business/" variant="text" size="small">Open Settings</v-btn>
-                    </v-alert>
+                    <div class="document-error mt-3">Missing from Business Settings: {{ profile_missing | join(', ') }}.</div>
                     {% endif %}
-                    <v-card variant="outlined"><v-card-text>
-                        <strong>${invoice.from_name || 'Business profile incomplete'}</strong>
-                        <div class="text-body-2 text-medium-emphasis" style="white-space: pre-line;">${invoice.from_address}</div>
-                        <div class="text-caption">${invoice.from_email}</div>
-                        <v-btn href="/settings/business/" variant="text" size="small" class="px-0 mt-1">Edit in Settings</v-btn>
-                    </v-card-text></v-card>
-                </v-col>
-                <v-col cols="12" md="6">
-                    <div class="text-subtitle-2 mb-2 font-weight-bold">Bill To</div>
-                    <v-autocomplete
-                        label="Customer"
-                        v-model="selectedClient"
-                        :items="clientResults"
-                        item-title="name"
-                        item-value="id"
-                        return-object
-                        v-model:search="clientSearch"
-                        @update:search="searchClients"
-                        @update:model-value="onClientSelect"
-                        density="compact"
-                        clearable
-                        :no-filter="true"
-                        placeholder="Type to search customers..."
-                    >
+                    <div v-for="error in errorsFor('business')" :key="error" class="document-error">${error}</div>
+                    <v-btn href="/settings/business/" variant="text" size="small" class="px-0 mt-2">Edit in Settings <i class="ti ti-arrow-up-right ml-1"></i></v-btn>
+                </section>
+                <section>
+                    <div class="document-caption mb-3">Bill to</div>
+                    <v-autocomplete label="Customer" v-model="selectedClient" :items="clientResults" item-title="name" item-value="id" return-object v-model:search="clientSearch" @update:search="searchClients" @update:model-value="onClientSelect" density="compact" clearable :no-filter="true" placeholder="Find or create a customer" hide-details="auto">
                         <template v-slot:no-data>
-                            <v-list-item v-if="clientSearch" @click="createClientInline">
+                            <v-list-item v-if="clientSearch" @click="createClientInline" @keydown.enter.prevent="createClientInline" tabindex="0" role="button">
                                 <v-list-item-title><i class="ti ti-plus mr-2"></i>Create customer "${clientSearch}"</v-list-item-title>
                             </v-list-item>
                             <v-list-item v-else title="Type a customer name"></v-list-item>
                         </template>
                     </v-autocomplete>
-                    <v-text-field label="Email" v-model="billTo.email" density="compact"></v-text-field>
-                    <v-text-field label="Address" v-model="billTo.address_line1" density="compact"></v-text-field>
-                    <v-text-field label="City / Region" v-model="billTo.address_line2" density="compact"></v-text-field>
-                    <v-text-field label="Phone" v-model="billTo.phone" density="compact"></v-text-field>
-                    <v-text-field label="VAT ID" v-model="invoice.client_vat_id" density="compact"></v-text-field>
-                </v-col>
-            </v-row>
-
-            <v-row>
-                <v-col cols="12" sm="4"><v-text-field label="Service Date From" v-model="invoice.service_date_from" type="date" density="compact"></v-text-field></v-col>
-                <v-col cols="12" sm="4"><v-text-field label="Service Date To" v-model="invoice.service_date_to" type="date" density="compact"></v-text-field></v-col>
-                <v-col cols="12" sm="4"><v-select label="Template" v-model="invoice.template_key" density="compact" :items="[{title:'Precision',value:'precision'},{title:'Branded',value:'branded'},{title:'Editorial',value:'editorial'}]"></v-select></v-col>
-            </v-row>
-
-            <v-divider class="my-4"></v-divider>
-
-                <v-row>
-                    <v-col cols="12"><v-select label="Tax Treatment" v-model="invoice.tax_treatment" density="compact" :items="[{title:'Standard VAT',value:'standard'},{title:'Reverse Charge',value:'reverse_charge'},{title:'Tax Exempt',value:'exempt'}]"></v-select></v-col>
-                <v-col cols="12" sm="4">
-                    <v-text-field label="Invoice Number" v-model="invoice.invoice_number" density="compact" :readonly="!!invoice.issued_at" placeholder="Auto"></v-text-field>
-                </v-col>
-                <v-col cols="12" sm="4">
-                    <v-text-field label="Date" v-model="invoice.date" type="date" density="compact"></v-text-field>
-                </v-col>
-                <v-col cols="12" sm="4">
-                    <v-select label="Terms" v-model="invoice.terms" density="compact"
-                        :items="[{title:'On Receipt',value:'on_receipt'},{title:'Net 15',value:'net_15'},{title:'Net 30',value:'net_30'},{title:'Net 60',value:'net_60'}]"
-                    ></v-select>
-                </v-col>
-                </v-row>
-                <v-textarea v-if="invoice.tax_treatment === 'exempt'" label="Tax Exemption Reason" v-model="invoice.tax_exemption_reason" rows="2"></v-textarea>
-
-            <v-divider class="my-4"></v-divider>
-
-            <div class="text-subtitle-2 mb-2 font-weight-bold">Items</div>
-            <div class="line-item-row text-caption font-weight-bold" style="padding-left: 40px;">
-                <div style="flex: 3;">Description</div>
-                <div style="flex: 1;">Rate</div>
-                <div style="flex: 1;">Qty</div>
-                <div style="flex: 1; text-align: right;">Amount</div>
-                <div v-if="invoice.tax_rate > 0" style="width: 40px; text-align: center;">VAT</div>
+                    <div v-for="error in errorsFor('Customer')" :key="error" class="document-error">${error}</div>
+                    <template v-if="billTo.name">
+                        <v-text-field label="Address" v-model="billTo.address_line1" density="compact" hide-details="auto" class="mt-3"></v-text-field>
+                        <v-text-field label="City / Region" v-model="billTo.address_line2" density="compact" hide-details="auto" class="mt-3"></v-text-field>
+                        <v-text-field label="Email" v-model="billTo.email" type="email" density="compact" hide-details="auto" class="mt-3"></v-text-field>
+                        <div class="text-caption text-medium-emphasis mt-2">Details also update the saved customer.</div>
+                    </template>
+                </section>
             </div>
-
-            <div v-for="(item, idx) in invoice.items" :key="idx" class="line-item-row">
-                <v-btn icon variant="text" size="x-small" @click="removeItem(idx)" color="error"><i class="ti ti-x"></i></v-btn>
-                <div style="flex: 3;"><v-text-field v-model="item.description" density="compact" hide-details placeholder="Description"></v-text-field><v-text-field v-model="item.detail" density="compact" hide-details placeholder="Detail or work period" class="mt-1"></v-text-field></div>
-                <div style="flex: 1;"><v-text-field v-model="item.unit_price" density="compact" hide-details inputmode="decimal" @input="calcLine(item)"></v-text-field></div>
-                <div style="flex: 1;"><v-text-field v-model="item.quantity" density="compact" hide-details inputmode="decimal" @input="calcLine(item)"></v-text-field></div>
-                <div style="flex: 1; text-align: right; padding-top: 8px; font-variant-numeric: tabular-nums;">${formatMoney(item.amount)}</div>
-                <div v-if="invoice.tax_rate > 0" style="width: 40px; text-align: center; padding-top: 4px;">
-                    <v-checkbox v-model="item.taxable" hide-details density="compact" color="primary" class="d-inline-flex"></v-checkbox>
+            <div class="document-dates">
+                <v-text-field label="Invoice number" v-model="invoice.invoice_number" placeholder="Assigned on save" density="compact" hide-details="auto"></v-text-field>
+                <v-text-field label="Invoice date" v-model="invoice.date" type="date" density="compact" hide-details="auto" :error-messages="!invoice.date ? 'Invoice date is required' : []"></v-text-field>
+                <v-text-field label="Due date" v-model="invoice.due_date" type="date" density="compact" hide-details="auto"></v-text-field>
+                <v-text-field label="Service from" v-model="invoice.service_date_from" type="date" density="compact" hide-details="auto" :error-messages="errorsFor('Service')"></v-text-field>
+                <v-text-field label="Service to (optional)" v-model="invoice.service_date_to" type="date" density="compact" hide-details="auto"></v-text-field>
+                <v-select label="Payment terms" v-model="invoice.terms" density="compact" hide-details="auto" :items="[{title:'On receipt',value:'on_receipt'},{title:'Net 15',value:'net_15'},{title:'Net 30',value:'net_30'},{title:'Net 60',value:'net_60'}]"></v-select>
+            </div>
+            <section class="document-items" aria-label="Line items">
+                <div class="document-caption">Work and services</div>
+                <div v-for="(item, idx) in invoice.items" :key="idx" class="document-item">
+                    <div class="item-description">
+                        <v-text-field v-model="item.description" :label="'Description ' + (idx + 1)" density="compact" hide-details="auto" :error-messages="showValidation && !item.description.trim() ? 'Add a description' : []"></v-text-field>
+                        <v-text-field v-model="item.detail" :label="'Detail ' + (idx + 1) + ' (optional)'" density="compact" variant="plain" hide-details="auto"></v-text-field>
+                    </div>
+                    <v-text-field v-model="item.unit_price" :label="'Rate ' + (idx + 1)" density="compact" inputmode="decimal" hide-details="auto" :error="!validNumber(item.unit_price)"></v-text-field>
+                    <v-text-field v-model="item.quantity" :label="'Qty ' + (idx + 1)" density="compact" inputmode="decimal" hide-details="auto" :error="!validNumber(item.quantity)"></v-text-field>
+                    <div class="item-amount">${formatMoney(lineAmount(item))}</div>
+                    <v-btn icon variant="text" size="small" @click="removeItem(idx)" :aria-label="'Remove item ' + (idx + 1)"><i class="ti ti-x"></i></v-btn>
+                    <v-checkbox v-if="invoice.tax_type === 'per_line' && invoice.tax_treatment === 'standard'" v-model="item.taxable" :label="'Taxable item ' + (idx + 1)" hide-details density="compact" class="item-description"></v-checkbox>
+                </div>
+                <div v-if="showValidation && !invoice.items.length" class="document-error">Add at least one line item.</div>
+                <v-btn @click="addItem" variant="text" class="px-0 mt-3"><i class="ti ti-plus mr-2"></i>Add item</v-btn>
+            </section>
+            <div class="document-footer">
+                <v-textarea label="Notes to customer" v-model="invoice.notes" rows="3" auto-grow hide-details="auto"></v-textarea>
+                <div aria-live="polite" aria-label="Invoice totals">
+                    <div class="summary-row"><span class="summary-label">Subtotal</span><span class="summary-value">${formatMoney(totals.subtotal)}</span></div>
+                    <div class="summary-row" v-if="Number(totals.discount)"><span class="summary-label">Discount</span><span class="summary-value">-${formatMoney(totals.discount)}</span></div>
+                    <div class="summary-row"><span class="summary-label">${invoice.tax_label || 'Tax'}${invoice.tax_inclusive ? ' (included)' : ''}</span><span class="summary-value">${formatMoney(totals.tax)}</span></div>
+                    <v-divider class="my-3"></v-divider>
+                    <div class="summary-row summary-total"><span class="summary-label">Total</span><span class="summary-value">${formatMoney(totals.total)}</span></div>
+                    <div class="text-caption text-medium-emphasis text-right mt-2">${dirty ? 'Estimate until saved' : 'Calculated on save'}</div>
                 </div>
             </div>
-
-            <v-btn @click="addItem" variant="tonal" size="small" class="mt-2 mb-4">
-                <template v-slot:prepend><i class="ti ti-plus"></i></template>Add Item
-            </v-btn>
-
-            <!-- Tax Settings -->
-            <v-divider class="my-2"></v-divider>
-            <v-row class="mt-1">
-                <v-col cols="6" sm="3">
-                    <v-text-field label="Tax Label" v-model="invoice.tax_label" density="compact" placeholder="VAT"></v-text-field>
-                </v-col>
-                <v-col cols="6" sm="3">
-                    <v-text-field label="Tax Rate %" v-model="invoice.tax_rate" density="compact" type="number"></v-text-field>
-                </v-col>
-                <v-col cols="6" sm="3">
-                    <v-select label="Tax Type" v-model="invoice.tax_type" density="compact"
-                        :items="[{title:'On Total',value:'on_total'},{title:'Per Line',value:'per_line'},{title:'None',value:'none'}]"
-                    ></v-select>
-                </v-col>
-                <v-col cols="6" sm="3" class="d-flex align-center">
-                    <v-checkbox label="Inclusive" v-model="invoice.tax_inclusive" density="compact" hide-details color="primary"></v-checkbox>
-                </v-col>
-            </v-row>
-
-            <!-- Summary -->
-            <div class="mt-4">
-                <div class="summary-row"><span class="summary-label">Subtotal</span><span class="summary-value">${formatMoney(totals.subtotal)}</span></div>
-                <div class="summary-row" v-if="parseFloat(invoice.tax_rate) > 0"><span class="summary-label">${invoice.tax_label || 'Tax'} (${invoice.tax_rate}%)</span><span class="summary-value">${formatMoney(totals.tax)}</span></div>
-                <v-divider class="my-1" style="max-width: 280px; margin-left: auto;"></v-divider>
-                <div class="summary-row summary-total"><span class="summary-label">Total</span><span class="summary-value">${formatMoney(totals.total)}</span></div>
-            </div>
-
-            <v-divider class="my-4"></v-divider>
-            <v-textarea label="Notes" v-model="invoice.notes" rows="3"></v-textarea>
-            <v-alert v-if="issueErrors.length" type="error" variant="tonal" class="mt-3">
+            <details class="document-options" :open="showValidation && errorsFor('tax', 'VAT', 'charge', 'template').length > 0">
+                <summary>Tax, template and customer details</summary>
+                <v-row>
+                    <v-col cols="12" sm="6"><v-select label="Tax treatment" v-model="invoice.tax_treatment" density="compact" hide-details="auto" :items="[{title:'Standard VAT',value:'standard'},{title:'Reverse charge',value:'reverse_charge'},{title:'Tax exempt',value:'exempt'}]"></v-select></v-col>
+                    <v-col cols="12" sm="6"><v-select label="PDF template" v-model="invoice.template_key" density="compact" hide-details="auto" :items="[{title:'Precision',value:'precision'},{title:'Branded',value:'branded'},{title:'Editorial',value:'editorial'}]"></v-select></v-col>
+                    <template v-if="invoice.tax_treatment === 'standard'">
+                        <v-col cols="6" sm="3"><v-text-field label="Tax label" v-model="invoice.tax_label" density="compact" hide-details="auto"></v-text-field></v-col>
+                        <v-col cols="6" sm="3"><v-text-field label="Tax rate %" v-model="invoice.tax_rate" inputmode="decimal" density="compact" hide-details="auto" :error="!validNumber(invoice.tax_rate)"></v-text-field></v-col>
+                        <v-col cols="6" sm="3"><v-select label="Tax type" v-model="invoice.tax_type" density="compact" hide-details="auto" :items="[{title:'On total',value:'on_total'},{title:'Per line',value:'per_line'},{title:'None',value:'none'}]"></v-select></v-col>
+                        <v-col cols="6" sm="3"><v-checkbox label="Inclusive" v-model="invoice.tax_inclusive" density="compact" hide-details></v-checkbox></v-col>
+                    </template>
+                    <v-col v-if="invoice.tax_treatment === 'exempt'" cols="12"><v-textarea label="Tax exemption reason" v-model="invoice.tax_exemption_reason" rows="2" hide-details="auto"></v-textarea></v-col>
+                    <v-col cols="12" sm="6"><v-text-field label="Customer VAT ID" v-model="invoice.client_vat_id" density="compact" hide-details="auto" :disabled="!billTo.name"></v-text-field></v-col>
+                    <v-col cols="12" sm="6"><v-text-field label="Customer phone" v-model="billTo.phone" density="compact" hide-details="auto" :disabled="!billTo.name"></v-text-field></v-col>
+                </v-row>
+                <div v-for="error in errorsFor('tax', 'VAT', 'charge', 'template')" :key="error" class="document-error">${error}</div>
+            </details>
+            <v-alert v-if="showValidation && issueErrors.length" type="error" variant="tonal" class="mt-4" role="alert">
                 <div class="font-weight-bold mb-1">Complete these fields before issuing:</div>
-                <div v-for="error in issueErrors" :key="error">• ${error}</div>
+                <div v-for="error in issueErrors" :key="error">${error}</div>
             </v-alert>
-        </v-card-text>
-    </v-card>
+            <button type="submit" class="d-none" tabindex="-1">Review and issue</button>
+        </form>
+    </section>
+
+    <v-dialog v-model="reviewDialog" max-width="480" :persistent="issuing">
+        <v-card v-if="reviewData">
+            <v-card-title class="pt-6 px-6">Review invoice</v-card-title>
+            <v-card-text>
+                <div class="document-caption">${reviewData.invoice_number}</div>
+                <div class="text-h6 mt-2">${reviewData.client_name}</div>
+                <div class="review-total">${formatMoney(reviewData.total)}</div>
+                <div class="text-body-2">${reviewData.items.length} line item(s) · Due ${formatDate(reviewData.due_date) || 'on receipt'}</div>
+                <div class="text-body-2 mt-4">Issuing locks this invoice and creates its permanent PDF. It does not send an email.</div>
+                <v-alert v-if="issueErrors.length" type="error" variant="tonal" class="mt-4"><div v-for="error in issueErrors" :key="error">${error}</div></v-alert>
+            </v-card-text>
+            <v-card-actions class="pa-4"><v-btn variant="text" @click="reviewDialog=false" :disabled="issuing">Back to invoice</v-btn><v-spacer></v-spacer><v-btn color="primary" variant="elevated" @click="issueInvoice" :loading="issuing">Issue invoice</v-btn></v-card-actions>
+        </v-card>
+    </v-dialog>
 
     <!-- Payment Dialog -->
     <v-dialog v-model="paymentDialog" width="400">
@@ -339,7 +331,7 @@
     </script>
 
     <script>
-        const {createApp, toRaw} = Vue;
+        const {createApp} = Vue;
         const {createVuetify} = Vuetify;
         const vuetify = createVuetify(config.vuetifyConfig);
 
@@ -350,7 +342,7 @@
             const today = new Date().toISOString().split('T')[0];
             return {
                 id: null, invoice_number: null,
-                status: 'draft', date: today, terms: 'on_receipt',
+                status: 'draft', date: today, due_date: today, terms: 'on_receipt',
                 from_name: s.business_name || '', from_email: s.email || '',
                 from_address: [s.address_line1, s.address_line2, s.address_line3].filter(Boolean).join('\n'),
                 from_phone: s.phone || '', from_business_number: s.business_number || '', from_tax_number: s.tax_number || '', from_vat_id: s.vat_id || '',
@@ -383,14 +375,18 @@
                 if (!inv.issued_at) applyBusinessSettings(inv, settingsData);
                 if (inv.items) inv.items.forEach(item => {
                     item.unit_price = parseFloat(item.unit_price) || 0;
-                    item.quantity = parseFloat(item.quantity) || 1;
+                    item.quantity = Number(item.quantity);
                     item.amount = parseFloat(item.amount) || 0;
                 });
                 return {
                     snackBar: false, snackMessage: "", saving: false,
-                    mode: inv.id ? 'preview' : 'edit',
+                    sending: false, emailMessage: '', emailError: false,
+                    savedState: '', saveError: '', initialized: false,
+                    savedInvoice: invoiceData.id ? invoiceData : null,
+                    reviewDialog: false, reviewData: null, reviewing: false, issuing: false,
+                    showValidation: false, clientVersion: 0,
                     invoice: inv,
-                    billTo: invoiceData.client || {},
+                    billTo: {...(invoiceData.client || {})},
                     selectedClient: invoiceData.client || null,
                     clientSearch: '', clientResults: invoiceData.client ? [invoiceData.client] : [],
                     paymentDialog: false,
@@ -400,23 +396,88 @@
                 };
             },
             computed: {
+                draftState() {
+                    const fields = ['client_id', 'invoice_number', 'date', 'due_date', 'terms',
+                        'service_date_from', 'service_date_to', 'currency_code', 'currency_symbol',
+                        'tax_type', 'tax_rate', 'tax_label', 'tax_inclusive', 'tax_treatment',
+                        'tax_exemption_reason', 'template_key', 'client_vat_id', 'notes',
+                        'discount_type', 'discount_value', 'from_name', 'from_email', 'from_address',
+                        'from_phone', 'from_business_number', 'from_tax_number', 'from_vat_id'];
+                    const invoice = Object.fromEntries(fields.map(key => [key, this.invoice[key] ?? null]));
+                    invoice.items = this.invoice.items.map(item => ({description: item.description,
+                        detail: item.detail || '', quantity: item.quantity, unit_price: item.unit_price, taxable: item.taxable}));
+                    const client = Object.fromEntries(['name', 'email', 'address_line1', 'address_line2', 'phone']
+                        .map(key => [key, this.billTo[key] || '']));
+                    client.vat_id = this.invoice.client_vat_id || '';
+                    return JSON.stringify({invoice, client});
+                },
+                dirty() { return this.initialized && !this.invoice.issued_at && this.draftState !== this.savedState; },
+                saveStatus() {
+                    if (this.saving) return 'Saving…';
+                    if (this.saveError) return 'Not saved';
+                    if (this.dirty) return 'Unsaved changes';
+                    return this.invoice.id ? 'Saved' : 'Draft saves when you start editing';
+                },
                 totals() {
-                    let subtotal = 0;
-                    (this.invoice.items || []).forEach(item => { subtotal += parseFloat(item.amount) || 0; });
-                    let discount = 0;
-                    if (this.invoice.discount_type === 'percentage' && this.invoice.discount_value) discount = subtotal * parseFloat(this.invoice.discount_value) / 100;
-                    else if (this.invoice.discount_type === 'fixed' && this.invoice.discount_value) discount = parseFloat(this.invoice.discount_value);
+                    if (this.savedInvoice && !this.dirty) {
+                        const inv = this.savedInvoice;
+                        return {subtotal: inv.subtotal, tax: inv.tax_amount, discount: inv.discount_amount,
+                            total: inv.total, paid: inv.amount_paid, balance: inv.balance_due};
+                    }
+                    let subtotal = 0, taxable = 0;
+                    this.invoice.items.forEach(item => {
+                        const amount = this.lineAmount(item);
+                        subtotal += amount;
+                        if (item.taxable) taxable += amount;
+                    });
+                    const value = Number(this.invoice.discount_value) || 0;
+                    const discount = this.invoice.discount_type === 'percentage' ? subtotal * value / 100
+                        : this.invoice.discount_type === 'fixed' ? value : 0;
                     const afterDiscount = subtotal - discount;
-                    const rate = parseFloat(this.invoice.tax_rate) || 0;
+                    if (subtotal > 0 && discount > 0) taxable *= afterDiscount / subtotal;
+                    const rate = (Number(this.invoice.tax_rate) || 0) / 100;
+                    const base = this.invoice.tax_type === 'per_line' ? taxable : afterDiscount;
                     let tax = 0;
                     if (rate > 0 && this.invoice.tax_type !== 'none' && this.invoice.tax_treatment === 'standard') {
-                        tax = this.invoice.tax_inclusive ? afterDiscount - (afterDiscount / (1 + rate / 100)) : afterDiscount * rate / 100;
+                        tax = this.invoice.tax_inclusive ? base - base / (1 + rate) : base * rate;
                     }
-                    const total = this.invoice.tax_inclusive ? afterDiscount : afterDiscount + tax;
-                    let paid = 0;
-                    (this.invoice.payments || []).forEach(p => { paid += parseFloat(p.amount) || 0; });
-                    return { subtotal: subtotal.toFixed(2), tax: tax.toFixed(2), discount: discount.toFixed(2), total: total.toFixed(2), paid: paid.toFixed(2), balance: (total - paid).toFixed(2) };
+                    tax = Number(tax.toFixed(2));
+                    const total = afterDiscount + (this.invoice.tax_inclusive ? 0 : tax);
+                    const paid = (this.invoice.payments || []).reduce((sum, p) => sum + Number(p.amount), 0);
+                    return {subtotal, tax, discount, total, paid, balance: total - paid};
                 }
+            },
+            watch: {
+                draftState() {
+                    if (!this.initialized || this.invoice.issued_at || this.reviewDialog) return;
+                    clearTimeout(this._saveTimer);
+                    if (this.dirty) this._saveTimer = setTimeout(() => this.saveInvoice(), 800);
+                },
+                'invoice.terms'() { this.updateDueDate(); },
+                'invoice.date'() { this.updateDueDate(); }
+            },
+            mounted() {
+                this.savedState = this.draftState;
+                this.initialized = true;
+                this._beforeUnload = event => {
+                    if (!this.dirty && !this.saving) return;
+                    event.preventDefault();
+                    event.returnValue = '';
+                };
+                this._saveShortcut = event => {
+                    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
+                        event.preventDefault();
+                        if (!this.invoice.issued_at) this.saveInvoice();
+                    }
+                };
+                window.addEventListener('beforeunload', this._beforeUnload);
+                window.addEventListener('keydown', this._saveShortcut);
+            },
+            beforeUnmount() {
+                clearTimeout(this._saveTimer);
+                clearTimeout(_clientTimeout);
+                window.removeEventListener('beforeunload', this._beforeUnload);
+                window.removeEventListener('keydown', this._saveShortcut);
             },
             delimiters: config.delimiters,
             methods: {
@@ -425,71 +486,137 @@
                     return new Intl.NumberFormat(settingsData.locale || navigator.language, {style: 'currency', currency: this.invoice.currency_code || settingsData.currency_code || 'EUR'}).format(parseFloat(v || 0));
                 },
                 formatDate(v) { return v ? new Intl.DateTimeFormat(settingsData.locale || navigator.language).format(new Date(v + 'T00:00:00')) : ''; },
-                statusColor(s) { return {draft:'grey',sent:'info',viewed:'info',paid:'success',overdue:'error',cancelled:'warning'}[s] || 'grey'; },
+                statusLabel(s) { return {sent: 'Issued', viewed: 'Link opened'}[s] || s.charAt(0).toUpperCase() + s.slice(1); },
                 addItem() { this.invoice.items.push({ description: '', unit_price: 0, quantity: 1, amount: 0, taxable: true, detail: '' }); },
                 removeItem(idx) { this.invoice.items.splice(idx, 1); },
-                calcLine(item) { item.amount = (parseFloat(item.unit_price) || 0) * (parseFloat(item.quantity) || 0); },
+                lineAmount(item) { return (Number(item.unit_price) || 0) * (Number(item.quantity) || 0); },
+                validNumber(value) { return value !== null && String(value).trim() !== '' && Number.isFinite(Number(value)); },
+                errorsFor(...terms) { return this.showValidation ? this.issueErrors.filter(error => terms.some(term => error.toLowerCase().includes(term.toLowerCase()))) : []; },
+                updateDueDate() {
+                    if (this.invoice.issued_at || !this.invoice.date) return;
+                    const days = {on_receipt: 0, net_15: 15, net_30: 30, net_60: 60}[this.invoice.terms];
+                    const date = new Date(this.invoice.date + 'T12:00:00Z');
+                    date.setUTCDate(date.getUTCDate() + days);
+                    this.invoice.due_date = date.toISOString().slice(0, 10);
+                },
                 searchClients(val) {
                     clearTimeout(_clientTimeout);
-                    if (!val || val.length < 1) { axios.get('/api/client/search?q=').then(r => { this.clientResults = r.data; }); return; }
-                    _clientTimeout = setTimeout(() => { axios.get(`/api/client/search?q=${val}`).then(r => { this.clientResults = r.data; }); }, 200);
+                    _clientTimeout = setTimeout(async () => {
+                        try {
+                            const response = await axios.get('/api/client/search', {params: {q: val || ''}});
+                            if (this.clientSearch === val) this.clientResults = response.data;
+                        } catch { this.showSnack('Could not search customers'); }
+                    }, 200);
                 },
                 onClientSelect(client) {
-                    if (!client) { this.invoice.client_id = null; this.billTo = {}; return; }
-                    this.invoice.client_id = client.id; this.billTo = {...client};
-                    this.invoice.client_vat_id = client.vat_id || '';
+                    this.clientVersion++;
+                    this.invoice.client_id = client?.id || null;
+                    this.billTo = client ? {...client} : {};
+                    this.invoice.client_vat_id = client?.vat_id || '';
                 },
-                async createClientInline() {
-                    this.billTo.name = this.clientSearch.trim();
-                    try { await this.persistClient(); }
-                    catch (err) { this.showSnack(err.response?.data?.message || 'Could not create customer'); }
+                createClientInline() {
+                    const name = this.clientSearch.trim();
+                    if (!name) { this.showSnack('Could not create customer without a name'); return; }
+                    const client = {id: null, name};
+                    this.clientResults = [client];
+                    this.selectedClient = client;
+                    this.onClientSelect(client);
                 },
-                async persistClient() {
-                    const name = (this.billTo.name || this.selectedClient?.name || this.clientSearch || '').trim();
-                    if (!name) return;
-                    const item = {...this.billTo, name, vat_id: this.invoice.client_vat_id || this.billTo.vat_id || ''};
-                    if (this.invoice.client_id) {
-                        await axios.post(`/api/client/${this.invoice.client_id}`, {item});
-                    } else {
-                        const response = await axios.post('/api/client/', {item});
-                        this.invoice.client_id = response.data.id;
-                    }
-                    this.billTo = {...item, id: this.invoice.client_id};
-                    this.selectedClient = this.billTo;
-                    this.invoice.client = this.billTo;
+                async persistClient(snapshot) {
+                    if (!snapshot.client.name) return;
+                    const id = snapshot.invoice.client_id;
+                    const previous = JSON.parse(this.savedState).client;
+                    if (id && JSON.stringify(previous) === JSON.stringify(snapshot.client)) return;
+                    const response = await axios.post(id ? `/api/client/${id}` : '/api/client/', {item: snapshot.client});
+                    if (!id) snapshot.invoice.client_id = response.data.id;
                 },
-                async saveInvoice() {
+                saveInvoice(force = false) {
+                    clearTimeout(this._saveTimer);
+                    if (this.invoice.issued_at) return Promise.resolve(true);
+                    if (this._savePromise) return this._savePromise;
+                    this._savePromise = this.saveDraft(force === true).finally(() => { this._savePromise = null; });
+                    return this._savePromise;
+                },
+                async saveDraft(force) {
                     this.saving = true;
-                    this.issueErrors = [];
-                    try { await this.persistClient(); }
-                    catch (err) { this.showSnack(err.response?.data?.message || 'Could not save customer'); this.saving = false; return; }
-                    const payload = { ...this.invoice, items: this.invoice.items.map((item, i) => ({ ...item, sort_order: i, unit_price: parseFloat(item.unit_price) || 0, quantity: parseFloat(item.quantity) || 0 })) };
-                    const url = this.invoice.id ? `/api/invoice/${this.invoice.id}` : '/api/invoice/';
-                    axios.post(url, payload)
-                        .then(res => {
-                            this.showSnack(res.data?.message);
-                            if (!this.invoice.id && res.data?.id) { window.location.href = `/invoices/${res.data.id}`; }
-                            else { this.reloadInvoice(); this.mode = 'preview'; }
-                        })
-                        .catch(err => this.showSnack(err.response?.data?.message || 'Error'))
-                        .finally(() => { this.saving = false; });
+                    this.saveError = '';
+                    try {
+                        while (this.dirty || force) {
+                            force = false;
+                            if (!this.invoice.date) throw new Error('Add an invoice date to save.');
+                            if (!this.validNumber(this.invoice.tax_rate) || this.invoice.items.some(item => !this.validNumber(item.quantity) || !this.validNumber(item.unit_price))) {
+                                throw new Error('Enter valid numbers for rates, quantities and tax.');
+                            }
+                            // Save a fixed snapshot. Responses must never replace edits made in flight.
+                            const snapshot = JSON.parse(this.draftState);
+                            const clientVersion = this.clientVersion;
+                            await this.persistClient(snapshot);
+                            if (clientVersion === this.clientVersion) this.invoice.client_id = snapshot.invoice.client_id;
+                            const payload = {...snapshot.invoice, items: snapshot.invoice.items.map((item, sort_order) =>
+                                ({...item, sort_order, quantity: Number(item.quantity), unit_price: Number(item.unit_price)}))};
+                            const response = await axios.post(this.invoice.id ? `/api/invoice/${this.invoice.id}` : '/api/invoice/', payload);
+                            const saved = response.data.invoice;
+                            if (!this.invoice.id) {
+                                this.invoice.id = saved.id;
+                                window.history.replaceState(null, '', `/invoices/${saved.id}`);
+                            }
+                            if (!snapshot.invoice.invoice_number) {
+                                snapshot.invoice.invoice_number = saved.invoice_number;
+                                if (!this.invoice.invoice_number) this.invoice.invoice_number = saved.invoice_number;
+                            }
+                            this.savedInvoice = saved;
+                            this.issueErrors = response.data.issue_errors;
+                            this.savedState = JSON.stringify(snapshot);
+                        }
+                        return true;
+                    } catch (error) {
+                        this.saveError = error.response?.data?.message || error.message || 'Could not save draft.';
+                        return false;
+                    } finally { this.saving = false; }
                 },
-                reloadInvoice() {
-                    axios.get(`/api/invoice/${this.invoice.id}`).then(r => {
-                        const inv = r.data;
-                        inv.items.forEach(item => { item.unit_price = parseFloat(item.unit_price) || 0; item.quantity = parseFloat(item.quantity) || 1; item.amount = parseFloat(item.amount) || 0; });
-                        this.invoice = inv;
-                        this.billTo = inv.client || {};
-                    });
+                async reviewInvoice() {
+                    if (this.reviewing || this.issuing) return;
+                    this.reviewing = true;
+                    this.showValidation = true;
+                    this.issueErrors = [];
+                    try {
+                        if (!await this.saveInvoice(true)) return;
+                        if (this.issueErrors.length) {
+                            await this.$nextTick();
+                            document.querySelector('.document-error, .invoice-paper .v-input--error input')?.scrollIntoView({block: 'center'});
+                            return;
+                        }
+                        this.reviewData = this.savedInvoice;
+                        this.reviewDialog = true;
+                    } finally { this.reviewing = false; }
+                },
+                async reloadInvoice() {
+                    const response = await axios.get(`/api/invoice/${this.invoice.id}`);
+                    this.invoice = response.data;
+                    this.savedInvoice = response.data;
+                    this.billTo = {...(response.data.client || {})};
+                    this.savedState = this.draftState;
                 },
                 requestConfirmation(title, message, color, action) { this.confirmTitle = title; this.confirmMessage = message; this.confirmColor = color; this.confirmedAction = action; this.confirmDialog = true; },
                 runConfirmedAction() { const action = this.confirmedAction; this.confirmDialog = false; this.confirmedAction = null; if (action) action(); },
-                deleteInvoice() { this.requestConfirmation('Delete invoice?', 'This draft will be permanently deleted.', 'error', () => axios.delete(`/api/invoice/${this.invoice.id}`).then(() => { window.location.href = '/invoices/'; })); },
-                issueInvoice() { this.issueErrors = []; this.requestConfirmation('Issue invoice?', 'Issuing freezes the invoice and creates its permanent PDF.', 'primary', () => axios.post(`/api/invoice/${this.invoice.id}/issue`).then(r => { this.showSnack(r.data?.message); this.reloadInvoice(); }).catch(err => { this.issueErrors = (err.response?.data?.message || 'Unable to issue invoice').split(';').map(v => v.trim()).filter(Boolean); this.mode = 'edit'; })); },
-                cancelInvoice() { this.requestConfirmation('Cancel invoice?', 'The issued record remains archived and will be marked cancelled.', 'error', () => axios.post(`/api/invoice/${this.invoice.id}/cancel`).then(r => { this.showSnack(r.data?.message); this.reloadInvoice(); }).catch(err => this.showSnack(err.response?.data?.message || 'Error'))); },
-                setStatus(status) {
-                    axios.post(`/api/invoice/${this.invoice.id}/status`, {status}).then(r => { this.showSnack(r.data?.message); this.reloadInvoice(); });
+                deleteInvoice() { this.requestConfirmation('Delete invoice?', 'This draft will be permanently deleted.', 'error', async () => { clearTimeout(this._saveTimer); if (this._savePromise) await this._savePromise; await axios.delete(`/api/invoice/${this.invoice.id}`); this.initialized = false; window.location.href = '/invoices/'; }); },
+                async issueInvoice() {
+                    if (this.issuing || !this.reviewDialog || this.dirty) return;
+                    this.issuing = true;
+                    try {
+                        await axios.post(`/api/invoice/${this.invoice.id}/issue`);
+                        // The issue succeeded even if the subsequent read fails. Never unlock locally.
+                        this.invoice.issued_at = new Date().toISOString();
+                        this.invoice.status = 'sent';
+                        this.reviewDialog = false;
+                        await this.reloadInvoice();
+                        this.showSnack('Invoice issued');
+                    } catch (error) {
+                        this.issueErrors = (error.response?.data?.message || 'Unable to complete issue. Reload to check its status before retrying.').split(';').map(v => v.trim()).filter(Boolean);
+                        if (this.invoice.issued_at) this.showSnack(this.issueErrors.join(' '));
+                    } finally { this.issuing = false; }
                 },
+                cancelInvoice() { this.requestConfirmation('Cancel invoice?', 'The issued record remains archived and will be marked cancelled.', 'error', () => axios.post(`/api/invoice/${this.invoice.id}/cancel`).then(r => { this.showSnack(r.data?.message); this.reloadInvoice(); }).catch(err => this.showSnack(err.response?.data?.message || 'Error'))); },
                 markPaid() {
                     const balance = parseFloat(this.totals.balance) || 0;
                     if (balance <= 0) {
@@ -510,6 +637,20 @@
                     }).catch(() => this.showSnack('Error'));
                 },
                 deletePayment(pid) { this.requestConfirmation('Remove payment?', 'This payment record will be deleted.', 'error', () => axios.delete(`/api/invoice/${this.invoice.id}/payment/${pid}`).then(res => { this.showSnack(res.data?.message); this.reloadInvoice(); })); },
+                confirmSend() {
+                    this.requestConfirmation('Email invoice?', `Send ${this.invoice.invoice_number} to ${this.invoice.client?.email || 'the customer'}?`, 'primary', () => this.sendInvoice());
+                },
+                async sendInvoice() {
+                    if (this.sending) return;
+                    this.sending = true; this.emailMessage = ''; this.emailError = false;
+                    try {
+                        const response = await axios.post(`/api/invoice/${this.invoice.id}/send`);
+                        this.emailMessage = response.data.message;
+                    } catch (error) {
+                        this.emailError = true;
+                        this.emailMessage = error.response?.data?.message || 'Email status could not be confirmed. Check before sending again.';
+                    } finally { this.sending = false; }
+                },
                 shareInvoice() { axios.post(`/api/invoice/${this.invoice.id}/share`).then(r => { this.shareUrl = window.location.origin + r.data.url; this.shareExpiresAt = r.data.expires_at; this.shareDialog = true; }); },
                 copyShare() { navigator.clipboard.writeText(this.shareUrl); this.showSnack('Link copied'); },
                 revokeShare() { axios.delete(`/api/invoice/${this.invoice.id}/share`).then(r => { this.shareUrl = ''; this.shareExpiresAt = null; this.shareDialog = false; this.showSnack(r.data.message); }); }

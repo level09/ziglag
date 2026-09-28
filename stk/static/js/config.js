@@ -1,6 +1,6 @@
 /**
  * stk Framework - Central Configuration
- * Monochrome brutalist palette
+ * Shared workspace theme
  */
 
 const config = {
@@ -83,23 +83,23 @@ const config = {
                 variant: 'outlined'
             },
             VChip: {
-                size: 'small',
+                size: 'default',
                 rounded: 'sm'
             },
             VCard: {
                 elevation: 0,
-                rounded: 0
+                rounded: 'lg'
             },
             VMenu: {
                 offset: 10
             },
             VBtn: {
                 variant: 'elevated',
-                size: 'small',
-                rounded: 0
+                size: 'default',
+                rounded: 'lg'
             },
             VDialog: {
-                rounded: 0
+                rounded: 'lg'
             },
             VToolbar: {
                 elevation: 0
@@ -115,33 +115,47 @@ const config = {
                 light: {
                     dark: false,
                     colors: {
-                        primary: '#1a1a1a',
-                        secondary: '#555555',
-                        accent: '#333333',
-                        error: '#b91c1c',
-                        info: '#1a1a1a',
-                        success: '#166534',
-                        warning: '#a16207',
-                        background: '#fafafa',
-                        surface: '#fafafa',
-                        'surface-light': '#f0f0f0',
-                        'on-surface': '#1a1a1a',
+                        primary: '#116b59',
+                        'on-primary': '#ffffff',
+                        secondary: '#536b7a',
+                        accent: '#126c8a',
+                        error: '#b33545',
+                        info: '#255da8',
+                        success: '#18734f',
+                        warning: '#8c5314',
+                        background: '#eff4f5',
+                        surface: '#ffffff',
+                        'surface-light': '#e7eff2',
+                        'on-surface': '#203640',
+                        'on-background': '#203640',
+                        'draft-ink': '#285fa3', 'draft-surface': '#e9f1fd',
+                        'due-ink': '#915216', 'due-surface': '#fff2dc',
+                        'paid-ink': '#1b704d', 'paid-surface': '#e4f4ec',
+                        'issued-ink': '#166b74', 'issued-surface': '#e3f3f5',
+                        'muted-ink': '#5d6377', 'muted-surface': '#eceef3',
                     }
                 },
                 dark: {
                     dark: true,
                     colors: {
-                        primary: '#e5e5e5',
-                        secondary: '#a3a3a3',
-                        accent: '#d4d4d4',
+                        primary: '#77e2c4',
+                        'on-primary': '#10362e',
+                        secondary: '#b3c3d0',
+                        accent: '#93d5e6',
                         error: '#fca5a5',
-                        info: '#e5e5e5',
+                        info: '#a6c7ff',
                         success: '#86efac',
                         warning: '#fde047',
-                        background: '#0a0a0a',
-                        surface: '#141414',
-                        'surface-light': '#262626',
-                        'on-surface': '#e5e5e5',
+                        background: '#0d1c23',
+                        surface: '#162a34',
+                        'surface-light': '#203a46',
+                        'on-surface': '#e1eef3',
+                        'on-background': '#e1eef3',
+                        'draft-ink': '#b5d3ff', 'draft-surface': '#213b5d',
+                        'due-ink': '#ffd49a', 'due-surface': '#493522',
+                        'paid-ink': '#93e6b5', 'paid-surface': '#1c4136',
+                        'issued-ink': '#99e3e5', 'issued-surface': '#1a3c46',
+                        'muted-ink': '#c5c9dd', 'muted-surface': '#33384b',
                     }
                 }
             }

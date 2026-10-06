@@ -9,13 +9,28 @@
         </div>
         <v-text-field v-model="search" label="Search invoice or customer" prepend-inner-icon="ti ti-search" hide-details density="compact" class="invoice-search" @update:model-value="searchChanged"></v-text-field>
     </div>
+    <div class="invoice-filters">
+        <v-text-field v-model="startDate" label="Invoice date from" type="date" hide-details density="compact" style="max-width:200px;" @update:model-value="changeDates"></v-text-field>
+        <v-text-field v-model="endDate" label="Invoice date to" type="date" hide-details density="compact" style="max-width:200px;" @update:model-value="changeDates"></v-text-field>
+        <v-btn variant="text" @click="setMonth(0)">This month</v-btn>
+        <v-btn variant="text" @click="setMonth(-1)">Last month</v-btn>
+        <v-btn v-if="startDate || endDate" variant="text" @click="clearDates">All dates</v-btn>
+    </div>
     <v-alert v-if="error" type="warning" variant="tonal" class="mb-4" role="alert">${error}<v-btn variant="text" @click="refresh()">Retry</v-btn></v-alert>
     <div v-if="loading" role="status" class="mb-3 text-medium-emphasis">${items.length ? 'Updating results. Previous results shown.' : 'Loading invoices…'}</div>
+    <v-card v-if="totals.length" class="pa-4 mb-4" :aria-busy="loading">
+        <h2 class="text-h6">Totals for all ${total} matching ${total === 1 ? 'invoice' : 'invoices'}</h2>
+        <p class="text-body-small text-medium-emphasis mb-2">Invoice value includes any selected drafts and cancellations. Collectible balance excludes both and any overpayment credits.</p>
+        <div v-for="row in totals" :key="row.currency_code" class="d-flex flex-wrap ga-4 mb-1">
+            <span class="money">Invoice value: ${formatMoney(row.total, row.currency_code)}</span>
+            <span class="money">Collectible balance: ${formatMoney(row.balance, row.currency_code)}</span>
+        </div>
+    </v-card>
     <v-card :aria-busy="loading">
         <div v-if="!loading && !error && !items.length" class="empty-state">
-            <h2>${search || statusFilter !== 'all' ? 'No matching invoices' : 'No invoices yet'}</h2>
-            <p class="mb-5">${search || statusFilter !== 'all' ? 'Try another search or filter.' : 'Create a draft and review it before issuing.'}</p>
-            <v-btn v-if="search || statusFilter !== 'all'" variant="outlined" @click="clearFilters">Clear filters</v-btn>
+            <h2>${hasFilters ? 'No matching invoices' : 'No invoices yet'}</h2>
+            <p class="mb-5">${hasFilters ? 'Try another search or filter.' : 'Create a draft and review it before issuing.'}</p>
+            <v-btn v-if="hasFilters" variant="outlined" @click="clearFilters">Clear filters</v-btn>
             <v-btn v-else color="primary" href="/invoices/new">Create invoice</v-btn>
         </div>
         <template v-else-if="isMobile">
@@ -49,10 +64,11 @@ const vuetify = Vuetify.createVuetify(config.vuetifyConfig);
 window.app = createApp({
     mixins: [layoutMixin], delimiters: config.delimiters,
     data() { return {
-        search: '', statusFilter: 'all', page: 1, perPage: 25, items: [], total: 0,
+        search: '', statusFilter: 'all', startDate: '', endDate: '', page: 1, perPage: 25, items: [], total: 0, totals: [],
         loading: true, error: '', requestId: 0,
         filters: [{value:'all',label:'All'}, {value:'draft',label:'Drafts'}, {value:'outstanding',label:'Unpaid'}, {value:'overdue',label:'Overdue'}, {value:'paid',label:'Paid'}, {value:'cancelled',label:'Cancelled'}]
     }; },
+    computed: {hasFilters() { return Boolean(this.search || this.statusFilter !== 'all' || this.startDate || this.endDate); }},
     mounted() {
         this.restoreUrl();
         this._popstate = () => this.restoreUrl();
@@ -64,6 +80,8 @@ window.app = createApp({
             clearTimeout(this._searchTimer);
             const params = new URLSearchParams(location.search);
             this.search = params.get('search') || '';
+            this.startDate = params.get('start_date') || '';
+            this.endDate = params.get('end_date') || '';
             this.statusFilter = this.filters.some(f => f.value === params.get('status')) ? params.get('status') : 'all';
             this.page = Math.max(1, parseInt(params.get('page')) || 1);
             this.perPage = [25, 50, 100].includes(Number(params.get('per_page'))) ? Number(params.get('per_page')) : 25;
@@ -72,7 +90,16 @@ window.app = createApp({
         changeFilter(value) { this.statusFilter = value; this.page = 1; this.refresh(); },
         changePage(value) { this.page = value; this.refresh(); },
         changePageSize(value) { this.perPage = value; this.page = 1; this.refresh(); },
-        clearFilters() { this.search = ''; this.statusFilter = 'all'; this.page = 1; this.refresh(); },
+        clearFilters() { this.search = ''; this.statusFilter = 'all'; this.startDate = ''; this.endDate = ''; this.page = 1; this.refresh(); },
+        changeDates() { this.page = 1; this.refresh(); },
+        clearDates() { this.startDate = ''; this.endDate = ''; this.changeDates(); },
+        setMonth(offset) {
+            const today = new Date();
+            const start = new Date(today.getFullYear(), today.getMonth() + offset, 1);
+            const end = new Date(start.getFullYear(), start.getMonth() + 1, 0);
+            const iso = date => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+            this.startDate = iso(start); this.endDate = iso(end); this.changeDates();
+        },
         searchChanged() {
             clearTimeout(this._searchTimer); ++this.requestId; this.loading = true; this.error = ''; this.page = 1;
             this._searchTimer = setTimeout(() => this.refresh(), 300);
@@ -80,7 +107,7 @@ window.app = createApp({
         async refresh(updateHistory = true) {
             clearTimeout(this._searchTimer);
             const requestId = ++this.requestId;
-            const params = {page: this.page, per_page: this.perPage, status: this.statusFilter, search: this.search};
+            const params = {page: this.page, per_page: this.perPage, status: this.statusFilter, search: this.search, start_date:this.startDate, end_date:this.endDate};
             if (updateHistory) {
                 const url = location.pathname + '?' + new URLSearchParams(params);
                 if (url !== location.pathname + location.search) history.pushState(null, '', url);
@@ -90,10 +117,11 @@ window.app = createApp({
                 const response = await axios.get('/api/invoices', {params});
                 if (requestId !== this.requestId) return;
                 this.items = response.data.items; this.total = response.data.total;
+                this.totals = response.data.totals_by_currency;
                 const lastPage = Math.max(1, Math.ceil(this.total / this.perPage));
                 if (this.page > lastPage) { this.page = lastPage; return this.refresh(); }
             } catch (error) {
-                if (requestId === this.requestId) this.error = 'Invoices could not be updated. Previous results may not match these filters.';
+                if (requestId === this.requestId) this.error = error.response?.data?.message || 'Invoices could not be updated. Previous results may not match these filters.';
             } finally { if (requestId === this.requestId) this.loading = false; }
         },
         _onWsMessage(msg) { if (msg.type === 'activity' && msg.action?.includes('Invoice')) this.refresh(false); },

@@ -1,8 +1,9 @@
-from datetime import date
+from datetime import date, timedelta
+from decimal import Decimal
 
 from quart import Blueprint, g, render_template
 from quart_security import auth_required, current_user
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 
 from stk.invoicing.models import BusinessSettings, Invoice
 from stk.invoicing.queries import invoice_conditions
@@ -28,6 +29,37 @@ async def dashboard():
     uid = current_user.id
 
     today = date.today()
+    month_start = today.replace(day=1)
+    previous_start = (month_start - timedelta(days=1)).replace(day=1)
+    paid_totals = await g.db_session.execute(
+        select(
+            Invoice.currency_code,
+            func.sum(case((Invoice.date >= month_start, Invoice.total), else_=0)).label(
+                "current"
+            ),
+            func.sum(case((Invoice.date < month_start, Invoice.total), else_=0)).label(
+                "previous"
+            ),
+        )
+        .where(
+            *invoice_conditions(uid, "paid", today),
+            Invoice.date >= previous_start,
+            Invoice.date <= today,
+        )
+        .group_by(Invoice.currency_code)
+        .order_by(Invoice.currency_code)
+    )
+    paid_comparison = [
+        {
+            "currency_code": row.currency_code,
+            "current": str(row.current),
+            "previous": str(row.previous),
+            "change": f"{(row.current - row.previous) / row.previous * Decimal('100'):+.1f}%"
+            if row.previous
+            else None,
+        }
+        for row in paid_totals
+    ]
 
     async def count(status):
         return await g.db_session.scalar(
@@ -49,6 +81,7 @@ async def dashboard():
     stats = {
         "draft_count": await count("draft"),
         "overdue_count": await count("overdue"),
+        "paid_comparison": paid_comparison,
         "outstanding_by_currency": [
             {
                 "currency_code": row.currency_code,

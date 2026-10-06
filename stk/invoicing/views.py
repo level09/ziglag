@@ -407,8 +407,18 @@ async def api_invoices():
         return {"message": "Invalid pagination"}, 400
     try:
         conditions = invoice_conditions(current_user.id, status, date.today())
+        start = request.args.get("start_date")
+        end = request.args.get("end_date")
+        start = date.fromisoformat(start) if start else None
+        end = date.fromisoformat(end) if end else None
+        if start and end and start > end:
+            raise ValueError("Start date must be on or before end date")
     except ValueError as error:
         return {"message": str(error)}, 400
+    if start:
+        conditions.append(Invoice.date >= start)
+    if end:
+        conditions.append(Invoice.date <= end)
     query = select(Invoice).outerjoin(Client)
     count_query = select(func.count()).select_from(Invoice).outerjoin(Client)
     if search:
@@ -426,6 +436,35 @@ async def api_invoices():
     count_query = count_query.where(*conditions)
 
     total = (await g.db_session.execute(count_query)).scalar()
+    totals = await g.db_session.execute(
+        select(
+            Invoice.currency_code,
+            func.sum(Invoice.total).label("total"),
+            func.sum(
+                case(
+                    (
+                        (Invoice.issued_at.is_not(None))
+                        & (Invoice.status != "cancelled")
+                        & (Invoice.balance_due > 0),
+                        Invoice.balance_due,
+                    ),
+                    else_=0,
+                )
+            ).label("balance"),
+        )
+        .outerjoin(Client)
+        .where(*conditions)
+        .group_by(Invoice.currency_code)
+        .order_by(Invoice.currency_code)
+    )
+    totals_by_currency = [
+        {
+            "currency_code": row.currency_code,
+            "total": str(row.total),
+            "balance": str(row.balance),
+        }
+        for row in totals
+    ]
     result = await g.db_session.execute(
         query.order_by(Invoice.date.desc(), Invoice.id.desc())
         .offset((page - 1) * per_page)
@@ -452,7 +491,14 @@ async def api_invoices():
         )
 
     return Response(
-        json.dumps({"items": items, "total": total, "perPage": per_page}),
+        json.dumps(
+            {
+                "items": items,
+                "total": total,
+                "perPage": per_page,
+                "totals_by_currency": totals_by_currency,
+            }
+        ),
         content_type="application/json",
     )
 
@@ -872,14 +918,27 @@ async def api_reports_monthly():
     year = request.args.get("year", date.today().year, type=int)
     if not 1 <= year <= 9999:
         return {"message": "Invalid year"}, 400
+    basis = request.args.get("basis", "invoices")
+    if basis not in ("invoices", "payments"):
+        return {"message": "Invalid report basis"}, 400
     settings = await BusinessSettings.get_or_create(current_user.id)
     await g.db_session.commit()
-    conditions = invoice_conditions(current_user.id, "paid", date.today())
-    conditions.append(extract("year", Invoice.date) == year)
+    report_date = Payment.payment_date if basis == "payments" else Invoice.date
+    amount = Payment.amount if basis == "payments" else Invoice.total
+    source = (
+        Invoice.__table__.join(Payment.__table__) if basis == "payments" else Invoice
+    )
+    conditions = (
+        [Invoice.user_id == current_user.id, Invoice.issued_at.is_not(None)]
+        if basis == "payments"
+        else invoice_conditions(current_user.id, "paid", date.today())
+    )
+    conditions.append(extract("year", report_date) == year)
     currencies = list(
         (
             await g.db_session.scalars(
                 select(Invoice.currency_code)
+                .select_from(source)
                 .where(*conditions)
                 .distinct()
                 .order_by(Invoice.currency_code)
@@ -895,18 +954,21 @@ async def api_reports_monthly():
         )
     result = await g.db_session.execute(
         select(
-            extract("month", Invoice.date).label("month"),
+            extract("month", report_date).label("month"),
             func.count(func.distinct(Invoice.client_id)).label("clients"),
-            func.count(Invoice.id).label("invoices"),
-            func.coalesce(func.sum(Invoice.total), 0).label("total"),
+            func.count(func.distinct(Invoice.id)).label("invoices"),
+            func.count().label("entries"),
+            func.coalesce(func.sum(amount), 0).label("total"),
         )
+        .select_from(source)
         .where(*conditions, Invoice.currency_code == currency)
-        .group_by(extract("month", Invoice.date))
+        .group_by(extract("month", report_date))
     )
     monthly = {
         int(r.month): {
             "clients": r.clients,
             "invoices": r.invoices,
+            "entries": r.entries,
             "total": str(r.total),
         }
         for r in result.all()
@@ -914,17 +976,30 @@ async def api_reports_monthly():
     months = [
         {
             "month": month,
-            **monthly.get(month, {"clients": 0, "invoices": 0, "total": "0.00"}),
+            **monthly.get(
+                month, {"clients": 0, "invoices": 0, "entries": 0, "total": "0.00"}
+            ),
         }
         for month in range(1, 13)
     ]
+    yearly_invoices = (
+        await g.db_session.scalar(
+            select(func.count(func.distinct(Invoice.id)))
+            .select_from(source)
+            .where(*conditions, Invoice.currency_code == currency)
+        )
+        if basis == "payments"
+        else sum(row["invoices"] for row in months)
+    )
     return {
         "year": year,
+        "basis": basis,
         "months": months,
         "currencies": currencies,
         "currency_code": currency,
         "yearly_total": str(
             sum((Decimal(row["total"]) for row in months), Decimal("0.00"))
         ),
-        "yearly_invoices": sum(row["invoices"] for row in months),
+        "yearly_invoices": yearly_invoices,
+        "yearly_entries": sum(row["entries"] for row in months),
     }

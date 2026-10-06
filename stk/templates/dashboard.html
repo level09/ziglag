@@ -30,6 +30,14 @@
             <span class="summary-link">Review overdue invoices <i class="ti ti-arrow-up-right" aria-hidden="true"></i></span>
         </a>
     </div>
+    <v-card class="pa-5 mb-5">
+        <h2 class="text-h6 mb-2">Paid invoice total this month</h2>
+        <p class="text-body-small text-medium-emphasis mb-3">By invoice date, through today. Compared with the full previous month.</p>
+        {% for row in stats.paid_comparison %}
+        <div class="mb-2"><span class="money">{{ row.currency_code }} {{ row.current }}</span> <span class="text-body-small text-medium-emphasis">{% if row.change %}{{ row.change }} compared with last month{% else %}Last month total was zero{% endif %} · Last month: {{ row.currency_code }} {{ row.previous }}</span></div>
+        {% else %}<p>No paid invoices this month or last month.</p>{% endfor %}
+        <v-btn href="/reports/" variant="text" class="mt-2">View monthly report</v-btn>
+    </v-card>
     <v-card>
         <v-card-title class="d-flex align-center pa-5">Recent invoices<v-spacer></v-spacer><v-btn href="/invoices/" variant="text">View all</v-btn></v-card-title>
         {% if recent %}

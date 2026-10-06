@@ -203,8 +203,10 @@ async def exercise(base_url, token):
             assert await page.evaluate(
                 "document.documentElement.scrollWidth <= innerWidth"
             ), ("long text", width)
-            assert await page.locator(".workspace > .v-card").evaluate(
-                "el => el.scrollWidth <= el.clientWidth"
+            assert (
+                await page.locator(".workspace > .v-card[aria-busy]")
+                .filter(has=page.locator(".v-pagination"))
+                .evaluate("el => el.scrollWidth <= el.clientWidth")
             ), ("clipped long text", width)
         for width in [720, 390]:
             await page.set_viewport_size({"width": width, "height": 900})

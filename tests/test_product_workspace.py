@@ -13,7 +13,7 @@ from sqlalchemy import select
 import stk.extensions as ext
 from stk.agent_login import create_agent_login_token
 from stk.app import create_app
-from stk.invoicing.models import BusinessSettings, Client, Invoice
+from stk.invoicing.models import BusinessSettings, Client, Invoice, Payment
 from stk.user.models import User
 from tests.test_agent_operability import AgentLoginTestingConfig
 
@@ -168,6 +168,171 @@ class ProductWorkspaceTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual((await self.listing(search="Archived customer"))["total"], 7)
         self.assertEqual((await self.listing(search="%_"))["total"], 0)
         self.assertEqual((await self.listing(search="OTHER"))["total"], 0)
+
+    async def test_filtered_totals_cover_all_pages_and_keep_currencies_separate(self):
+        result = await self.listing(status="outstanding", per_page=1)
+        self.assertEqual(len(result["items"]), 1)
+        self.assertEqual(result["total"], 5)
+        self.assertEqual(
+            result["totals_by_currency"],
+            [
+                {"currency_code": "EUR", "total": "530.00", "balance": "480.00"},
+                {"currency_code": "USD", "total": "600.00", "balance": "600.00"},
+            ],
+        )
+        result = await self.listing(search="UNPAID")
+        self.assertEqual(
+            result["totals_by_currency"],
+            [
+                {"currency_code": "EUR", "total": "200.00", "balance": "200.00"},
+            ],
+        )
+        result = await self.listing()
+        self.assertEqual(result["totals_by_currency"][0]["balance"], "480.00")
+        self.assertEqual(result["totals_by_currency"][0]["total"], "1530.00")
+        for status in ("draft", "cancelled", "paid"):
+            result = await self.listing(status=status)
+            self.assertEqual(result["totals_by_currency"][0]["balance"], "0.00")
+
+    async def test_invoice_date_filters_are_inclusive_and_reject_invalid_ranges(self):
+        async with ext.async_session_factory() as session:
+            invoice = await session.get(Invoice, self.ids["UNPAID"])
+            invoice.date = self.today - timedelta(days=1)
+            await session.commit()
+        result = await self.listing(
+            start_date=self.today.isoformat(),
+            end_date=self.today.isoformat(),
+            status="overdue",
+        )
+        self.assertEqual(result["total"], 0)
+        self.assertEqual(result["totals_by_currency"], [])
+        result = await self.listing(
+            end_date=(self.today - timedelta(days=1)).isoformat()
+        )
+        self.assertEqual([row["invoice_number"] for row in result["items"]], ["UNPAID"])
+        self.assertEqual(result["totals_by_currency"][0]["total"], "200.00")
+        for params in [
+            {"start_date": "invalid"},
+            {"end_date": "2026-02-30"},
+            {"start_date": "2026-02-02", "end_date": "2026-02-01"},
+        ]:
+            response = await self.client.get("/api/invoices", query_string=params)
+            self.assertEqual(response.status_code, 400)
+
+    async def test_cash_report_uses_payment_dates_and_includes_partial_payments(self):
+        async with ext.async_session_factory() as session:
+            invoice = await session.get(Invoice, self.ids["PARTIAL"])
+            invoice.date = date(self.today.year - 1, 12, 31)
+            for name, amount, month, year in [
+                ("PARTIAL", "0.10", 1, self.today.year),
+                ("PARTIAL", "0.20", 2, self.today.year),
+                ("PARTIAL", "10", 12, self.today.year - 1),
+                ("CANCELLED", "2", 1, self.today.year),
+                ("USD", "5", 1, self.today.year),
+                ("OTHER", "900", 1, self.today.year),
+                ("DRAFT", "100", 1, self.today.year),
+            ]:
+                session.add(
+                    Payment(
+                        invoice_id=self.ids[name],
+                        amount=Decimal(amount),
+                        payment_date=date(year, month, 2),
+                    )
+                )
+            await session.commit()
+        response = await self.client.get(
+            "/api/reports/monthly",
+            query_string={
+                "year": self.today.year,
+                "basis": "payments",
+                "currency": "EUR",
+            },
+        )
+        data = await response.get_json()
+        self.assertEqual(data["yearly_total"], "2.30")
+        self.assertEqual(data["yearly_entries"], 3)
+        self.assertEqual(data["yearly_invoices"], 2)
+        self.assertEqual(data["months"][0]["total"], "2.10")
+        self.assertEqual(data["months"][1]["total"], "0.20")
+        self.assertEqual(data["months"][2]["total"], "0.00")
+        self.assertEqual(data["currencies"], ["EUR", "USD"])
+        response = await self.client.get(
+            "/api/reports/monthly",
+            query_string={
+                "year": self.today.year,
+                "basis": "payments",
+                "currency": "USD",
+            },
+        )
+        self.assertEqual((await response.get_json())["yearly_total"], "5.00")
+
+    async def test_report_rejects_invalid_basis_and_handles_empty_cash_year(self):
+        response = await self.client.get("/api/reports/monthly?basis=invalid")
+        self.assertEqual(response.status_code, 400)
+        response = await self.client.get(
+            "/api/reports/monthly", query_string={"basis": "payments"}
+        )
+        data = await response.get_json()
+        self.assertEqual(len(data["months"]), 12)
+        self.assertEqual(data["yearly_total"], "0.00")
+        self.assertEqual(data["yearly_entries"], 0)
+
+    async def test_dashboard_comparison_handles_year_boundary_and_zero_previous_total(
+        self,
+    ):
+        today = date(2026, 1, 15)
+        async with ext.async_session_factory() as session:
+            invoice = await session.get(Invoice, self.ids["PAID"])
+            invoice.date = date(2026, 1, 2)
+            for number, amount, currency, invoice_date in [
+                ("PREVIOUS", "200", "EUR", date(2025, 12, 31)),
+                ("USD-PAID", "50", "USD", date(2026, 1, 2)),
+                ("OLDER", "1000", "EUR", date(2025, 11, 30)),
+                ("FUTURE", "1000", "EUR", date(2026, 1, 16)),
+            ]:
+                session.add(
+                    Invoice(
+                        user_id=self.uid,
+                        invoice_number=number,
+                        status="paid",
+                        issued_at=datetime.now(),
+                        date=invoice_date,
+                        total=Decimal(amount),
+                        balance_due=0,
+                        currency_code=currency,
+                    )
+                )
+            await session.commit()
+        captured = {}
+
+        async def render(template, **context):
+            captured.update(context)
+            return "ok"
+
+        with (
+            patch("stk.portal.views.date") as clock,
+            patch("stk.portal.views.render_template", side_effect=render),
+        ):
+            clock.today.return_value = today
+            response = await self.client.get("/dashboard/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            captured["stats"]["paid_comparison"],
+            [
+                {
+                    "currency_code": "EUR",
+                    "current": "400.00",
+                    "previous": "200.00",
+                    "change": "+100.0%",
+                },
+                {
+                    "currency_code": "USD",
+                    "current": "50.00",
+                    "previous": "0.00",
+                    "change": None,
+                },
+            ],
+        )
 
     async def test_reports_group_currency_and_use_decimal_totals(self):
         async with ext.async_session_factory() as session:

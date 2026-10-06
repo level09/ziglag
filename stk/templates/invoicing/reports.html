@@ -1,23 +1,47 @@
 {% extends 'layout.html' %}
-{% block title %}Paid invoices | ZigLag{% endblock %}
+{% block title %}Reports | ZigLag{% endblock %}
+{% block css %}
+<style>
+.monthly-chart {display:flex;gap:12px;min-width:540px;height:220px;align-items:flex-end;padding:16px 8px;}
+.monthly-chart-column {flex:1;min-width:0;text-align:center;}
+.monthly-chart-track {height:160px;display:flex;align-items:flex-end;justify-content:center;border-bottom:1px solid rgba(var(--v-theme-on-surface),.2);}
+.monthly-chart-bar {width:70%;background:rgb(var(--v-theme-primary));border-radius:4px 4px 0 0;}
+.monthly-chart-label {font-size:12px;margin-top:8px;}
+</style>
+{% endblock %}
 {% block content %}
 <section class="workspace">
-    <header class="page-header"><div><h1>Paid invoices</h1><p>By invoice date, calendar year. Amounts shown separately by currency.</p></div></header>
+    <header class="page-header"><div><h1>${basis === 'payments' ? 'Cash received' : 'Paid invoices'}</h1><p>${basis === 'payments' ? 'By payment date' : 'By invoice date'}, calendar year. Amounts shown separately by currency.</p></div></header>
     <div class="invoice-filters">
+        <v-btn :variant="basis === 'invoices' ? 'tonal' : 'text'" :aria-pressed="basis === 'invoices'" @click="changeBasis('invoices')">Paid invoices</v-btn>
+        <v-btn :variant="basis === 'payments' ? 'tonal' : 'text'" :aria-pressed="basis === 'payments'" @click="changeBasis('payments')">Cash received</v-btn>
         <v-select :model-value="year" :items="years" label="Year" style="max-width: 160px;" hide-details density="compact" @update:model-value="value => { year = value; load(); }"></v-select>
         <v-select v-if="currency" :model-value="currency" :items="currencies.length ? currencies : [currency]" label="Currency" style="max-width: 160px;" hide-details density="compact" @update:model-value="value => { currency = value; load(); }"></v-select>
     </div>
-    <p class="text-body-medium text-medium-emphasis mb-5">Includes fully paid invoices only. Partial payments appear once the invoice is fully paid, under its invoice month. This is not a cash receipts report.</p>
+    <p v-if="basis === 'invoices'" class="text-body-medium text-medium-emphasis mb-5">Includes fully paid invoices only. Partial payments appear once the invoice is fully paid, under its invoice month. This is not a cash receipts report.</p>
+    <p v-else class="text-body-medium text-medium-emphasis mb-5">Recorded payments on issued invoices, including partial payments, by payment month. Includes payments retained on cancelled invoices. Refunds and unrecorded bank transactions are not included.</p>
     <v-alert v-if="error" type="warning" variant="tonal" role="alert" class="mb-4">${error}<v-btn variant="text" @click="load">Retry</v-btn></v-alert>
     <div v-if="loading" role="status" class="pa-6">Loading report…</div>
     <template v-else-if="!error">
-        <v-alert v-if="!yearlyInvoices" variant="tonal" class="mb-4">No paid invoices for ${year} in ${currency}.</v-alert>
+        <v-alert v-if="!yearlyEntries" variant="tonal" class="mb-4">${basis === 'payments' ? 'No recorded payments' : 'No paid invoices'} for ${year} in ${currency}.</v-alert>
+        <v-card class="pa-4 mb-5">
+            <h2 class="text-h6">Monthly ${basis === 'payments' ? 'cash received' : 'paid invoice totals'} (${currency})</h2>
+            <p class="text-body-small text-medium-emphasis">Exact amounts are in the table below.</p>
+            <div style="overflow-x:auto;" tabindex="0" aria-label="Monthly totals chart">
+                <div class="monthly-chart">
+                    <div v-for="row in months" :key="row.month" class="monthly-chart-column" :title="monthName(row.month) + ': ' + currency + ' ' + formatAmount(row.total)">
+                        <div class="monthly-chart-track"><div class="monthly-chart-bar" :style="{height:barHeight(row.total) + '%'}"></div></div>
+                        <div class="monthly-chart-label">${monthName(row.month)}</div>
+                    </div>
+                </div>
+            </div>
+        </v-card>
         <v-card>
             <table class="workspace-table">
-                <thead><tr><th scope="col">Month</th><th scope="col">Customers</th><th scope="col">Invoices</th><th scope="col">${currency}</th></tr></thead>
+                <thead><tr><th scope="col">Month</th><th scope="col">Customers</th><th scope="col">${basis === 'payments' ? 'Payments' : 'Invoices'}</th><th scope="col">${currency}</th></tr></thead>
                 <tbody>
-                    <tr class="annual"><th scope="row">${year} total</th><td></td><td>${yearlyInvoices}</td><td class="money">${formatAmount(yearlyTotal)}</td></tr>
-                    <tr v-for="row in months" :key="row.month"><th scope="row">${monthName(row.month)}</th><td>${row.clients}</td><td>${row.invoices}</td><td class="money">${formatAmount(row.total)}</td></tr>
+                    <tr class="annual"><th scope="row">${year} total</th><td></td><td>${yearlyEntries}</td><td class="money">${formatAmount(yearlyTotal)}</td></tr>
+                    <tr v-for="row in months" :key="row.month"><th scope="row">${monthName(row.month)}</th><td>${row.clients}</td><td>${row.entries}</td><td class="money">${formatAmount(row.total)}</td></tr>
                 </tbody>
             </table>
         </v-card>
@@ -31,20 +55,22 @@ const vuetify = Vuetify.createVuetify(config.vuetifyConfig);
 const currentYear = new Date().getFullYear();
 window.app = createApp({
     mixins: [layoutMixin], delimiters: config.delimiters,
-    data() { return {year: currentYear, years: Array.from({length:5}, (_, i) => currentYear - i), months:[], currency:'', currencies:[], yearlyTotal:'0.00', yearlyInvoices:0, loading:true, error:'', requestId:0}; },
+    data() { return {year: currentYear, years: Array.from({length:5}, (_, i) => currentYear - i), basis:'invoices', months:[], currency:'', currencies:[], yearlyTotal:'0.00', yearlyEntries:0, loading:true, error:'', requestId:0}; },
     mounted() { this.load(); },
     methods: {
+        changeBasis(value) { this.basis = value; this.load(); },
+        barHeight(value) { const max = Math.max(...this.months.map(row => Number(row.total))); return max > 0 ? Number(value) / max * 100 : 0; },
         monthName(month) { return new Intl.DateTimeFormat(navigator.language, {month:'short'}).format(new Date(this.year, month - 1, 1)); },
         formatAmount(value) { return new Intl.NumberFormat(navigator.language, {minimumFractionDigits:2, maximumFractionDigits:2}).format(Number(value)); },
         async load() {
             const requestId = ++this.requestId;
             this.loading = true; this.error = '';
             try {
-                const response = await axios.get('/api/reports/monthly', {params:{year:this.year, currency:this.currency}});
+                const response = await axios.get('/api/reports/monthly', {params:{year:this.year, currency:this.currency, basis:this.basis}});
                 if (requestId !== this.requestId) return;
                 const data = response.data;
                 this.months = data.months; this.currency = data.currency_code; this.currencies = data.currencies;
-                this.yearlyTotal = data.yearly_total; this.yearlyInvoices = data.yearly_invoices;
+                this.yearlyTotal = data.yearly_total; this.yearlyEntries = data.yearly_entries;
             } catch (error) {
                 if (requestId === this.requestId) this.error = 'The report could not be loaded. Try again.';
             } finally { if (requestId === this.requestId) this.loading = false; }

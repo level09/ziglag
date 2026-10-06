@@ -1,5 +1,12 @@
 # Changelog
 
+## ZigLag 0.2.0 (2026-10-06)
+
+- Update the vendored framework to stk 16.0.0 and Quart-Security 2.0.1.
+- Add shared authentication state, session revocation, encrypted MFA seeds, atomic login limits, stricter OAuth checks, and application CSRF protection.
+- Update pinned Vue, Vuetify, Axios, and Tabler assets. Preserve ZigLag pages and backup commands.
+- Add security migrations after the existing invoice migration chain. See [SECURITY.md](SECURITY.md) before upgrading a deployment.
+
 ## v11.3.0 (2025-12-02)
 
 ### Added
@@ -60,4 +67,4 @@
 
 ### Fixed
 - Various UI and UX improvements
-- Code cleanup and bug fixes 
+- Code cleanup and bug fixes

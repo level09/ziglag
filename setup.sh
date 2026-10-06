@@ -106,19 +106,18 @@ fi
 # Generate secure random values
 SECRET_KEY=$(generate_secure_string 32)
 PASSWORD_SALT=$(generate_secure_string 32)
-TOTP_SECRET=$(generate_secure_string 32)
 REDIS_PASSWORD=$(generate_secure_string 20)
 DB_PASSWORD=$(generate_secure_string 20)
 DOCKER_UID=$(id -u)
 
 # Validate generated values
-if [ -z "$SECRET_KEY" ] || [ -z "$PASSWORD_SALT" ] || [ -z "$TOTP_SECRET" ]; then
+if [ -z "$SECRET_KEY" ] || [ -z "$PASSWORD_SALT" ]; then
     echo -e "${RED}Error: Failed to generate secure values${NC}"
     exit 1
 fi
 
 # Process the .env file
-if ! awk -v sk="$SECRET_KEY" -v ps="$PASSWORD_SALT" -v ts="$TOTP_SECRET" \
+if ! awk -v sk="$SECRET_KEY" -v ps="$PASSWORD_SALT" \
        -v docker="$DOCKER_CONFIG" -v rpass="$REDIS_PASSWORD" -v dbpass="$DB_PASSWORD" -v uid="$DOCKER_UID" '
 {
     if ($0 ~ /^SECRET_KEY=/) {
@@ -126,9 +125,6 @@ if ! awk -v sk="$SECRET_KEY" -v ps="$PASSWORD_SALT" -v ts="$TOTP_SECRET" \
     }
     else if ($0 ~ /^SECURITY_PASSWORD_SALT=/) {
         print "SECURITY_PASSWORD_SALT=\"" ps "\""
-    }
-    else if ($0 ~ /^SECURITY_TOTP_SECRETS=/) {
-        print "SECURITY_TOTP_SECRETS=\"" ts "\""
     }
     else if ($0 ~ /^SQLALCHEMY_DATABASE_URI=/) {
         # Skip - use default from settings.py (instance/stk.db)
@@ -172,7 +168,7 @@ if [ ! -f .env ]; then
 fi
 
 echo -e "${GREEN}Successfully generated .env file with secure keys${NC}"
-echo -e "${GREEN}Generated secure values for: SECRET_KEY, SECURITY_PASSWORD_SALT, SECURITY_TOTP_SECRETS${NC}"
+echo -e "${GREEN}Generated secure values for: SECRET_KEY, SECURITY_PASSWORD_SALT${NC}"
 if [ "$DOCKER_CONFIG" = true ]; then
     echo -e "${GREEN}Docker configuration enabled with secure passwords for Redis and PostgreSQL${NC}"
 fi

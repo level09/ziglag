@@ -32,13 +32,15 @@ class Config:
     )
     SQLALCHEMY_DATABASE_URI = os.environ.get("SQLALCHEMY_DATABASE_URI", _default_db)
 
+    STK_PUBLIC_URL = os.environ.get("STK_PUBLIC_URL")
+
     # security
     SECURITY_REGISTERABLE = False
     SECURITY_RECOVERABLE = False
     SECURITY_CONFIRMABLE = False
     SECURITY_CHANGEABLE = True
     SECURITY_TRACKABLE = True
-    SECURITY_PASSWORD_HASH = "pbkdf2_sha512"
+    SECURITY_PASSWORD_HASH = "argon2"
     SECURITY_PASSWORD_SALT = os.environ.get("SECURITY_PASSWORD_SALT")
     if not SECURITY_PASSWORD_SALT:
         raise ValueError("SECURITY_PASSWORD_SALT environment variable is required")
@@ -53,6 +55,8 @@ class Config:
 
     SECURITY_TWO_FACTOR_ENABLED_METHODS = ["authenticator"]
     SECURITY_TWO_FACTOR = True
+    _totp_keys = os.environ.get("SECURITY_TOTP_ENCRYPTION_KEYS")
+    SECURITY_TOTP_ENCRYPTION_KEYS = _totp_keys.split(",") if _totp_keys else None
     SECURITY_API_ENABLED_METHODS = ["session"]
 
     SECURITY_FRESHNESS = timedelta(minutes=60)
@@ -61,9 +65,10 @@ class Config:
         os.environ.get("SECURITY_PASSWORD_LENGTH_MIN", 12)
     )
 
-    SECURITY_TOTP_SECRETS = {"1": os.environ.get("SECURITY_TOTP_SECRETS")}
     SECURITY_TOTP_ISSUER = "ZigLag"
 
+    SECURITY_WAN_RP_ID = os.environ.get("SECURITY_WAN_RP_ID")
+    SECURITY_WAN_EXPECTED_ORIGIN = os.environ.get("SECURITY_WAN_EXPECTED_ORIGIN")
     SECURITY_WEBAUTHN = True
     SECURITY_WAN_ALLOW_AS_FIRST_FACTOR = True
     SECURITY_WAN_ALLOW_AS_MULTI_FACTOR = True
@@ -77,8 +82,9 @@ class Config:
     SESSION_USE_SIGNER = False
     PERMANENT_SESSION_LIFETIME = 3600
     SESSION_COOKIE_SECURE = (
-        os.environ.get("SESSION_COOKIE_SECURE", "False").lower() == "true"
+        os.environ.get("SESSION_COOKIE_SECURE", "True").lower() == "true"
     )
+    SECURITY_COOKIE_SECURE = SESSION_COOKIE_SECURE
     SESSION_COOKIE_HTTPONLY = (
         os.environ.get("SESSION_COOKIE_HTTPONLY", "True").lower() == "true"
     )

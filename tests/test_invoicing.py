@@ -238,11 +238,11 @@ class ProductionConfigTests(unittest.TestCase):
         self.assertIn("this.issueErrors = [];", editor)
         self.assertIn("Could not create customer", editor)
 
-    def test_installers_generate_totp_secret(self):
+    def test_installers_generate_mfa_root_key(self):
         for filename in ("setup.sh", "deploy.sh"):
             with self.subTest(filename=filename):
                 content = (PROJECT_ROOT / filename).read_text()
-                self.assertIn("SECURITY_TOTP_SECRETS", content)
+                self.assertIn("SECRET_KEY=$(", content)
 
     def test_deploy_installs_invoice_font(self):
         content = (PROJECT_ROOT / "deploy.sh").read_text()

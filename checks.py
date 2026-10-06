@@ -320,8 +320,9 @@ def check_cli_commands(app):
         "create",
         "add-role",
         "reset",
-        "migrate",
-        "migration-status",
+        "db",
+        "protect-mfa",
+        "backup",
     ]
     for cmd in required:
         assert cmd in commands, f"Missing CLI command: {cmd}"

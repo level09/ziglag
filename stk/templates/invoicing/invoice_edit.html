@@ -54,7 +54,7 @@
     <section class="invoice-workspace">
         <header class="workspace-toolbar">
             <v-btn icon variant="text" href="/invoices/" aria-label="Back to invoices"><i class="ti ti-arrow-left"></i></v-btn>
-            <span class="text-body-2">${invoice.id ? invoice.invoice_number : 'New invoice'}</span>
+            <span class="text-body-medium">${invoice.id ? invoice.invoice_number : 'New invoice'}</span>
             <span class="status-pill" :class="'status-' + invoice.status">${statusLabel(invoice.status)}</span>
             <v-spacer></v-spacer>
             <span v-if="!invoice.issued_at" class="save-status" role="status" aria-live="polite">${saveStatus}</span>
@@ -166,15 +166,15 @@
         <form v-else class="invoice-paper" @submit.prevent="reviewInvoice" novalidate>
             <div class="document-heading">
                 <div><div class="document-caption mb-2">Draft / ${invoice.currency_code}</div><h1>Invoice</h1></div>
-                <span class="text-caption text-medium-emphasis">Edit directly. Changes save automatically.</span>
+                <span class="text-body-small text-medium-emphasis">Edit directly. Changes save automatically.</span>
             </div>
             <div class="document-parties">
                 <section>
                     <div class="document-caption mb-3">From</div>
                     <strong>${invoice.from_name || 'Business profile incomplete'}</strong>
-                    <div class="text-body-2 text-medium-emphasis mt-2" style="white-space: pre-line;">${invoice.from_address}</div>
-                    <div class="text-caption mt-2">${invoice.from_email}</div>
-                    <div class="text-caption">${invoice.from_tax_number || invoice.from_vat_id}</div>
+                    <div class="text-body-medium text-medium-emphasis mt-2" style="white-space: pre-line;">${invoice.from_address}</div>
+                    <div class="text-body-small mt-2">${invoice.from_email}</div>
+                    <div class="text-body-small">${invoice.from_tax_number || invoice.from_vat_id}</div>
                     {% if profile_missing %}
                     <div class="document-error mt-3">Missing from Business Settings: {{ profile_missing | join(', ') }}.</div>
                     {% endif %}
@@ -196,7 +196,7 @@
                         <v-text-field label="Address" v-model="billTo.address_line1" density="compact" hide-details="auto" class="mt-3"></v-text-field>
                         <v-text-field label="City / Region" v-model="billTo.address_line2" density="compact" hide-details="auto" class="mt-3"></v-text-field>
                         <v-text-field label="Email" v-model="billTo.email" type="email" density="compact" hide-details="auto" class="mt-3"></v-text-field>
-                        <div class="text-caption text-medium-emphasis mt-2">Details also update the saved customer.</div>
+                        <div class="text-body-small text-medium-emphasis mt-2">Details also update the saved customer.</div>
                     </template>
                 </section>
             </div>
@@ -232,7 +232,7 @@
                     <div class="summary-row"><span class="summary-label">${invoice.tax_label || 'Tax'}${invoice.tax_inclusive ? ' (included)' : ''}</span><span class="summary-value">${formatMoney(totals.tax)}</span></div>
                     <v-divider class="my-3"></v-divider>
                     <div class="summary-row summary-total"><span class="summary-label">Total</span><span class="summary-value">${formatMoney(totals.total)}</span></div>
-                    <div class="text-caption text-medium-emphasis text-right mt-2">${dirty ? 'Estimate until saved' : 'Calculated on save'}</div>
+                    <div class="text-body-small text-medium-emphasis text-right mt-2">${dirty ? 'Estimate until saved' : 'Calculated on save'}</div>
                 </div>
             </div>
             <details class="document-options" :open="showValidation && errorsFor('tax', 'VAT', 'charge', 'template').length > 0">
@@ -265,10 +265,10 @@
             <v-card-title class="pt-6 px-6">Review invoice</v-card-title>
             <v-card-text>
                 <div class="document-caption">${reviewData.invoice_number}</div>
-                <div class="text-h6 mt-2">${reviewData.client_name}</div>
+                <div class="text-title-large mt-2">${reviewData.client_name}</div>
                 <div class="review-total">${formatMoney(reviewData.total)}</div>
-                <div class="text-body-2">${reviewData.items.length} line item(s) · Due ${formatDate(reviewData.due_date) || 'on receipt'}</div>
-                <div class="text-body-2 mt-4">Issuing locks this invoice and creates its permanent PDF. It does not send an email.</div>
+                <div class="text-body-medium">${reviewData.items.length} line item(s) · Due ${formatDate(reviewData.due_date) || 'on receipt'}</div>
+                <div class="text-body-medium mt-4">Issuing locks this invoice and creates its permanent PDF. It does not send an email.</div>
                 <v-alert v-if="issueErrors.length" type="error" variant="tonal" class="mt-4"><div v-for="error in issueErrors" :key="error">${error}</div></v-alert>
             </v-card-text>
             <v-card-actions class="pa-4"><v-btn variant="text" @click="reviewDialog=false" :disabled="issuing">Back to invoice</v-btn><v-spacer></v-spacer><v-btn color="primary" variant="elevated" @click="issueInvoice" :loading="issuing">Issue invoice</v-btn></v-card-actions>
@@ -309,7 +309,7 @@
                 <v-text-field :model-value="shareUrl" readonly label="Share URL" @click="copyShare">
                     <template v-slot:append-inner><v-btn icon size="small" variant="text" @click="copyShare"><i class="ti ti-copy"></i></v-btn></template>
                 </v-text-field>
-                <div v-if="shareExpiresAt" class="text-caption mb-3">Expires ${new Date(shareExpiresAt).toLocaleString()}</div>
+                <div v-if="shareExpiresAt" class="text-body-small mb-3">Expires ${new Date(shareExpiresAt).toLocaleString()}</div>
                 <v-btn color="error" variant="text" @click="revokeShare">Revoke link</v-btn>
             </v-card-text>
         </v-card>

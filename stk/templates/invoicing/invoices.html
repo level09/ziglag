@@ -22,20 +22,20 @@
             <article v-for="item in items" :key="item.id" class="mobile-invoice">
                 <div class="invoice-line"><a :href="'/invoices/' + item.id">${item.invoice_number}</a><span class="money">${formatMoney(item.total, item.currency_code)}</span></div>
                 <div class="mb-2">${item.client_name || 'No customer yet'}</div>
-                <div class="invoice-line text-caption"><span>${item.due_date ? 'Due ' + formatDate(item.due_date) : 'No due date'}</span><span class="status-pill" :class="'status-' + item.status">${statusLabel(item.status)}</span></div>
-                <div class="text-caption money">Balance ${formatMoney(item.balance_due, item.currency_code)}</div>
+                <div class="invoice-line text-body-small"><span>${item.due_date ? 'Due ' + formatDate(item.due_date) : 'No due date'}</span><span class="status-pill" :class="'status-' + item.status">${statusLabel(item.status)}</span></div>
+                <div class="text-body-small money">Balance ${formatMoney(item.balance_due, item.currency_code)}</div>
             </article>
         </template>
         <table v-else-if="items.length" class="workspace-table invoice-table">
             <thead><tr><th scope="col">Invoice / customer</th><th scope="col">Date</th><th scope="col">Due</th><th scope="col">Total</th><th scope="col">Balance</th><th scope="col">Status</th></tr></thead>
             <tbody><tr v-for="item in items" :key="item.id">
-                <td><a :href="'/invoices/' + item.id">${item.invoice_number}</a><div class="text-caption text-medium-emphasis mt-1">${item.client_name || 'No customer yet'}</div></td>
+                <td><a :href="'/invoices/' + item.id">${item.invoice_number}</a><div class="text-body-small text-medium-emphasis mt-1">${item.client_name || 'No customer yet'}</div></td>
                 <td>${formatDate(item.date)}</td><td>${formatDate(item.due_date) || 'No due date'}</td>
                 <td class="money">${formatMoney(item.total, item.currency_code)}</td><td class="money">${formatMoney(item.balance_due, item.currency_code)}</td><td><span class="status-pill" :class="'status-' + item.status">${statusLabel(item.status)}</span></td>
             </tr></tbody>
         </table>
         <div v-if="total" class="d-flex align-center flex-wrap pa-3 ga-3">
-            <span class="text-caption">${total} invoices</span><v-spacer></v-spacer>
+            <span class="text-body-small">${total} invoices</span><v-spacer></v-spacer>
             <v-select :model-value="perPage" :items="[25, 50, 100]" label="Per page" density="compact" hide-details style="max-width: 120px;" @update:model-value="changePageSize"></v-select>
             <v-pagination :model-value="page" :length="Math.ceil(total / perPage)" :total-visible="isMobile ? 3 : 5" density="comfortable" @update:model-value="changePage"></v-pagination>
         </div>

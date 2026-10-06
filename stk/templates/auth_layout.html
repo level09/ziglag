@@ -12,7 +12,7 @@
     <link rel="icon" href="/static/img/favicon.ico" type="image/x-icon">
 
     <link rel="stylesheet" href="/static/css/vuetify.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='icons/tabler-icons.min.css') }}">
     <link rel="stylesheet" href="/static/css/app.css?v=20260928-color">
 
     {% block css %}{% endblock %}
@@ -26,4 +26,4 @@
     <script src="/static/js/config.js?v=20260928-color"></script>
     {% block js %}{% endblock %}
 </body>
-</html> 
+</html>

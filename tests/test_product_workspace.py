@@ -6,6 +6,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 from aiosmtplib.errors import SMTPResponseException, SMTPServerDisconnected
+from quart.testing import QuartClient
 from quart_security import hash_password
 from sqlalchemy import select
 
@@ -18,13 +19,24 @@ from tests.test_agent_operability import AgentLoginTestingConfig
 
 
 class WorkspaceConfig(AgentLoginTestingConfig):
-    WTF_CSRF_ENABLED = False
+    pass
+
+
+class WorkspaceClient(QuartClient):
+    async def open(self, *args, **kwargs):
+        if kwargs.get("method", "GET") in {"POST", "PUT", "PATCH", "DELETE"}:
+            await self.get("/dashboard/")
+            async with self.session_transaction() as cookie:
+                csrf = cookie["_csrf_token"]
+            kwargs.setdefault("headers", {})["X-CSRFToken"] = csrf
+        return await super().open(*args, **kwargs)
 
 
 class ProductWorkspaceTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.directory = tempfile.TemporaryDirectory()
         self.app = create_app(WorkspaceConfig)
+        self.app.test_client_class = WorkspaceClient
         self.app.instance_path = self.directory.name
         async with ext.engine.begin() as conn:
             await conn.run_sync(ext.Base.metadata.create_all)
@@ -36,7 +48,7 @@ class ProductWorkspaceTests(unittest.IsolatedAsyncioTestCase):
                     name="Studio",
                     active=True,
                     confirmed_at=datetime.now(),
-                    password=hash_password("TestPassword123!"),
+                    password=hash_password("TestPassword123!", app=self.app),
                 )
                 for email in ["owner@example.com", "other@example.com"]
             ]

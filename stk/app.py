@@ -1,15 +1,13 @@
 import asyncio
 import inspect
-from datetime import timedelta
 
 import click
 from quart import Quart, g, render_template, request
-from quart_rate_limiter import RateLimiter, limit_blueprint
 from quart_security import Security, SQLAlchemyUserDatastore
 from quart_security.views import _ensure_csrf_token
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-import stk.commands as commands
+import stk.cli as cli
 import stk.extensions as ext
 from stk.agent_login import agent_login_enabled, bp_agent_login
 from stk.extensions import session
@@ -29,8 +27,7 @@ def create_app(config_object=Config):
     register_blueprints(app)
     register_extensions(app)
     register_errorhandlers(app)
-    register_shellcontext(app)
-    register_commands(app, commands)
+    register_commands(app, cli)
     return app
 
 
@@ -39,9 +36,12 @@ def register_extensions(app):
     ext.engine = create_async_engine(app.config["SQLALCHEMY_DATABASE_URI"])
     ext.async_session_factory = async_sessionmaker(ext.engine, expire_on_commit=False)
 
-    @app.before_request
+    user_datastore = SQLAlchemyUserDatastore(
+        ext.async_session_factory, User, Role, webauthn_model=WebAuthn
+    )
+
     async def _open_session():
-        g.db_session = ext.async_session_factory()
+        g.db_session = user_datastore.session
 
     @app.after_request
     async def _close_session(response):
@@ -50,9 +50,8 @@ def register_extensions(app):
             await db_session.close()
         return response
 
-    @app.before_websocket
     async def _open_ws_session():
-        g.db_session = ext.async_session_factory()
+        g.db_session = user_datastore.session
 
     @app.after_websocket
     async def _close_ws_session(response):
@@ -96,26 +95,31 @@ def register_extensions(app):
         except TimeoutError:
             app.logger.warning("Timed out while disposing SQLAlchemy engine")
 
-    user_datastore = SQLAlchemyUserDatastore(
-        lambda: g.db_session, User, Role, webauthn_model=WebAuthn
-    )
+    from stk.security import register_security_controls
+    from stk.utils.ratelimit import register_rate_limits
+
+    register_rate_limits(app)
+    register_security_controls(app)
+
     Security(
         app,
         user_datastore,
         register_form=ExtendedRegisterForm,
         change_password_form=OAuthAwareChangePasswordForm,
     )
+    # The library resets its session before loading the user. Share that session
+    # so signals and application routes participate in the same transaction.
+    app.before_request(_open_session)
+    app.before_websocket(_open_ws_session)
 
     # Session initialization
     if app.config.get("SESSION_TYPE") == "redis":
         session.init_app(app)
     # For non-redis, fall back to Quart's built-in cookie sessions
 
-    # Rate limiting (replaces custom in-memory limiter)
-    RateLimiter(app)
-    security_bp = app.blueprints.get("security")
-    if security_bp:
-        limit_blueprint(security_bp, 10, timedelta(minutes=1))
+    # CSRF token for POSTs outside quart-security templates (e.g. logout form).
+    # Uses the library's own get-or-create so tokens stay in sync.
+    app.jinja_env.globals["csrf_token"] = _ensure_csrf_token
 
     # CSRF token for POSTs outside quart-security templates (e.g. logout form).
     # Uses the library's own get-or-create so tokens stay in sync.
@@ -172,7 +176,11 @@ def register_errorhandlers(app):
             logger.exception("Unhandled exception")
 
         if _is_api_request():
-            return {"message": "Internal server error"}, code
+            return {
+                "message": "Internal server error"
+                if code == 500
+                else getattr(error, "description", "Request failed")
+            }, code
         # Fall back to 500.html for codes without a dedicated template (405, 403, ...)
         return await render_template([f"{code}.html", "500.html"]), code
 
@@ -187,16 +195,6 @@ def register_errorhandlers(app):
     for errcode in [401, 404, 500]:
         app.errorhandler(errcode)(render_error)
     return None
-
-
-def register_shellcontext(app):
-    """Register shell context objects."""
-
-    def shell_context():
-        """Shell context objects."""
-        return {"User": User, "Role": Role}
-
-    app.shell_context_processor(shell_context)
 
 
 def register_commands(app: Quart, commands_module):

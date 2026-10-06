@@ -7,7 +7,7 @@
         <v-select :model-value="year" :items="years" label="Year" style="max-width: 160px;" hide-details density="compact" @update:model-value="value => { year = value; load(); }"></v-select>
         <v-select v-if="currency" :model-value="currency" :items="currencies.length ? currencies : [currency]" label="Currency" style="max-width: 160px;" hide-details density="compact" @update:model-value="value => { currency = value; load(); }"></v-select>
     </div>
-    <p class="text-body-2 text-medium-emphasis mb-5">Includes fully paid invoices only. Partial payments appear once the invoice is fully paid, under its invoice month. This is not a cash receipts report.</p>
+    <p class="text-body-medium text-medium-emphasis mb-5">Includes fully paid invoices only. Partial payments appear once the invoice is fully paid, under its invoice month. This is not a cash receipts report.</p>
     <v-alert v-if="error" type="warning" variant="tonal" role="alert" class="mb-4">${error}<v-btn variant="text" @click="load">Retry</v-btn></v-alert>
     <div v-if="loading" role="status" class="pa-6">Loading report…</div>
     <template v-else-if="!error">

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What is ZigLag
 
-Self-hosted invoicing application built on vendored stk 13.4.1. The stack uses async Quart, SQLAlchemy 2, Vue 3, Vuetify 3, quart-security 1.4.1, Alembic, and fpdf2. SQLite is the local default. Production deployments use PostgreSQL, Redis, Caddy, systemd, and the stk deploy script.
+Self-hosted invoicing application built on vendored stk 16.0.0. The stack uses async Quart, SQLAlchemy 2, Vue 3, Vuetify 4, quart-security 2.0.1, Alembic, and fpdf2. SQLite is the local default. Production deployments use PostgreSQL, Redis, Caddy, systemd, and the stk deploy script.
 
 ZigLag issues PDF invoices with German and EU B2B safeguards. It does not yet generate XRechnung or ZUGFeRD.
 
@@ -56,7 +56,7 @@ Migration config lives in `stk/migrations.py`. Alembic env in `alembic/env.py`. 
 Current migration chain:
 
 ```text
-20260326_0001 -> cfa8efad03ed -> 228ac4e0ebf5 -> 20260712_0001
+20260326_0001 -> cfa8efad03ed -> 228ac4e0ebf5 -> 20260712_0001 -> 20260712_0002 -> 20261006_0001 -> 20261006_0002
 ```
 
 ## Architecture
@@ -84,7 +84,7 @@ All relationships must use `lazy="selectin"` for async compatibility.
 
 ### CLI Commands
 
-Sync click commands wrapping `asyncio.run()` in `stk/commands.py`. Quart CLI doesn't support async click commands. The `db` group is a click.Group with Alembic subcommands. All commands are auto-registered via `register_commands()` in `app.py`.
+Sync click commands wrapping `asyncio.run()` in `stk/cli/`. `stk/commands.py` preserves compatibility imports. Quart CLI doesn't support async click commands. The `db` group is a click.Group with Alembic subcommands. All commands are auto-registered via `register_commands()` in `app.py`.
 
 ### Blueprints
 
@@ -97,14 +97,14 @@ Sync click commands wrapping `asyncio.run()` in `stk/commands.py`. Quart CLI doe
 
 ### Auth (quart-security)
 
-`SQLAlchemyUserDatastore` with session factory callable (`lambda: g.db_session`). Key decorators: `@auth_required("session")`, `@roles_required('admin')`.
+`SQLAlchemyUserDatastore` with `ext.async_session_factory`. The application uses the datastore session as `g.db_session`. Key decorators: `@auth_required("session")`, `@roles_required('admin')`.
 
 **Features enabled:**
 - Session auth with tracking (IP, device, browser via `Session` model)
 - 2FA via TOTP authenticator (`SECURITY_TWO_FACTOR = True`)
 - WebAuthn as first or multi-factor (`SECURITY_WEBAUTHN = True`)
 - OAuth (Google, GitHub) via AuthLib `AsyncOAuth2Client`
-- Password hashing: pbkdf2_sha512, min 12 chars
+- Password hashing: Argon2id, min 12 chars; legacy hashes remain readable
 - Account lockout: `failed_login_count` + `locked_until` on User model
 - Recovery codes (3 codes)
 - Session freshness: 60-minute window

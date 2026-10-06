@@ -6,7 +6,7 @@
 
 <p align="center">
   Self-hosted invoicing for freelancers and small businesses.<br>
-  Built on <a href="https://github.com/level09/stk">stk 13.4.1</a>. Open source. No document limits.
+  Built on <a href="https://github.com/level09/stk">stk 16.0.0</a>. Open source. No document limits.
 </p>
 
 ## Status
@@ -50,8 +50,8 @@ Drafts remain editable and deletable. Issuing or sending an invoice freezes its 
 | Layer | Technology |
 |-------|------------|
 | Backend | Python 3.11+, async Quart, SQLAlchemy 2 |
-| Framework | stk 13.4.1 |
-| Frontend | Vue 3 and Vuetify 3, no build step |
+| Framework | stk 16.0.0 |
+| Frontend | Vue 3 and Vuetify 4, no build step |
 | Database | SQLite by default, PostgreSQL optional |
 | Auth | Sessions, TOTP, WebAuthn, OAuth, recovery codes |
 | PDF | fpdf2 with Unicode font support |

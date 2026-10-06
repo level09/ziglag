@@ -1,5 +1,6 @@
 import datetime
 import logging
+from uuid import uuid4
 
 import orjson as json
 from quart import Blueprint, Response, current_app, g, render_template, request, session
@@ -14,6 +15,7 @@ from quart_security import (
 )
 from sqlalchemy import func, select
 
+from stk.security import check_password_policy
 from stk.user.models import Activity, Role, Session, User
 
 log = logging.getLogger(__name__)
@@ -59,6 +61,8 @@ async def api_user():
 async def api_user_create():
     json_data = await request.json
     user_data = json_data.get("item", {})
+    if "password" in user_data:
+        await check_password_policy(user_data["password"])
     user = User()
     await user.from_dict(user_data)
     user.confirmed_at = datetime.datetime.now()
@@ -82,6 +86,8 @@ async def api_user_update(id):
         return {"message": "User not found"}, 404
     json_data = await request.json
     user_data = json_data.get("item", {})
+    if "password" in user_data:
+        await check_password_policy(user_data["password"])
     old_user_data = user.to_dict()
     try:
         await user.from_dict(user_data)
@@ -106,15 +112,14 @@ async def api_user_reset_password(id):
     if user is None:
         return {"message": "User not found"}, 404
     json_data = await request.json
-    password = json_data.get("password", "").strip()
-    min_len = current_app.config.get("SECURITY_PASSWORD_LENGTH_MIN", 12)
-    if not password or len(password) < min_len:
-        return {"message": f"Password must be at least {min_len} characters"}, 400
-    from quart_security import hash_password
+    password = json_data.get("password", "")
+    await check_password_policy(password)
+    from quart_security.password import hash_password_async
 
     try:
-        user.password = hash_password(password)
+        user.password = await hash_password_async(password)
         user.password_set = True
+        user.fs_uniquifier = uuid4().hex
         await Activity.register(
             current_user.id,
             "Admin Password Reset",
@@ -272,7 +277,7 @@ async def user_authenticated_handler(app, user, authn_via, **extra_args):
     """Handle user authentication - create session record and check for new IP."""
     session_data = {
         "user_id": user.id,
-        "session_token": getattr(session, "sid", None) or session.get("_id", ""),
+        "session_token": session["_id"],
         "ip_address": request.remote_addr,
         "meta": {
             "browser": request.user_agent.browser,
@@ -321,7 +326,7 @@ async def after_tf_profile_change(sender, user, **extra_args):
 @user_logged_out.connect
 async def user_logged_out_handler(app, user, **extra_args):
     """Clear session on logout."""
-    token = getattr(session, "sid", None) or session.get("_id")
+    token = session.get("_id")
     if token:
         stmt = (
             Session.__table__.update()

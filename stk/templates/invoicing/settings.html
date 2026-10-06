@@ -11,10 +11,10 @@
         <div class="settings-readiness"><strong>${profileMissing.length ? 'Complete your saved profile' : 'Business profile ready'}</strong><p class="mt-2">${profileMissing.length ? 'Still needed: ' + profileMissing.join(', ') + '.' : 'You can start your first invoice.'}</p><v-btn v-if="!profileMissing.length" href="/invoices/new" color="primary" variant="text" class="mt-2">New invoice</v-btn></div></nav>
         <v-card class="pa-6 settings-fields">
             <section id="identity" class="settings-section">
-            <h2 class="text-h6 mb-4 mt-2">Business identity</h2>
+            <h2 class="text-title-large mb-4 mt-2">Business identity</h2>
 
             <div class="mb-4">
-                <div class="text-body-2 mb-2">Logo</div>
+                <div class="text-body-medium mb-2">Logo</div>
                 <div v-if="s.logo_path" class="mb-2 d-flex align-center ga-3">
                     <img :src="'/static/' + s.logo_path" style="max-height: 80px;" />
                     <v-btn size="x-small" variant="tonal" color="error" @click="removeLogo"><i class="ti ti-trash mr-1"></i> Remove</v-btn>
@@ -52,9 +52,9 @@
 
             </section>
             <section id="defaults" class="settings-section">
-            <h2 class="text-h6 mb-2">Invoice defaults</h2><p class="text-body-2 text-medium-emphasis mb-5">Applied to new drafts. Issued invoices keep their saved details.</p>
+            <h2 class="text-title-large mb-2">Invoice defaults</h2><p class="text-body-medium text-medium-emphasis mb-5">Applied to new drafts. Issued invoices keep their saved details.</p>
             <!-- Tax -->
-            <div class="text-h6 mb-4">Tax</div>
+            <div class="text-title-large mb-4">Tax</div>
             <v-row>
                 <v-col>
                     <v-select label="Type" v-model="s.tax_type"
@@ -76,7 +76,7 @@
             <v-divider class="my-6"></v-divider>
 
             <!-- Invoice Numbering -->
-            <div class="text-h6 mb-4">Invoice Number</div>
+            <div class="text-title-large mb-4">Invoice Number</div>
             <v-row>
                 <v-col>
                     <v-text-field label="Prefix" v-model="s.invoice_prefix"></v-text-field>
@@ -89,13 +89,13 @@
             <v-divider class="my-6"></v-divider>
 
             <!-- Default Notes -->
-            <div class="text-h6 mb-4">Default Notes</div>
+            <div class="text-title-large mb-4">Default Notes</div>
             <v-textarea label="Default Invoice Notes" v-model="s.default_invoice_notes" rows="4"></v-textarea>
 
             <v-divider class="my-6"></v-divider>
 
             <!-- Region -->
-            <div class="text-h6 mb-4">Region</div>
+            <div class="text-title-large mb-4">Region</div>
             <v-row>
                 <v-col>
                     <v-text-field label="Currency Code" v-model="s.currency_code"></v-text-field>
@@ -104,14 +104,14 @@
                     <v-text-field label="Currency Symbol" v-model="s.currency_symbol"></v-text-field>
                 </v-col>
                 <v-col>
-                    <p class="text-body-2 text-medium-emphasis">Dates in the workspace follow your browser language.</p>
+                    <p class="text-body-medium text-medium-emphasis">Dates in the workspace follow your browser language.</p>
                 </v-col>
             </v-row>
 
             <v-divider class="my-6"></v-divider>
 
             <!-- Customization -->
-            <div class="text-h6 mb-4">Customize</div>
+            <div class="text-title-large mb-4">Customize</div>
             <v-select label="Default Invoice Template" v-model="s.default_invoice_template"
                 :items="[{title:'Precision',value:'precision'},{title:'Branded',value:'branded'},{title:'Editorial',value:'editorial'}]"
             ></v-select>
@@ -126,13 +126,13 @@
 
 </section>
             <section id="payment" class="settings-section">
-            <h2 class="text-h6 mb-4">Payment instructions</h2>
-            <p class="text-body-2 text-medium-emphasis mb-4">Add your bank details, payment reference guidance, or payment link here. These details are saved with each issued invoice.</p>
+            <h2 class="text-title-large mb-4">Payment instructions</h2>
+            <p class="text-body-medium text-medium-emphasis mb-4">Add your bank details, payment reference guidance, or payment link here. These details are saved with each issued invoice.</p>
             <v-textarea label="Payment instructions" v-model="s.payment_instructions" rows="3"></v-textarea>
 
 </section>
             <section id="email" class="settings-section">
-            <h2 class="text-h6 mb-4">Email preferences</h2>
+            <h2 class="text-title-large mb-4">Email preferences</h2>
             <v-textarea label="Email introduction" v-model="s.default_email_message" rows="3"></v-textarea>
             <v-checkbox label="Send a private copy to my account email" v-model="s.send_copy_to_self" hide-details color="primary"></v-checkbox>
 

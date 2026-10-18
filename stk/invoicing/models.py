@@ -50,8 +50,12 @@ class BusinessSettings(Base):
     tax_rate = Column(Numeric(5, 2), default=0)
     tax_label = Column(String(50), default="VAT")
     tax_inclusive = Column(Boolean, default=False)
-    default_tax_treatment = Column(String(30), default="standard")
-    default_invoice_template = Column(String(30), default="precision")
+    default_tax_treatment = Column(
+        String(30), nullable=False, default="standard", server_default="standard"
+    )
+    default_invoice_template = Column(
+        String(30), nullable=False, default="precision", server_default="precision"
+    )
 
     # invoice numbering
     invoice_prefix = Column(String(20), default="INV")
@@ -326,9 +330,13 @@ class Invoice(Base):
     tax_rate = Column(Numeric(5, 2), default=0)
     tax_label = Column(String(50), default="VAT")
     tax_inclusive = Column(Boolean, default=False)
-    tax_treatment = Column(String(30), default="standard")
+    tax_treatment = Column(
+        String(30), nullable=False, default="standard", server_default="standard"
+    )
     tax_exemption_reason = Column(Text, nullable=True)
-    template_key = Column(String(30), default="precision")
+    template_key = Column(
+        String(30), nullable=False, default="precision", server_default="precision"
+    )
 
     notes = Column(Text, nullable=True)
     share_token = Column(String(64), unique=True, nullable=True)

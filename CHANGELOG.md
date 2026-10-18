@@ -6,6 +6,8 @@
 - Add shared authentication state, session revocation, encrypted MFA seeds, atomic login limits, stricter OAuth checks, and application CSRF protection.
 - Update pinned Vue, Vuetify, Axios, and Tabler assets. Preserve ZigLag pages and backup commands.
 - Add security migrations after the existing invoice migration chain. See [SECURITY.md](SECURITY.md) before upgrading a deployment.
+- Add finance reports and invoice date filters.
+- Align invoice tax treatment and template columns with their migrations. The migration drift check now passes.
 
 ## v11.3.0 (2025-12-02)
 

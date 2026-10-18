@@ -10,12 +10,13 @@ stk provides authentication built on quart-security with session-based auth, OAu
 
 ## Features
 
-- User registration and login
+- Login (public registration, confirmation, and password reset are disabled; the first admin is created at `/setup` or with `quart install`)
 - Role-based access control (RBAC)
 - Two-factor authentication (2FA)
 - WebAuthn / Passkeys
 - OAuth integration (Google, GitHub)
-- Password policies
+- Argon2id password hashing, 12 character minimum
+- Account lockout and 3 recovery codes
 - Session protection
 - CSRF protection
 
@@ -78,20 +79,21 @@ async def before_request():
 Key security settings in `.env`:
 
 ```bash
-SECURITY_PASSWORD_SALT=your_secure_salt
-SECURITY_TOTP_SECRETS=your_totp_secrets
-SECURITY_REGISTERABLE=true
-SECURITY_CONFIRMABLE=true
-SECURITY_RECOVERABLE=true
-SECURITY_TRACKABLE=true
-SECURITY_PASSWORD_LENGTH_MIN=8
+SECRET_KEY=keep_stable           # also derives the default MFA encryption key
+SECURITY_PASSWORD_SALT=required  # the app refuses to start without it
+SECURITY_PASSWORD_LENGTH_MIN=12
+#SECURITY_TOTP_ENCRYPTION_KEYS=   # optional Fernet keyring, current write key first
+SECURITY_WAN_RP_ID=invoices.example.com
+SECURITY_WAN_EXPECTED_ORIGIN=https://invoices.example.com
 ```
+
+Registration, confirmation, and recovery are fixed to off in `stk/settings.py`. See `SECURITY.md` for MFA key rotation.
 
 ## Session Protection
 
 ```python
 # Session Configuration
-PERMANENT_SESSION_LIFETIME = timedelta(days=1)
+PERMANENT_SESSION_LIFETIME = 3600  # seconds
 SESSION_COOKIE_SECURE = True
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'
@@ -99,15 +101,18 @@ SESSION_COOKIE_SAMESITE = 'Lax'
 
 ## Rate Limiting
 
-stk includes built-in rate limiting for auth endpoints (`/login`, `/register`, `/reset`, `/confirm`). Configure in `settings.py`:
+Authentication and OAuth endpoints are limited per IP with shared SQL state (`stk/utils/ratelimit.py`), so limits hold across workers:
 
 ```python
-SECURITY_RATE_LIMIT = "5/minute"
+STK_AUTH_REQUEST_LIMIT = 120  # any auth request, per minute
+STK_AUTH_ATTEMPT_LIMIT = 10   # POSTs and OAuth starts, per minute
 ```
+
+Fresh sessions last 60 minutes before sensitive actions require reauthentication.
 
 ## Best Practices
 
-1. **Password Storage** - Passwords are automatically hashed with unique per-user salt
+1. **Password Storage** - Argon2id; legacy hashes remain readable
 2. **CSRF Protection** - Automatic token generation for all state-changing requests
 3. **XSS Prevention** - Automatic HTML escaping in Jinja2 templates, secure cookie flags
 4. **Session Security** - Optional Redis-backed sessions, configurable lifetime
@@ -122,7 +127,7 @@ SECURITY_RATE_LIMIT = "5/minute"
 2. **2FA Problems**
    - Verify TOTP secrets configuration
    - Check time synchronization
-   - Provide backup codes for recovery
+   - Use one of the 3 recovery codes
 
 3. **Session Issues**
    - Check `PERMANENT_SESSION_LIFETIME` setting

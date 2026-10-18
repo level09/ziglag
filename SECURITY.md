@@ -52,7 +52,3 @@ development, explicitly set `SESSION_COOKIE_SECURE=False`.
 The existing Docker Compose configuration still publishes database and Redis
 ports and permits default passwords. It needs a separate deployment review before
 production use. This framework upgrade does not establish production readiness.
-
-The migration drift check also reports existing differences in nullability and
-server defaults for invoice tax treatment and template fields. Resolve those
-separately before requiring a clean migration drift gate.

@@ -17,9 +17,9 @@ async def exercise(base_url, token):
         await page.goto(f"{base_url}/_test/login?token={token}")
         await expect(page.get_by_text("Get ready to issue invoices")).to_be_visible()
         await page.get_by_role("link", name="Complete profile").click()
-        await expect(page.get_by_label("Business Name", exact=True)).to_be_visible()
-        await page.get_by_label("Business Name", exact=True).fill("North Studio")
-        await page.get_by_label("Address Line 1", exact=True).fill("Example Street 12")
+        await expect(page.get_by_label("Business name", exact=True)).to_be_visible()
+        await page.get_by_label("Business name", exact=True).fill("North Studio")
+        await page.get_by_label("Address line 1", exact=True).fill("Example Street 12")
         await page.get_by_label("Steuernummer", exact=True).fill("12/345/67890")
         await page.get_by_label("Payment instructions", exact=True).fill(
             "Please use the invoice reference.\nBank: Example Bank"
@@ -38,7 +38,7 @@ async def exercise(base_url, token):
         await expect(page.locator(".v-alert")).to_contain_text(
             "Your changes are still here"
         )
-        await expect(page.get_by_label("Business Name", exact=True)).to_have_value(
+        await expect(page.get_by_label("Business name", exact=True)).to_have_value(
             "North Studio"
         )
         await page.unroute("**/api/settings", failure)
@@ -56,12 +56,12 @@ async def exercise(base_url, token):
         await page.route("**/api/settings", delayed)
         await page.get_by_role("button", name="Save changes").click()
         await asyncio.wait_for(started.wait(), 10)
-        await page.get_by_label("Owner Name", exact=True).fill("Newer edit")
+        await page.get_by_label("Owner name", exact=True).fill("Newer edit")
         release.set()
         await expect(page.locator(".settings-savebar")).to_contain_text(
             "Unsaved changes"
         )
-        await expect(page.get_by_label("Owner Name", exact=True)).to_have_value(
+        await expect(page.get_by_label("Owner name", exact=True)).to_have_value(
             "Newer edit"
         )
         await page.unroute("**/api/settings", delayed)
@@ -93,22 +93,35 @@ async def exercise(base_url, token):
 
         await page.goto(base_url + "/clients/")
         await page.get_by_role("button", name="New customer").click()
-        await page.get_by_role("button", name="Save", exact=True).click()
-        await expect(page.get_by_label("Name", exact=True)).to_be_focused()
-        await page.get_by_label("Name", exact=True).fill("South Studio")
-        await page.get_by_label("Address Line 1", exact=True).fill("Customer Street 2")
+        await page.get_by_role("button", name="Save customer", exact=True).click()
+        await expect(page.get_by_label("Customer name", exact=True)).to_be_focused()
+        await page.get_by_label("Customer name", exact=True).fill("South Studio")
+        await page.get_by_label("Address line 1", exact=True).fill("Customer Street 2")
         await page.get_by_label("Email", exact=True).fill("customer@example.test")
+        for width in [1440, 390]:
+            await page.set_viewport_size({"width": width, "height": 900})
+            await expect(
+                page.get_by_role("button", name="Save customer", exact=True)
+            ).to_be_visible()
+            assert await page.get_by_role("dialog").evaluate(
+                "el => el.scrollWidth <= el.clientWidth"
+            ), ("customer editor overflow", width)
+            await page.evaluate(
+                "async () => { await Promise.all(document.getAnimations().filter(a => a.effect.getComputedTiming().iterations !== Infinity).map(a => a.finished.catch(() => {}))); }"
+            )
+            await page.screenshot(path=f"/tmp/ziglag-customer-editor-{width}.png")
+        await page.set_viewport_size({"width": 1440, "height": 1000})
         await page.route("**/api/client/", failure)
-        await page.get_by_role("button", name="Save", exact=True).click()
+        await page.get_by_label("Email", exact=True).press("Enter")
         await expect(page.get_by_role("dialog")).to_be_visible()
-        await expect(page.get_by_label("Name", exact=True)).to_have_value(
+        await expect(page.get_by_label("Customer name", exact=True)).to_have_value(
             "South Studio"
         )
         await expect(page.locator(".v-alert")).to_contain_text(
             "Your changes are still here"
         )
         await page.unroute("**/api/client/", failure)
-        await page.get_by_role("button", name="Save", exact=True).click()
+        await page.get_by_role("button", name="Save customer", exact=True).click()
         await expect(page.get_by_role("dialog")).not_to_be_visible()
         await expect(
             page.get_by_role("button", name="South Studio", exact=True)
@@ -216,7 +229,7 @@ async def exercise(base_url, token):
                 ), (width, path)
                 if path == "/settings/business/":
                     await expect(
-                        page.get_by_label("Business Name", exact=True)
+                        page.get_by_label("Business name", exact=True)
                     ).to_be_visible()
                     await page.screenshot(path=f"/tmp/ziglag-settings-{width}.png")
         assert not errors, errors

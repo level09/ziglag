@@ -17,10 +17,10 @@
     </section>
 
     <!--Edit Dialog-->
-    <v-dialog v-model="edialog" width="660" :persistent="saving || editDirty">
-        <v-card v-if="edialog">
+    <v-dialog v-model="edialog" max-width="820" scrollable :persistent="saving || editDirty">
+        <v-card v-if="edialog" class="customer-editor" tag="form" @submit.prevent="saveItem" novalidate>
             <v-toolbar>
-                <v-toolbar-title>${eitem.id ? 'Edit' : 'New'} Customer</v-toolbar-title>
+                <v-toolbar-title>${eitem.id ? 'Edit customer' : 'New customer'}</v-toolbar-title>
                 <template v-slot:append>
                     <v-btn @click="closeEditor" :disabled="saving" aria-label="Close customer editor" size="small" icon="ti ti-x" variant="text"></v-btn>
                 </template>
@@ -28,22 +28,26 @@
 
             <v-card-text>
                 <v-alert v-if="saveError" type="error" variant="tonal" role="alert" class="mb-4">${saveError}</v-alert>
-                <v-text-field ref="customerName" label="Name" v-model="eitem.name" :error-messages="nameError" :disabled="saving"></v-text-field>
-                <v-text-field label="Email" v-model="eitem.email"></v-text-field>
-                <v-text-field label="VAT ID" v-model="eitem.vat_id"></v-text-field>
-                <v-text-field label="Address Line 1" v-model="eitem.address_line1"></v-text-field>
-                <v-text-field label="Address Line 2" v-model="eitem.address_line2"></v-text-field>
-                <v-text-field label="Address Line 3" v-model="eitem.address_line3"></v-text-field>
-                <v-row>
-                    <v-col><v-text-field label="Phone" v-model="eitem.phone"></v-text-field></v-col>
-                    <v-col><v-text-field label="Mobile" v-model="eitem.mobile"></v-text-field></v-col>
-                </v-row>
-                <v-textarea label="Notes" v-model="eitem.notes" rows="3"></v-textarea>
+                <p class="form-intro">Use the name and address that should appear on invoices.</p>
+                <fieldset class="form-section" :disabled="saving"><legend>Customer details</legend><div class="form-grid">
+                    <v-text-field label="Customer name" v-model="eitem.name" hide-details="auto" ref="customerName" :error-messages="nameError" class="field-wide" autocomplete="organization"></v-text-field>
+                    <v-text-field label="Email" v-model="eitem.email" hide-details="auto" autocomplete="email" type="email"></v-text-field>
+                    <v-text-field label="VAT ID" v-model="eitem.vat_id" hide-details="auto"></v-text-field>
+                    <v-text-field label="Phone" v-model="eitem.phone" hide-details="auto" autocomplete="tel" type="tel"></v-text-field>
+                    <v-text-field label="Mobile" v-model="eitem.mobile" hide-details="auto" type="tel"></v-text-field>
+                </div></fieldset>
+                <fieldset class="form-section" :disabled="saving"><legend>Billing address</legend><div class="form-grid">
+                    <v-text-field label="Address line 1" v-model="eitem.address_line1" hide-details="auto" class="field-wide" autocomplete="address-line1"></v-text-field>
+                    <v-text-field label="Address line 2" v-model="eitem.address_line2" hide-details="auto" autocomplete="address-line2"></v-text-field>
+                    <v-text-field label="Address line 3" v-model="eitem.address_line3" hide-details="auto" autocomplete="address-line3"></v-text-field>
+                </div></fieldset>
+                <v-textarea label="Internal notes" v-model="eitem.notes" rows="2" auto-grow hide-details="auto" :disabled="saving"></v-textarea>
             </v-card-text>
 
-            <v-card-actions>
+            <v-card-actions class="editor-actions">
+                <v-btn variant="text" @click="closeEditor" :disabled="saving">Cancel</v-btn>
                 <v-spacer></v-spacer>
-                <v-btn color="primary" @click="saveItem" :loading="saving" :disabled="saving" variant="elevated">Save</v-btn>
+                <v-btn color="primary" type="submit" :loading="saving" :disabled="saving" variant="elevated">Save customer</v-btn>
             </v-card-actions>
         </v-card>
     </v-dialog>

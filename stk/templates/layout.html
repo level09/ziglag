@@ -17,7 +17,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@7/css/materialdesignicons.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='icons/tabler-icons.min.css') }}">
     <link rel="stylesheet" href="/static/css/layout.css">
-    <link rel="stylesheet" href="/static/css/app.css?v=20260928-color">
+    <link rel="stylesheet" href="/static/css/app.css?v=20261003-workspace">
 
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>[v-cloak] { display: none !important; }</style>
@@ -28,6 +28,7 @@
 </head>
 
 <body class="{% block body_class %} {% endblock %}">
+<a class="skip-link" href="#main-content">Skip to content</a>
 <v-app id="app" v-cloak>
     <v-layout class="rounded rounded-md">
         <!-- App Bar -->
@@ -153,7 +154,7 @@
         {% endif %}
 
         <!-- Main Content -->
-        <v-main class="d-flex align-center justify-center" style="min-height: 300px;">
+        <v-main id="main-content" tabindex="-1" class="d-flex align-center justify-center" style="min-height: 300px;">
             {% block content %}
             {% endblock %}
         </v-main>
@@ -195,7 +196,7 @@
 
 <!-- Core Scripts -->
 <script src="/static/js/vue.min.js"></script>
-<script src="/static/js/config.js?v=20260928-color"></script>
+<script src="/static/js/config.js?v=20261003-workspace"></script>
 <script src="/static/js/vuetify.min.js"></script>
 <script src="/static/js/axios.min.js"></script>
 <script>axios.defaults.headers.common["X-CSRFToken"] = document.querySelector('meta[name="csrf-token"]').content;</script>

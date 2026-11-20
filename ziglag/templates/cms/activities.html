@@ -1,0 +1,157 @@
+{% extends "stk/cms/activities.html" %}
+{% block title %}Activity log | ZigLag{% endblock %}
+{% block css %}
+<style>
+    .activity-what { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; }
+    .activity-icon { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; border: 1.5px solid rgb(var(--v-theme-stroke)); background: rgb(var(--v-theme-surface)); color: rgb(var(--v-theme-on-surface)); font-size: 18px; }
+    .activity-icon.tone-add { background: rgb(var(--v-theme-paid-surface)); color: rgb(var(--v-theme-paid-ink)); }
+    .activity-icon.tone-send { background: rgb(var(--v-theme-issued-surface)); color: rgb(var(--v-theme-issued-ink)); }
+    .activity-icon.tone-remove { background: rgb(var(--v-theme-due-surface)); color: rgb(var(--v-theme-due-ink)); }
+    .activity-icon.tone-security { background: rgb(var(--v-theme-sun)); color: rgb(var(--v-theme-on-sun)); }
+    .activity-text { min-width: 0; overflow-wrap: anywhere; }
+    .activity-text strong { font-weight: 700; }
+    .activity-more { margin-top: 2px; padding: 0; border: 0; background: none; cursor: pointer; font: 400 12px var(--mono); color: rgb(var(--v-theme-secondary)); text-decoration: underline; min-height: 24px; }
+    .activity-details { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 16px; margin: 8px 0 4px; padding: 10px 14px; border: 1.5px solid rgb(var(--v-theme-line)); border-radius: 10px; background: rgb(var(--v-theme-background)); font-size: 13px; }
+    .activity-details dt { font: 400 12px/1.7 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: rgb(var(--v-theme-secondary)); }
+    .activity-details dd { margin: 0; overflow-wrap: anywhere; }
+    .activity-when { white-space: nowrap; }
+    .activity-when small { display: block; color: rgb(var(--v-theme-secondary)); font-size: 12px; }
+    @media (max-width: 700px) {
+        .activity-details { grid-template-columns: 1fr; gap: 0; }
+        .activity-details dd { margin-bottom: 6px; }
+        .activity-when { white-space: normal; }
+    }
+</style>
+{% endblock %}
+{% block content %}
+<section class="workspace">
+    <header class="page-header"><div><h1>Activity log</h1><p>Who did what in this workspace, newest first.</p></div></header>
+    <v-alert v-if="error" type="warning" variant="tonal" class="mb-4" role="alert">${error}<v-btn variant="text" @click="refresh()">Retry</v-btn></v-alert>
+    <v-card :aria-busy="loading">
+        <v-data-table-server :headers="headers" :items="items" :items-length="itemsLength" :page="options.page" :items-per-page="options.itemsPerPage" :items-per-page-options="[10, 25, 50, 100]" :loading="loading" @update:options="refresh">
+            <template v-slot:item.what="{ item }">
+                <div class="activity-what">
+                    <span class="activity-icon" :class="'tone-' + item.view.tone"><i :class="item.view.icon" aria-hidden="true"></i></span>
+                    <div class="activity-text">
+                        <div>${item.view.text} <strong v-if="item.view.subject">${item.view.subject}</strong></div>
+                        <button v-if="item.view.details.length" type="button" class="activity-more" :aria-expanded="open.includes(item.id)" @click="toggle(item.id)">${open.includes(item.id) ? 'Hide details' : 'Details'}</button>
+                        <dl v-if="open.includes(item.id)" class="activity-details">
+                            <template v-for="row in item.view.details" :key="row.label"><dt>${row.label}</dt><dd>${row.value}</dd></template>
+                        </dl>
+                    </div>
+                </div>
+            </template>
+            <template v-slot:item.user="{ item }">${item.user}</template>
+            <template v-slot:item.created_at="{ item }"><div class="activity-when">${item.view.ago}<small>${item.view.when}</small></div></template>
+            <template v-slot:no-data><div class="empty-state"><h2>Nothing recorded yet</h2><p>Invoices, customers, users and sign-in changes appear here as they happen.</p></div></template>
+        </v-data-table-server>
+    </v-card>
+</section>
+{% endblock %}
+{% block js %}
+<script>
+    const {createApp} = Vue;
+    const {createVuetify} = Vuetify;
+    const vuetify = createVuetify(config.vuetifyConfig);
+
+    // What each recorded action means in plain words. `subject` names the key that identifies the thing.
+    const ACTIONS = {
+        'Invoice Create': {text: 'Created draft invoice', subject: 'number', icon: 'ti ti-file-plus', tone: 'add'},
+        'Invoice Issue': {text: 'Issued invoice', subject: 'number', icon: 'ti ti-file-check', tone: 'send'},
+        'Invoice Cancel': {text: 'Cancelled invoice', subject: 'number', icon: 'ti ti-file-off', tone: 'remove'},
+        'Invoice Delete': {text: 'Deleted draft invoice', subject: 'number', icon: 'ti ti-trash', tone: 'remove'},
+        'Client Create': {text: 'Added customer', subject: 'name', icon: 'ti ti-user-plus', tone: 'add'},
+        'Client Delete': {text: 'Deleted customer', subject: 'name', icon: 'ti ti-user-minus', tone: 'remove'},
+        'User Create': {text: 'Created user', subject: 'email', icon: 'ti ti-user-plus', tone: 'add'},
+        'User Update': {text: 'Updated user', subject: 'email', icon: 'ti ti-user-edit', tone: 'plain'},
+        'User Delete': {text: 'Deleted user', subject: 'email', icon: 'ti ti-user-minus', tone: 'remove'},
+        'Role Create': {text: 'Created role', subject: 'name', icon: 'ti ti-shield-plus', tone: 'add'},
+        'Role Update': {text: 'Updated role', subject: 'name', icon: 'ti ti-shield', tone: 'plain'},
+        'Role Delete': {text: 'Deleted role', subject: 'name', icon: 'ti ti-shield-minus', tone: 'remove'},
+        'Admin Password Reset': {text: 'Reset the password of', subject: 'target_user', icon: 'ti ti-key', tone: 'security'},
+        'Password Changed': {text: 'Changed their password', icon: 'ti ti-key', tone: 'security'},
+        'Two-Factor Profile Changed': {text: 'Changed two-factor authentication', icon: 'ti ti-shield-lock', tone: 'security'},
+        'Login from new IP': {text: 'Signed in from a new IP address', subject: 'new_ip', icon: 'ti ti-map-pin', tone: 'security'},
+    };
+    const HIDDEN = /password|secret|token|uniquifier|totp|recovery/i;
+    const relative = new Intl.RelativeTimeFormat(undefined, {numeric: 'auto'});
+
+    function label(key) { return key.replace(/_/g, ' '); }
+    function show(value) {
+        if (value === null || value === undefined || value === '') return 'None';
+        if (value === true) return 'Yes';
+        if (value === false) return 'No';
+        if (Array.isArray(value)) return value.length ? value.map(show).join(', ') : 'None';
+        if (typeof value === 'object') return value.name || value.email || value.title || Object.entries(value).filter(([k]) => !HIDDEN.test(k)).map(([k, v]) => `${label(k)}: ${show(v)}`).join(', ');
+        return String(value);
+    }
+    function ago(date) {
+        const seconds = (date - Date.now()) / 1000;
+        for (const [unit, size] of [['year', 31536000], ['month', 2592000], ['day', 86400], ['hour', 3600], ['minute', 60]]) {
+            if (Math.abs(seconds) >= size) return relative.format(Math.round(seconds / size), unit);
+        }
+        return 'Just now';
+    }
+    function describe(item) {
+        const known = ACTIONS[item.action];
+        const data = item.data && typeof item.data === 'object' ? item.data : {};
+        // An update stores {old, new}: show only the fields that changed.
+        const isChange = data.old && data.new && typeof data.old === 'object' && typeof data.new === 'object';
+        const current = isChange ? data.new : data;
+        let details;
+        if (isChange) {
+            details = Object.keys(current)
+                .filter(key => !HIDDEN.test(key) && show(data.old[key]) !== show(current[key]))
+                .map(key => ({label: label(key), value: `${show(data.old[key])} → ${show(current[key])}`}));
+        } else {
+            details = Object.entries(current)
+                .filter(([key]) => !HIDDEN.test(key) && key !== known?.subject && key !== 'id')
+                .map(([key, value]) => ({label: label(key), value: show(value)}));
+        }
+        const date = new Date(item.created_at.replace(' ', 'T'));
+        return {
+            text: known ? known.text : item.action,
+            subject: known?.subject ? show(current[known.subject]) : '',
+            icon: known ? known.icon : 'ti ti-point',
+            tone: known ? known.tone : 'plain',
+            details,
+            ago: ago(date),
+            when: date.toLocaleString(undefined, {dateStyle: 'medium', timeStyle: 'short'}),
+        };
+    }
+
+    window.app = createApp({
+        mixins: [layoutMixin],
+        delimiters: config.delimiters,
+        data() {
+            return {
+                items: [], itemsLength: 0, loading: false, error: '', open: [],
+                options: {page: 1, itemsPerPage: 25},
+                headers: [
+                    {title: 'What happened', key: 'what', sortable: false},
+                    {title: 'By', key: 'user', sortable: false},
+                    {title: 'When', key: 'created_at', sortable: false, align: 'end'},
+                ],
+            };
+        },
+        methods: {
+            toggle(id) { this.open = this.open.includes(id) ? this.open.filter(x => x !== id) : [...this.open, id]; },
+            refresh(options) {
+                if (options) this.options = {...this.options, page: options.page, itemsPerPage: options.itemsPerPage};
+                this.loading = true;
+                this.error = '';
+                axios.get('/api/activities', {params: {page: this.options.page, per_page: this.options.itemsPerPage}})
+                    .then(res => {
+                        this.items = res.data.items.map(item => ({...item, view: describe(item)}));
+                        this.itemsLength = res.data.total;
+                    })
+                    .catch(() => { this.error = 'Could not load the activity log.'; })
+                    .finally(() => { this.loading = false; });
+            },
+        },
+    });
+
+    registerStkComponents(app);
+    app.use(vuetify).mount('#app');
+</script>
+{% endblock %}

@@ -11,10 +11,13 @@ class Config(stk.Config):
     APP_TAGLINE = os.environ.get("APP_TAGLINE", "Self-hosted invoicing")
     APP_DESCRIPTION = os.environ.get("APP_DESCRIPTION", "Self-hosted invoicing")
 
-    SQLALCHEMY_DATABASE_URI = os.environ.get(
-        "SQLALCHEMY_DATABASE_URI",
-        f"sqlite+aiosqlite:///{PROJECT_ROOT / 'instance' / 'ziglag.db'}",
-    )
+    SQLALCHEMY_DATABASE_URI = os.environ.get("SQLALCHEMY_DATABASE_URI")
+    if not SQLALCHEMY_DATABASE_URI:
+        # stk creates instance/ only for its own default database name.
+        (PROJECT_ROOT / "instance").mkdir(exist_ok=True)
+        SQLALCHEMY_DATABASE_URI = (
+            f"sqlite+aiosqlite:///{PROJECT_ROOT / 'instance' / 'ziglag.db'}"
+        )
 
     STK_CLI_SECTIONS = [("Backup", ["backup"]), ("Upgrade", ["adopt-stk16"])]
 

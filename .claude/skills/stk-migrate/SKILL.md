@@ -10,30 +10,33 @@ argument-hint: "[description]"
 ## Current state
 
 Current revision:
-!`cd /Users/level09/projects/stk && uv run quart db current 2>&1 | tail -5`
+!`uv run stk db current 2>&1 | tail -5`
 
 Recent migrations:
-!`ls -1t alembic/versions/*.py 2>/dev/null | head -10`
+!`ls -1t */migrations/*.py 2>/dev/null | head -10`
 
 Models with tables:
-!`grep -rn "__tablename__" stk/*/models.py 2>/dev/null`
+!`grep -rn "__tablename__" */*/models.py 2>/dev/null`
 
 ## Steps
 
 1. **Generate the migration:**
    ```bash
-   uv run quart db revision -m "$ARGUMENTS"
+   uv run stk db revision -m "$ARGUMENTS"
    ```
 
-2. **Review the generated file** in `alembic/versions/`. Check:
+2. **Review the generated file** in the app's `migrations/` (its own lineage; it already `depends_on` stk's head, so `stk db upgrade` applies both and heads never need merging). Check:
    - All expected table/column changes are present
    - Foreign keys reference correct tables and use correct column types
    - Indexes are created where needed (especially on foreign keys and unique constraints)
    - `downgrade()` correctly reverses `upgrade()`
-   - No destructive changes that would lose data (if so, warn the user)
+   - No destructive changes that would lose data. `stk verify` fails on drops, renames,
+     retypes, and NOT NULL adds without a default; a renamed field usually shows up as
+     drop + add, so rewrite it as `alter_column(..., new_column_name=...)` with a
+     `# destructive: <reason>` comment, and tell the user
    - Column types match the model definitions (String lengths, nullable flags, defaults)
 
-3. **For SQLite compatibility**, verify batch mode is used. The `env.py` enables `render_as_batch` automatically for SQLite, but if writing manual SQL, wrap ALTER TABLE operations in `with op.batch_alter_table()`.
+3. **For SQLite compatibility**, verify batch mode is used. stk's `env.py` enables `render_as_batch` automatically for SQLite, but if writing manual SQL, wrap ALTER TABLE operations in `with op.batch_alter_table()`.
 
 4. **If the migration needs manual edits** (data migrations, complex constraints, multi-step operations):
    - Edit the generated file directly
@@ -42,24 +45,22 @@ Models with tables:
 
 5. **Test the migration:**
    ```bash
-   uv run quart db upgrade    # apply
-   uv run quart db downgrade -1  # rollback
-   uv run quart db upgrade    # re-apply to confirm idempotency
+   uv run stk db upgrade    # apply
+   uv run stk db downgrade -1  # rollback
+   uv run stk db upgrade    # re-apply to confirm idempotency
    ```
 
 6. **Run checks:**
    ```bash
-   uv run python checks.py
+   uv run stk verify
    ```
 
-## Model conventions to verify against
+## Before you trust it
 
-Models use `@dataclasses.dataclass` and inherit from `Base` (stk.extensions). Key patterns:
-- `id = Column(Integer, primary_key=True)`
-- `created_at = Column(DateTime, default=datetime.now, nullable=False)`
-- Foreign keys: `Column(Integer, ForeignKey("table.id"))` or `Column(String(64), ForeignKey("table.field", ondelete="CASCADE"))`
-- JSON fields: `Column(JSON, nullable=True)`
-- Unique constraints: either `unique=True` on column or `UniqueConstraint(...)` in `__table_args__`
+Model conventions and the three SQLite traps (non-transactional DDL, NOT NULL needs
+`server_default`, named constraints) are in https://docs.stkit.dev/models/. Check each exit code;
+never pipe a migration command to `tail`, and never delete a revision file before
+`uv run stk db downgrade <target>` has succeeded.
 
 ## Common patterns
 
@@ -78,6 +79,7 @@ op.create_index("ix_products_name", "products", ["name"])
 from alembic import op
 from sqlalchemy import text
 
+
 def upgrade():
     op.add_column("users", sa.Column("display_name", sa.String(255)))
     op.execute(text("UPDATE users SET display_name = name WHERE display_name IS NULL"))
@@ -91,5 +93,7 @@ with op.batch_alter_table("users") as batch_op:
 
 **Add a composite unique constraint:**
 ```python
-op.create_unique_constraint("uq_oauth_provider_user", "oauth", ["provider", "provider_user_id"])
+op.create_unique_constraint(
+    "uq_oauth_provider_user", "oauth", ["provider", "provider_user_id"]
+)
 ```

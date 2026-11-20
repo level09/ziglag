@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from stk.backup import BackupError, create_backup, restore_backup, verify_backup
+from ziglag.backup import BackupError, create_backup, restore_backup, verify_backup
 
 
 class BackupTests(unittest.TestCase):

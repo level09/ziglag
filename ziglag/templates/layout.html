@@ -1,0 +1,28 @@
+{% extends "stk/layout.html" %}
+{% block body_start %}<a class="skip-link" href="#main-content">Skip to content</a>{% endblock %}
+{% block user_menu %}
+<v-list-item href="/dashboard">
+    <template v-slot:prepend><i class="ti ti-layout-dashboard mr-3" style="font-size: 18px;"></i></template>
+    <v-list-item-title>Dashboard</v-list-item-title>
+</v-list-item>
+<v-list-item href="/change">
+    <template v-slot:prepend><i class="ti ti-key mr-3" style="font-size: 18px;"></i></template>
+    <v-list-item-title>Change password</v-list-item-title>
+</v-list-item>
+<v-list-item href="/tf-setup">
+    <template v-slot:prepend><i class="ti ti-shield-lock mr-3" style="font-size: 18px;"></i></template>
+    <v-list-item-title>Two-factor authentication</v-list-item-title>
+</v-list-item>
+<v-list-item href="/mf-recovery-codes">
+    <template v-slot:prepend><i class="ti ti-lifebuoy mr-3" style="font-size: 18px;"></i></template>
+    <v-list-item-title>Recovery codes</v-list-item-title>
+</v-list-item>
+{% endblock %}
+{% block navigation %}
+<script>const stkNavigation = {{ app_navigation() | tojson }};</script>
+{% endblock %}
+{% block main %}
+<v-main id="main-content" tabindex="-1" class="d-flex align-center justify-center" style="min-height: 300px;">
+    {{ self.content() }}
+</v-main>
+{% endblock %}

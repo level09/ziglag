@@ -17,8 +17,8 @@ SQLite works locally without another service. PostgreSQL and Redis are recommend
 git clone git@github.com:level09/ziglag.git
 cd ziglag
 ./setup.sh
-uv run quart create-db
-uv run quart run --port 5001
+uv run stk db upgrade
+uv run stk run --port 5001
 ```
 
 Open `http://localhost:5001`. The first visit opens `/setup` so you can create the administrator account.
@@ -26,18 +26,17 @@ Open `http://localhost:5001`. The first visit opens `/setup` so you can create t
 You can also create the account from the CLI:
 
 ```bash
-uv run quart install -e admin@example.com -p 'replace-this-password'
+uv run stk install -e admin@example.com -p 'replace-this-password'
 ```
 
 ## Verify the Checkout
 
 ```bash
-uv sync --extra dev
+uv sync
 uv run ruff check .
 uv run ruff format --check .
 uv run python -m unittest discover -s tests -v
-uv run python checks.py
-uv run quart verify --json
+uv run stk verify --json
 ```
 
 ## Docker

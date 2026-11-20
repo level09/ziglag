@@ -4,17 +4,25 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 
-from stk.invoicing.models import BusinessSettings, Client, Invoice, InvoiceItem
-from stk.invoicing.pdf import _build_pdf
-from stk.invoicing.presentation import TEMPLATES, tax_statement
-from stk.invoicing.views import (
+import stk
+
+from ziglag.app import extensions
+from ziglag.invoicing.models import BusinessSettings, Client, Invoice, InvoiceItem
+from ziglag.invoicing.pdf import _build_pdf
+from ziglag.invoicing.presentation import TEMPLATES, tax_statement
+from ziglag.invoicing.views import (
     business_profile_missing,
     invoice_archive_path,
     invoice_archive_relative_path,
     resolve_invoice_archive,
 )
+from ziglag.settings import Config
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+
+class TestConfig(stk.TestingConfig, Config):
+    pass
 
 
 def valid_invoice(treatment="standard"):
@@ -44,22 +52,22 @@ def valid_invoice(treatment="standard"):
 class InvoiceValidationTests(unittest.TestCase):
     def test_complete_business_profile_has_no_missing_fields(self):
         settings = BusinessSettings(
-            business_name="Mohab",
-            address_line1="Zimmerstraße 94",
+            business_name="Example GmbH",
+            address_line1="Musterstraße 1",
             tax_number="12/345/67890",
         )
         self.assertEqual(business_profile_missing(settings), [])
 
     def test_supplier_snapshot_refreshes_legacy_draft(self):
         settings = BusinessSettings(
-            business_name="Mohab",
-            address_line1="Zimmerstraße 94",
+            business_name="Example GmbH",
+            address_line1="Musterstraße 1",
             tax_number="12/345/67890",
         )
         invoice = Invoice(from_name="", from_address="", from_tax_number="")
         invoice.snapshot_supplier(settings)
-        self.assertEqual(invoice.from_name, "Mohab")
-        self.assertEqual(invoice.from_address, "Zimmerstraße 94")
+        self.assertEqual(invoice.from_name, "Example GmbH")
+        self.assertEqual(invoice.from_address, "Musterstraße 1")
         self.assertEqual(invoice.from_tax_number, "12/345/67890")
 
     def test_next_invoice_number_is_editable_and_positive(self):
@@ -209,7 +217,7 @@ class PdfTests(unittest.TestCase):
 class ProductionConfigTests(unittest.TestCase):
     def test_invoice_editor_preserves_inline_client_and_item_detail(self):
         editor = (
-            PROJECT_ROOT / "stk/templates/invoicing/invoice_edit.html"
+            PROJECT_ROOT / "ziglag/templates/invoicing/invoice_edit.html"
         ).read_text()
         self.assertIn("async persistClient(snapshot)", editor)
         self.assertIn('v-model="item.detail"', editor)
@@ -218,34 +226,42 @@ class ProductionConfigTests(unittest.TestCase):
 
     def test_invoice_editor_has_guided_issue_state(self):
         editor = (
-            PROJECT_ROOT / "stk/templates/invoicing/invoice_edit.html"
+            PROJECT_ROOT / "ziglag/templates/invoicing/invoice_edit.html"
         ).read_text()
         self.assertIn("issueErrors", editor)
         self.assertIn("confirmDialog", editor)
         self.assertNotIn("confirm('", editor)
         self.assertIn("invoice.issued_at && invoice.status !== 'paid'", editor)
 
-    def test_navigation_asset_is_cache_busted(self):
-        layout = (PROJECT_ROOT / "stk/templates/layout.html").read_text()
-        self.assertRegex(layout, r"navigation\.js\?v=")
+    def test_invoicing_entries_are_in_the_sidebar(self):
+        app = stk.Stk("ziglag.app", config=TestConfig, extensions=extensions)
+        self.assertEqual(
+            [(e["title"], e["to"]) for e in app.navigation if "to" in e],
+            [
+                ("Dashboard", "/dashboard"),
+                ("Invoices", "/invoices"),
+                ("Customers", "/clients"),
+                ("Reports", "/reports"),
+                ("Business settings", "/settings/business"),
+                ("Activity log", "/activities"),
+            ],
+        )
 
     def test_list_currency_and_editor_error_cleanup_are_wired(self):
-        views = (PROJECT_ROOT / "stk/invoicing/views.py").read_text()
+        views = (PROJECT_ROOT / "ziglag/invoicing/views.py").read_text()
         editor = (
-            PROJECT_ROOT / "stk/templates/invoicing/invoice_edit.html"
+            PROJECT_ROOT / "ziglag/templates/invoicing/invoice_edit.html"
         ).read_text()
         self.assertIn('"currency_code": inv.currency_code', views)
         self.assertIn("this.issueErrors = [];", editor)
         self.assertIn("Could not create customer", editor)
 
     def test_installers_generate_mfa_root_key(self):
-        for filename in ("setup.sh", "deploy.sh"):
-            with self.subTest(filename=filename):
-                content = (PROJECT_ROOT / filename).read_text()
-                self.assertIn("SECRET_KEY=$(", content)
+        content = (PROJECT_ROOT / "setup.sh").read_text()
+        self.assertIn("SECRET_KEY=$(", content)
 
-    def test_deploy_installs_invoice_font(self):
-        content = (PROJECT_ROOT / "deploy.sh").read_text()
+    def test_image_installs_invoice_font(self):
+        content = (PROJECT_ROOT / "Dockerfile").read_text()
         self.assertIn("fonts-dejavu-core", content)
 
     def test_compose_persists_invoice_archive(self):

@@ -7,15 +7,37 @@ import sys
 import tempfile
 from pathlib import Path
 
+import stk
 from playwright.async_api import async_playwright, expect
-
-from stk.commands import (
-    _create_smoke_token,
+from stk.agent_login import create_agent_login_token
+from stk.cli.base import run_async
+from stk.cli.smoke import (
+    SMOKE_EMAIL,
     _free_localhost_port,
     _run_smoke_setup,
     _smoke_env,
     _wait_for_smoke_server,
 )
+
+from ziglag.app import extensions
+from ziglag.settings import Config
+
+
+def _create_smoke_token(database_uri, secret_key, password_salt):
+    class SmokeConfig(Config):
+        SECRET_KEY = secret_key
+        SECURITY_PASSWORD_SALT = password_salt
+        SQLALCHEMY_DATABASE_URI = database_uri
+        SESSION_TYPE = None
+        STK_ENV = "development"
+        STK_ENABLE_AGENT_LOGIN = True
+
+    async def _create_token():
+        app = stk.Stk("ziglag.app", config=SmokeConfig, extensions=extensions)
+        async with app.app_context():
+            return create_agent_login_token(SMOKE_EMAIL, "/dashboard/")
+
+    return run_async(_create_token())
 
 
 async def exercise(base_url, token):
@@ -205,8 +227,8 @@ async def exercise(base_url, token):
 def main(exercise_fn=exercise):
     with tempfile.TemporaryDirectory(prefix="ziglag-editor-") as directory:
         root = Path(directory)
-        env = _smoke_env(root / "test.db")
-        _run_smoke_setup(env)
+        env = _smoke_env(f"sqlite+aiosqlite:///{root / 'test.db'}")
+        _run_smoke_setup(env, False)
         token = _create_smoke_token(
             env["SQLALCHEMY_DATABASE_URI"],
             env["SECRET_KEY"],
@@ -219,7 +241,7 @@ def main(exercise_fn=exercise):
             [
                 sys.executable,
                 "-c",
-                "import sys; from stk.app import create_app; app = create_app(); app.instance_path = sys.argv[1]; app.run(host='127.0.0.1', port=int(sys.argv[2]), use_reloader=False)",
+                "import sys, uvicorn; from ziglag.app import app; app.instance_path = sys.argv[1]; uvicorn.run(app, host='127.0.0.1', port=int(sys.argv[2]), log_level='warning')",
                 str(root),
                 str(port),
             ],

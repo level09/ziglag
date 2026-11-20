@@ -5,21 +5,22 @@ from decimal import Decimal
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
+import stk
+import stk.extensions as ext
 from aiosmtplib.errors import SMTPResponseException, SMTPServerDisconnected
 from quart.testing import QuartClient
 from quart_security import hash_password
 from sqlalchemy import select
-
-import stk.extensions as ext
 from stk.agent_login import create_agent_login_token
-from stk.app import create_app
-from stk.invoicing.models import BusinessSettings, Client, Invoice, Payment
 from stk.user.models import User
-from tests.test_agent_operability import AgentLoginTestingConfig
+
+from ziglag.app import extensions
+from ziglag.invoicing.models import BusinessSettings, Client, Invoice, Payment
+from ziglag.settings import Config
 
 
-class WorkspaceConfig(AgentLoginTestingConfig):
-    pass
+class WorkspaceConfig(stk.TestingConfig, Config):
+    STK_ENABLE_AGENT_LOGIN = True
 
 
 class WorkspaceClient(QuartClient):
@@ -35,7 +36,7 @@ class WorkspaceClient(QuartClient):
 class ProductWorkspaceTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.directory = tempfile.TemporaryDirectory()
-        self.app = create_app(WorkspaceConfig)
+        self.app = stk.Stk("ziglag.app", config=WorkspaceConfig, extensions=extensions)
         self.app.test_client_class = WorkspaceClient
         self.app.instance_path = self.directory.name
         async with ext.engine.begin() as conn:
@@ -152,7 +153,7 @@ class ProductWorkspaceTests(unittest.IsolatedAsyncioTestCase):
             captured.update(context)
             return "ok"
 
-        with patch("stk.portal.views.render_template", side_effect=render):
+        with patch("ziglag.invoicing.views.render_template", side_effect=render):
             response = await self.client.get("/dashboard/")
         self.assertEqual(response.status_code, 200)
         stats = captured["stats"]
@@ -310,8 +311,8 @@ class ProductWorkspaceTests(unittest.IsolatedAsyncioTestCase):
             return "ok"
 
         with (
-            patch("stk.portal.views.date") as clock,
-            patch("stk.portal.views.render_template", side_effect=render),
+            patch("ziglag.invoicing.views.date") as clock,
+            patch("ziglag.invoicing.views.render_template", side_effect=render),
         ):
             clock.today.return_value = today
             response = await self.client.get("/dashboard/")
@@ -419,7 +420,9 @@ class ProductWorkspaceTests(unittest.IsolatedAsyncioTestCase):
         with patch(
             "aiosmtplib.send", new_callable=AsyncMock, return_value=({}, "OK")
         ) as send:
-            response = await self.client.post(f"/api/invoice/{self.ids['PAID']}/send")
+            response = await self.client.post(
+                f"/api/invoice/{self.ids['PAID']}/send", json={}
+            )
             self.assertEqual(response.status_code, 200)
             self.assertEqual(
                 (await response.get_json())["message"],
@@ -445,7 +448,7 @@ class ProductWorkspaceTests(unittest.IsolatedAsyncioTestCase):
                 patch("aiosmtplib.send", new_callable=AsyncMock, side_effect=error),
             ):
                 response = await self.client.post(
-                    f"/api/invoice/{self.ids['UNPAID']}/send"
+                    f"/api/invoice/{self.ids['UNPAID']}/send", json={}
                 )
                 self.assertEqual(response.status_code, code)
                 self.assertNotIn(
@@ -454,7 +457,9 @@ class ProductWorkspaceTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_send_rejects_wrong_owner_and_cancelled_invoice(self):
         for key, code in [("OTHER", 404), ("CANCELLED", 409)]:
-            response = await self.client.post(f"/api/invoice/{self.ids[key]}/send")
+            response = await self.client.post(
+                f"/api/invoice/{self.ids[key]}/send", json={}
+            )
             self.assertEqual(response.status_code, code)
 
     async def test_customer_paid_totals_separate_currencies(self):
@@ -494,7 +499,9 @@ class ProductWorkspaceTests(unittest.IsolatedAsyncioTestCase):
         with patch(
             "aiosmtplib.send", new_callable=AsyncMock, return_value=({}, "OK")
         ) as send:
-            response = await self.client.post(f"/api/invoice/{self.ids['PAID']}/send")
+            response = await self.client.post(
+                f"/api/invoice/{self.ids['PAID']}/send", json={}
+            )
         self.assertEqual(response.status_code, 200)
         msg = send.call_args.args[0]
         self.assertIn(
@@ -545,7 +552,7 @@ class ProductWorkspaceTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(await response.get_data(), b"%PDF-test-archive")
         await self.share_fixture(archived_pdf_path=None)
         with patch(
-            "stk.invoicing.pdf.generate_invoice_pdf", new_callable=AsyncMock
+            "ziglag.invoicing.pdf.generate_invoice_pdf", new_callable=AsyncMock
         ) as generate:
             response = await public.get("/i/" + token + "/pdf")
             self.assertEqual(response.status_code, 503)
@@ -604,7 +611,7 @@ class ProductWorkspaceTests(unittest.IsolatedAsyncioTestCase):
                 ),
             ):
                 response = await self.client.post(
-                    f"/api/invoice/{self.ids['PAID']}/send"
+                    f"/api/invoice/{self.ids['PAID']}/send", json={}
                 )
                 self.assertEqual(response.status_code, code)
                 body = (await response.get_json())["message"]
@@ -623,7 +630,9 @@ class ProductWorkspaceTests(unittest.IsolatedAsyncioTestCase):
         with patch(
             "aiosmtplib.send", new_callable=AsyncMock, return_value=({}, "OK")
         ) as send:
-            response = await self.client.post(f"/api/invoice/{self.ids['PAID']}/send")
+            response = await self.client.post(
+                f"/api/invoice/{self.ids['PAID']}/send", json={}
+            )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(send.call_args.kwargs["recipients"], ["OWNER@example.com"])
 
@@ -631,7 +640,7 @@ class ProductWorkspaceTests(unittest.IsolatedAsyncioTestCase):
         token = await self.share_fixture(archived_pdf_path="invoices/missing.pdf")
         public = self.app.test_client()
         with patch(
-            "stk.invoicing.pdf.generate_invoice_pdf", new_callable=AsyncMock
+            "ziglag.invoicing.pdf.generate_invoice_pdf", new_callable=AsyncMock
         ) as generate:
             response = await public.get("/i/" + token + "/pdf")
             self.assertEqual(response.status_code, 503)
@@ -668,5 +677,6 @@ class ProductWorkspaceTests(unittest.IsolatedAsyncioTestCase):
         for path in [f"/api/invoice/{invoice_id}", f"/api/invoice/{invoice_id}/pdf"]:
             self.assertEqual((await other.get(path)).status_code, 404)
         self.assertEqual(
-            (await other.post(f"/api/invoice/{invoice_id}/share")).status_code, 404
+            (await other.post(f"/api/invoice/{invoice_id}/share", json={})).status_code,
+            404,
         )

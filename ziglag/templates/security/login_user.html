@@ -1,0 +1,97 @@
+{% extends "stk/security/login_user.html" %}
+
+{% block css %}
+<style>
+    html, body { height: 100%; margin: 0; }
+    body { display: flex; align-items: center; justify-content: center; }
+    #app, .v-application, .v-application__wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+</style>
+{% endblock %}
+
+{% from "_shapes.html" import iso_stack %}
+{% block content %}
+    <div id="app">
+        <v-card width="440" elevation="0" style="max-width: calc(100vw - 32px);" class="pa-2">
+            <v-card-title class="pb-0">
+                <div class="d-flex align-center mb-4" style="gap: 10px;">
+                    <img src="/static/img/ziglag.svg" alt="Logo" height="32">
+                    <span style="font-family: 'Onest', system-ui, sans-serif; font-weight: 800; font-size: 16px; letter-spacing: -0.02em; white-space: normal;">Sign in to ZigLag</span>
+                </div>
+            </v-card-title>
+
+            <v-card-text>
+                <div class="mb-4">{{ iso_stack(96) }}</div>
+                {% include "security/_messages.html" %}
+
+                <v-form
+                    action="{{ url_for_security('login') }}"
+                    method="post"
+                    id="loginForm"
+                >
+                    {{ login_user_form.hidden_tag() }}
+
+                    <v-text-field label="Email" name="email" type="email" required density="compact" class="mb-1"></v-text-field>
+                    <v-text-field label="Password" name="password" type="password" required density="compact" class="mb-1"></v-text-field>
+
+                    {% if login_user_form.email.errors or login_user_form.password.errors %}
+                        <v-alert type="error" density="compact" class="mb-3">Invalid email or password!</v-alert>
+                    {% endif %}
+
+                    <v-btn block color="primary" size="large" @click="submit" class="mb-3">Sign in</v-btn>
+                </v-form>
+
+                {% if security.webauthn and security.wan_allow_as_first_factor or config.GOOGLE_AUTH_ENABLED or config.GITHUB_AUTH_ENABLED %}
+                <div class="d-flex align-center my-3">
+                    <v-divider></v-divider>
+                    <span class="mx-3 text-medium-emphasis text-body-small">or</span>
+                    <v-divider></v-divider>
+                </div>
+
+                {% if security.webauthn and security.wan_allow_as_first_factor %}
+                <v-btn variant="outlined" block href="{{ url_for_security('wan_signin') }}" height="44" class="mb-2">
+                    <template v-slot:prepend><i class="ti ti-fingerprint" style="font-size: 20px;"></i></template>
+                    Sign in with Passkey
+                </v-btn>
+                {% endif %}
+
+                {% if config.GOOGLE_AUTH_ENABLED %}
+                <v-btn variant="outlined" block href="{{ url_for('public.google_login') }}" height="44" class="mb-2">
+                    Continue with Google
+                </v-btn>
+                {% endif %}
+
+                {% if config.GITHUB_AUTH_ENABLED %}
+                <v-btn variant="outlined" block href="{{ url_for('public.github_login') }}" height="44" class="mb-2">
+                    Continue with GitHub
+                </v-btn>
+                {% endif %}
+                {% endif %}
+
+                {% if security.registerable %}
+                <div class="text-center mt-4">
+                    <span class="text-medium-emphasis">New to ZigLag? </span>
+                    <a href="{{ url_for_security('register') }}" class="text-decoration-none">Sign up</a>
+                </div>
+                {% endif %}
+            </v-card-text>
+        </v-card>
+    </div>
+{% endblock %}
+
+{% block js %}
+    <script>
+        const {createApp} = Vue;
+        const {createVuetify} = Vuetify;
+        const vuetify = createVuetify(config.vuetifyConfig);
+
+        const app = createApp({
+            data() { return {}; },
+            methods: {
+                submit() { document.getElementById('loginForm').submit(); }
+            },
+            delimiters: ['${', '}']
+        });
+
+        app.use(vuetify).mount('#app');
+    </script>
+{% endblock %}

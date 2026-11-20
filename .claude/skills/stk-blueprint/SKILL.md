@@ -1,83 +1,48 @@
 ---
 name: stk-blueprint
 description: |
-  Scaffold a new stk blueprint with models, views, templates, and Alembic migration. Use when creating a new feature module, adding a new section to the app, or scaffolding a blueprint.
+  Scaffold a new extension in an stk app: blueprint, model, page, sidebar entry, and Alembic migration. Use when creating a new feature module, adding a new section to the app, or scaffolding a blueprint.
 argument-hint: "[blueprint-name]"
 ---
 
 # Scaffold stk Blueprint
 
-Create a complete blueprint for `$ARGUMENTS` in the stk framework.
+Create a complete extension for `$ARGUMENTS` in the app package (run from the app's directory).
 
 ## Workflow
 
 The scaffolder generates the full module structure. Run it first, then customize domain fields and logic.
 
 ```bash
-uv run quart new <name>
+uv run stk new <name>
 ```
 
 `<name>` must be lowercase snake_case (e.g. `blog_post`, `invoice_line`). Reserved names (`user`, `role`, `portal`, `public`, `session`, `admin`, etc.) are rejected with a clear error.
 
-The command generates:
-- `stk/<name>/__init__.py`, `models.py`, `views.py`
-- `stk/templates/cms/<name>.html`
-- Patches `stk/app.py` (import + `register_blueprint`)
-- Patches `stk/static/js/navigation.js` (nav entry)
+The command generates, inside the app package (`ziglag/`):
+- `<name>/__init__.py` with `init_app(app)`: registers the blueprint and appends the sidebar entry to `app.navigation`
+- `<name>/models.py`, `<name>/views.py`, `<name>/templates/<name>/index.html`
+- Adds `<name>` to `extensions` in the app module (import + list entry)
+- Generates AND applies the migration in the app's lineage, then prints the page URL
 
-Then:
-1. Customize `stk/<name>/models.py` -- add/rename fields to fit your domain
-2. Run: `uv run quart db revision -m "add <name>"` and review the generated migration
-3. Apply: `uv run quart db upgrade`
-4. Verify: `uv run quart verify && uv run quart smoke`
+It never edits a stk file. Then:
+1. Customize `<name>/models.py` -- add/rename fields to fit your domain; point at core tables by foreign key (`ForeignKey("user.id")`)
+2. If you changed the model after scaffolding: `uv run stk db revision -m "update <name>"` and review, then `uv run stk db upgrade`
+   (only needed for post-scaffold model edits; the initial migration is already applied. With `--no-migrate`, the first revision is manual)
+3. Verify: `uv run stk verify && uv run stk smoke`
 
-## Customization reference
+## Conventions
 
-After scaffolding, the generated files follow these conventions. Only touch these when you need to go beyond the defaults.
+The generated files already follow every stk convention. When you change them, the rules
+are in `CLAUDE.md` and the details in https://docs.stkit.dev/models/, https://docs.stkit.dev/api/, and
+https://docs.stkit.dev/frontend/. Read the page before editing that layer.
 
-### Models (`stk/<name>/models.py`)
+## Before you report done
 
-- `import dataclasses` and use `@dataclasses.dataclass` decorator
-- Import `Base` from `stk.extensions`, NOT `db`
-- Use `Column(Type)` from sqlalchemy directly
-- All relationships use `lazy="selectin"`
-- Include `to_dict()` instance method
-- Include `async from_dict(self, data)` as **instance method** that mutates self (NOT a classmethod)
-- Include `created_at = Column(DateTime, default=datetime.now, nullable=False)`
+Each line is a mistake an agent made while building a real app on stk.
 
-### Views (`stk/<name>/views.py`)
-
-- ALL handlers are `async def`
-- Use `import orjson as json` and return `Response(json.dumps(data), content_type="application/json")` for list endpoints
-- Blueprint-level auth via `@bp.before_request` with `@auth_required("session")` + `@roles_required("admin")`
-- DB access via `await g.db_session.execute(...)` or `await g.db_session.get(...)`
-- Frontend sends `{item: {...}}`, extract with `json_data.get("item", {})`
-- Wrap mutations in try/except with `await g.db_session.rollback()` on error
-- Log mutations: `await Activity.register(current_user.id, "Action", data)`
-- Return `{"message": "..."}` for create/update/delete responses
-- Use `PER_PAGE = 25` constant
-- Use `log = logging.getLogger(__name__)` for error logging
-
-### Template (`stk/templates/cms/<name>.html`)
-
-- Extend `layout.html`
-- Vue 3 Options API: `data()`, `methods`, `mounted()`, NOT `setup()`
-- Must include `mixins: [layoutMixin]` and `delimiters: config.delimiters`
-- Use `const vuetify = createVuetify(config.vuetifyConfig)`
-- Call `registerStkComponents(app)` before `app.use(vuetify).mount("#app")`
-- Use `v-data-table-server` for lists
-- Icons: Tabler Icons (`ti ti-*`), e.g. `ti ti-plus`, `ti ti-pencil`, `ti ti-trash`, `ti ti-x`
-- Pass server data via `<script type="application/json" id="...">{{ data|tojson|safe }}</script>`
-- Use `toRaw()` from Vue when editing items: `const {createApp, toRaw} = Vue`
-
-## Do NOT:
-- Use `db.Model`, `db.Column`, `db.select()`, or any Flask-SQLAlchemy patterns
-- Use `from flask import ...` or `from flask_security import ...`
-- Use sync handlers (every route must be `async def`)
-- Use `jsonify()` (return dicts or Response objects)
-- Use `lazy="dynamic"` on relationships (breaks async)
-- Forget `await` on DB operations
-- Use Vue Composition API (`setup()`, `ref()`, `reactive()`) -- use Options API
-- Use Material Design Icons -- use Tabler Icons (`ti ti-*`)
-- Send raw data in POST -- wrap in `{item: {...}}`
-- Forget `mixins: [layoutMixin]` or `registerStkComponents(app)` in templates
+- Lint and format only the files you changed (`uv run ruff format path/a.py path/b.py`), never a whole package another person owns.
+- Tests: give test-only blueprints names an app cannot already use.
+- Migrations: check each command's exit code, never behind a pipe to `tail`. Never delete a revision file before `stk db downgrade <target>` has succeeded.
+- Tables inside Vue's in-DOM templates: never put `<tbody>`/`<tr>` inside `<v-table>` or another custom element; the browser parser moves the rows out before Vue mounts and they never render. Use `v-data-table`, a native `<table>`, or flex rows.
+- Verify UI in a browser: `uv run stk smoke`, then look at a screenshot of the page with real rows. A 200 and green tests do not prove columns, labels or buttons render.

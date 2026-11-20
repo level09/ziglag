@@ -44,7 +44,7 @@ echo -e "${GREEN}Virtual environment will be available at .venv${NC}"
 
 # Install dependencies using modern uv sync  
 echo -e "${GREEN}Installing dependencies from pyproject.toml...${NC}"
-uv sync --extra dev
+uv sync
 
 # Check for required commands
 for cmd in tr openssl awk; do
@@ -108,6 +108,7 @@ SECRET_KEY=$(generate_secure_string 32)
 PASSWORD_SALT=$(generate_secure_string 32)
 REDIS_PASSWORD=$(generate_secure_string 20)
 DB_PASSWORD=$(generate_secure_string 20)
+DB_ADMIN_PASSWORD=$(generate_secure_string 20)
 DOCKER_UID=$(id -u)
 
 # Validate generated values
@@ -118,7 +119,7 @@ fi
 
 # Process the .env file
 if ! awk -v sk="$SECRET_KEY" -v ps="$PASSWORD_SALT" \
-       -v docker="$DOCKER_CONFIG" -v rpass="$REDIS_PASSWORD" -v dbpass="$DB_PASSWORD" -v uid="$DOCKER_UID" '
+       -v docker="$DOCKER_CONFIG" -v rpass="$REDIS_PASSWORD" -v dbpass="$DB_PASSWORD" -v adminpass="$DB_ADMIN_PASSWORD" -v uid="$DOCKER_UID" '
 {
     if ($0 ~ /^SECRET_KEY=/) {
         print "SECRET_KEY=\"" sk "\""
@@ -127,11 +128,17 @@ if ! awk -v sk="$SECRET_KEY" -v ps="$PASSWORD_SALT" \
         print "SECURITY_PASSWORD_SALT=\"" ps "\""
     }
     else if ($0 ~ /^SQLALCHEMY_DATABASE_URI=/) {
-        # Skip - use default from settings.py (instance/stk.db)
+        # Skip - use the default from ziglag/settings.py (instance/ziglag.db)
         next
     }
     else if (docker == "true" && $0 ~ /^#REDIS_PASSWORD=/) {
         print "REDIS_PASSWORD=" rpass
+    }
+    else if (docker == "true" && $0 ~ /^#DB_ADMIN_PASSWORD=/) {
+        print "DB_ADMIN_PASSWORD=" adminpass
+    }
+    else if (docker == "true" && $0 ~ /^#DOCKER_UID=/) {
+        print "DOCKER_UID=" uid
     }
     else if (docker == "true" && $0 ~ /^#DB_PASSWORD=/) {
         print "DB_PASSWORD=" dbpass
@@ -141,11 +148,6 @@ if ! awk -v sk="$SECRET_KEY" -v ps="$PASSWORD_SALT" \
     }
     else if (docker == "true" && $0 ~ /^#REDIS_URL=/) {
         print "REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/1"
-    }
-    else if (docker == "true" && $0 ~ /^# Docker-specific settings/) {
-        print "# Docker-specific settings"
-        print "DOCKER_UID=" uid
-        print
     }
     else {
         print $0
@@ -175,28 +177,19 @@ fi
 # Create instance directory for SQLite database
 mkdir -p instance
 
-# Create .quartenv for Quart CLI auto-loading
-cat > .quartenv << 'EOF'
-QUART_APP=run.py
-QUART_DEBUG=1
-EOF
-echo -e "${GREEN}Created .quartenv for Quart CLI${NC}"
-echo -e "${GREEN}SQLite database will be created at: instance/stk.db${NC}"
+echo -e "${GREEN}SQLite database will be created at: instance/ziglag.db${NC}"
 echo
 echo -e "${GREEN}Next steps:${NC}"
 echo -e "1. Update the remaining values in your .env file (mail settings, etc.)"
 echo -e "2. Modern uv workflow - use these commands:"
-echo -e "   ${GREEN}uv run quart create-db${NC}   # Initialize database"
-echo -e "   ${GREEN}uv run quart install${NC}     # Create admin user"
-echo -e "   ${GREEN}uv run quart run${NC}         # Start development server"
+echo -e "   ${GREEN}uv run stk db upgrade${NC}   # Apply stk's migrations, then the app's"
+echo -e "   ${GREEN}uv run stk run${NC}          # Start development server, then open /setup to create the admin"
+echo -e "   ${GREEN}uv run stk install${NC}      # Or create the admin user from the CLI"
 echo -e "   ${GREEN}uv run ruff check --fix .${NC} # Lint and auto-fix code"
 echo -e "   ${GREEN}uv run ruff format .${NC}      # Format code"
 echo -e "   ${GREEN}uv run pre-commit install${NC} # Install pre-commit hooks"
 echo -e ""
 echo -e "3. Or activate manually: ${GREEN}$ACTIVATE_CMD${NC}"
-if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
-    echo -e "${YELLOW}Note: On Windows, uWSGI is automatically excluded${NC}"
-fi
 if [ "$DOCKER_CONFIG" = true ]; then
-    echo -e "4. For Docker: ${GREEN}docker compose up -d${NC}"
+    echo -e "4. For Docker, also set STK_HOST, TLS_CERTIFICATE and TLS_PRIVATE_KEY in .env, then: ${GREEN}docker compose up -d${NC}"
 fi

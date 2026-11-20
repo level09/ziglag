@@ -1,0 +1,220 @@
+{% extends 'layout.html' %}
+{% block title %}Business settings | ZigLag{% endblock %}
+{% block content %}
+<section class="workspace settings-workspace">
+    <header class="page-header"><div><h1>Business settings</h1><p>Your identity, invoice defaults, and payment details.</p></div></header>
+    <div class="settings-savebar"><span role="status" aria-live="polite">${saving ? 'Saving…' : dirty ? 'Unsaved changes' : loaded ? 'All changes saved' : 'Loading settings…'}</span><v-spacer></v-spacer><v-btn color="primary" @click="save" :loading="saving" :disabled="!loaded || !dirty || saving">Save changes</v-btn></div>
+    <v-alert v-if="loadError" type="warning" variant="tonal" role="alert" class="mb-4">${loadError}<v-btn variant="text" @click="load">Retry</v-btn></v-alert>
+    <v-alert v-if="saveError" type="error" variant="tonal" role="alert" class="mb-4">${saveError}</v-alert>
+    <div v-if="loaded" class="settings-layout">
+        <nav class="settings-nav" aria-label="Settings sections"><a href="#identity">Business identity</a><a href="#defaults">Invoice defaults</a><a href="#payment">Payment instructions</a><a href="#email">Email preferences</a>
+        <div class="settings-readiness"><strong>${profileMissing.length ? 'Complete your saved profile' : 'Business profile ready'}</strong><p class="mt-2">${profileMissing.length ? 'Still needed: ' + profileMissing.join(', ') + '.' : 'You can start your first invoice.'}</p><v-btn v-if="!profileMissing.length" href="/invoices/new" color="primary" variant="text" class="mt-2">New invoice</v-btn></div></nav>
+        <v-card class="pa-6 settings-fields">
+            <section id="identity" class="settings-section">
+            <h2 class="text-title-large mb-4 mt-2">Business identity</h2>
+
+            <div class="mb-4">
+                <div class="text-body-medium mb-2">Logo</div>
+                <div v-if="s.logo_path" class="mb-2 d-flex align-center ga-3">
+                    <img :src="'/static/' + s.logo_path" alt="Current logo" style="max-height: 80px; max-width: 100%;" />
+                    <v-btn size="x-small" variant="tonal" color="error" @click="removeLogo"><i class="ti ti-trash mr-1"></i> Remove</v-btn>
+                </div>
+                <v-file-input
+                    label="Upload Logo"
+                    accept="image/*"
+                    @change="uploadLogo"
+                    prepend-icon=""
+                    prepend-inner-icon="ti ti-upload"
+                    density="compact"
+                ></v-file-input>
+            </div>
+
+            <div class="form-grid">
+                <v-text-field label="Business name" v-model="s.business_name" class="field-wide" autocomplete="organization"></v-text-field>
+                <v-text-field label="Owner name" v-model="s.owner_name" autocomplete="name"></v-text-field>
+                <v-text-field label="Business number" v-model="s.business_number"></v-text-field>
+                <v-text-field label="Steuernummer" v-model="s.tax_number"></v-text-field>
+                <v-text-field label="USt-IdNr." v-model="s.vat_id"></v-text-field>
+                <v-text-field label="Address line 1" v-model="s.address_line1" class="field-wide" autocomplete="address-line1"></v-text-field>
+                <v-text-field label="Address line 2" v-model="s.address_line2" autocomplete="address-line2"></v-text-field>
+                <v-text-field label="Address line 3" v-model="s.address_line3" autocomplete="address-line3"></v-text-field>
+                <v-text-field label="Email" v-model="s.email" autocomplete="email" type="email"></v-text-field>
+                <v-text-field label="Phone" v-model="s.phone" autocomplete="tel" type="tel"></v-text-field>
+                <v-text-field label="Mobile" v-model="s.mobile" type="tel"></v-text-field>
+                <v-text-field label="Website" v-model="s.website" autocomplete="url" type="url"></v-text-field>
+            </div>
+
+            <v-divider class="my-6"></v-divider>
+
+            </section>
+            <section id="defaults" class="settings-section">
+            <h2 class="text-title-large mb-2">Invoice defaults</h2><p class="text-body-medium text-medium-emphasis mb-5">Applied to new drafts. Issued invoices keep their saved details.</p>
+            <!-- Tax -->
+            <div class="text-title-large mb-4">Tax</div>
+            <v-row>
+                <v-col>
+                    <v-select label="Type" v-model="s.tax_type"
+                        :items="[{title:'On Total',value:'on_total'},{title:'Per Line',value:'per_line'},{title:'None',value:'none'}]"
+                    ></v-select>
+                </v-col>
+                <v-col>
+                    <v-text-field label="Rate (%)" v-model="s.tax_rate" type="number"></v-text-field>
+                </v-col>
+                <v-col>
+                    <v-text-field label="Label" v-model="s.tax_label"></v-text-field>
+                </v-col>
+            </v-row>
+            <v-checkbox label="Tax Inclusive" v-model="s.tax_inclusive" hide-details color="primary"></v-checkbox>
+            <v-select label="Default Tax Treatment" v-model="s.default_tax_treatment"
+                :items="[{title:'Standard VAT',value:'standard'},{title:'Reverse Charge',value:'reverse_charge'},{title:'Tax Exempt',value:'exempt'}]"
+            ></v-select>
+
+            <v-divider class="my-6"></v-divider>
+
+            <!-- Invoice Numbering -->
+            <div class="text-title-large mb-4">Invoice Number</div>
+            <v-row>
+                <v-col>
+                    <v-text-field label="Prefix" v-model="s.invoice_prefix"></v-text-field>
+                </v-col>
+                <v-col>
+                    <v-text-field label="Next Number" v-model="s.invoice_next_number" type="number"></v-text-field>
+                </v-col>
+            </v-row>
+
+            <v-divider class="my-6"></v-divider>
+
+            <!-- Default Notes -->
+            <div class="text-title-large mb-4">Default Notes</div>
+            <v-textarea label="Default Invoice Notes" v-model="s.default_invoice_notes" rows="4"></v-textarea>
+
+            <v-divider class="my-6"></v-divider>
+
+            <!-- Region -->
+            <div class="text-title-large mb-4">Region</div>
+            <v-row>
+                <v-col>
+                    <v-text-field label="Currency Code" v-model="s.currency_code"></v-text-field>
+                </v-col>
+                <v-col>
+                    <v-text-field label="Currency Symbol" v-model="s.currency_symbol"></v-text-field>
+                </v-col>
+                <v-col>
+                    <p class="text-body-medium text-medium-emphasis">Dates in the workspace follow your browser language.</p>
+                </v-col>
+            </v-row>
+
+            <v-divider class="my-6"></v-divider>
+
+            <!-- Customization -->
+            <div class="text-title-large mb-4">Customize</div>
+            <v-select label="Default Invoice Template" v-model="s.default_invoice_template"
+                :items="[{title:'Precision',value:'precision'},{title:'Branded',value:'branded'},{title:'Editorial',value:'editorial'}]"
+            ></v-select>
+            <v-text-field label="Invoice Title" v-model="s.invoice_title"></v-text-field>
+            <v-row>
+                <v-col><v-text-field label="Quantity Label" v-model="s.quantity_label"></v-text-field></v-col>
+                <v-col><v-text-field label="Unit Cost Label" v-model="s.unit_cost_label"></v-text-field></v-col>
+            </v-row>
+
+
+            <v-divider class="my-6"></v-divider>
+
+</section>
+            <section id="payment" class="settings-section">
+            <h2 class="text-title-large mb-4">Payment instructions</h2>
+            <p class="text-body-medium text-medium-emphasis mb-4">Add your bank details, payment reference guidance, or payment link here. These details are saved with each issued invoice.</p>
+            <v-textarea label="Payment instructions" v-model="s.payment_instructions" rows="3"></v-textarea>
+
+</section>
+            <section id="email" class="settings-section">
+            <h2 class="text-title-large mb-4">Email preferences</h2>
+            <v-textarea label="Email introduction" v-model="s.default_email_message" rows="3"></v-textarea>
+            <v-checkbox label="Send a private copy to my account email" v-model="s.send_copy_to_self" hide-details color="primary"></v-checkbox>
+
+            <v-divider class="my-6"></v-divider>
+
+            </section>
+        </v-card>
+    </div>
+    <v-snackbar v-model="snackBar">${snackMessage}</v-snackbar>
+</section>
+{% endblock %}
+{% block js %}
+
+    <script>
+        const {createApp} = Vue;
+        const {createVuetify} = Vuetify;
+        const vuetify = createVuetify(config.vuetifyConfig);
+
+        window.app = createApp({
+            mixins: [layoutMixin],
+            data() {
+                return {
+                    snackBar: false,
+                    snackMessage: "",
+                    loaded: false,
+                    saving: false,
+                    s: {}, savedState:'', profileMissing:[], loadError:'', saveError:''
+                };
+            },
+            computed: {dirty() {return this.loaded && JSON.stringify(this.s)!==this.savedState;}},
+            delimiters: config.delimiters,
+            mounted() {
+                this.load();
+                this._leave=event=>{if(this.dirty || this.saving){event.preventDefault();event.returnValue='';}};
+                window.addEventListener('beforeunload',this._leave);
+            },
+            beforeUnmount(){window.removeEventListener('beforeunload',this._leave);},
+            methods: {
+                showSnack(msg){this.snackMessage=msg;this.snackBar=true;},
+                async load(){
+                    this.loadError='';
+                    try {
+                        const response=await axios.get('/api/settings');
+                        const {profile_missing,...settings}=response.data;
+                        this.s=settings;this.profileMissing=profile_missing;this.savedState=JSON.stringify(settings);this.loaded=true;
+                    }catch(error){this.loadError='Settings could not be loaded. Try again.';}
+                },
+                async save(){
+                    if(this.saving || !this.loaded) return;
+                    const snapshot=JSON.stringify(this.s);this.saving=true;this.saveError='';
+                    try {
+                        const response=await axios.post('/api/settings',JSON.parse(snapshot));
+                        if(JSON.stringify(this.s)===snapshot){this.s=response.data.settings;this.savedState=JSON.stringify(this.s);}
+                        else this.savedState=snapshot;
+                        this.profileMissing=response.data.profile_missing;this.showSnack(response.data.message);
+                    }catch(error){this.saveError=error.response?.data?.message || 'Settings could not be saved. Your changes are still here.';}
+                    finally{this.saving=false;}
+                },
+                acceptLogo(path){
+                    this.s.logo_path=path;
+                    const saved=JSON.parse(this.savedState);saved.logo_path=path;this.savedState=JSON.stringify(saved);
+                },
+                uploadLogo(e) {
+                    const file = e.target?.files?.[0];
+                    if (!file) return;
+                    const fd = new FormData();
+                    fd.append('logo', file);
+                    axios.post('/settings/logo', fd)
+                        .then(res => {
+                            this.acceptLogo(res.data.logo_path);
+                            this.showSnack(res.data?.message);
+                        })
+                        .catch(err => this.showSnack('Upload failed'));
+                },
+                removeLogo() {
+                    axios.post('/api/settings/logo/remove', {})
+                        .then(res => {
+                            this.acceptLogo(null);
+                            this.showSnack(res.data?.message);
+                        })
+                        .catch(err => this.showSnack('Error'));
+                }
+            }
+        });
+
+        registerStkComponents(app);
+        app.use(vuetify).mount("#app");
+    </script>
+{% endblock %}

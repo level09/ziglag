@@ -45,13 +45,13 @@ Example prompts:
 ### Development Commands
 ```bash
 ./setup.sh                    # Setup environment
-uv run quart create-db        # Initialize database
-uv run quart install          # Create admin user
-uv run quart run              # Start server
+uv run stk db upgrade        # Initialize database
+uv run stk install          # Create admin user
+uv run stk run              # Start server
 ```
 
 ### Architecture Overview
-- Quart async factory pattern in `stk/app.py`
+- Quart app composed in `ziglag/app.py` with `Stk(__name__, config=Config, extensions=[...])`
 - Blueprint organization (public, portal, user)
 - Async SQLAlchemy setup in `extensions.py`
 - Per-request `g.db_session` lifecycle

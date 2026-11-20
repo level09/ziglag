@@ -14,7 +14,7 @@ node_modules/
 .parcel-cache
 stk.sqlite3
 instance/
-stk/static/uploads/
+ziglag/static/uploads/
 
 
 __pycache__/

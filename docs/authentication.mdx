@@ -10,7 +10,7 @@ stk provides authentication built on quart-security with session-based auth, OAu
 
 ## Features
 
-- Login (public registration, confirmation, and password reset are disabled; the first admin is created at `/setup` or with `quart install`)
+- Login (public registration is disabled and password reset needs mail configured; the first admin is created at `/setup` or with `stk install`)
 - Role-based access control (RBAC)
 - Two-factor authentication (2FA)
 - WebAuthn / Passkeys
@@ -87,7 +87,7 @@ SECURITY_WAN_RP_ID=invoices.example.com
 SECURITY_WAN_EXPECTED_ORIGIN=https://invoices.example.com
 ```
 
-Registration, confirmation, and recovery are fixed to off in `stk/settings.py`. See `SECURITY.md` for MFA key rotation.
+Public registration is off (`SECURITY_REGISTERABLE = False` in `ziglag/settings.py`). Password reset by email turns on when `MAIL_SERVER` and `STK_PUBLIC_URL` are both set, unless `SECURITY_RECOVERABLE` overrides it. See `SECURITY.md` for MFA key rotation.
 
 ## Session Protection
 
@@ -101,7 +101,7 @@ SESSION_COOKIE_SAMESITE = 'Lax'
 
 ## Rate Limiting
 
-Authentication and OAuth endpoints are limited per IP with shared SQL state (`stk/utils/ratelimit.py`), so limits hold across workers:
+Authentication and OAuth endpoints are limited per IP with shared SQL state (in the installed `stk` package), so limits hold across workers:
 
 ```python
 STK_AUTH_REQUEST_LIMIT = 120  # any auth request, per minute

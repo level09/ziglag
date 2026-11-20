@@ -6,7 +6,7 @@ sidebarTitle: "Introduction"
 
 ## Overview
 
-ZigLag is a self-hosted invoicing application for freelancers and small businesses. It uses stk 13.4.1 for async Quart, authentication, database migrations, WebSockets, operational commands, and production deployment.
+ZigLag is a self-hosted invoicing application for freelancers and small businesses. It uses stk 17 for async Quart, authentication, database migrations, WebSockets, operational commands, and production deployment.
 
 ## Core Workflow
 
@@ -24,10 +24,10 @@ stk supplies session authentication, TOTP, WebAuthn, OAuth, recovery codes, acco
 Useful commands:
 
 ```bash
-uv run quart inspect context --json
-uv run quart verify --json
-uv run quart smoke --json
-uv run quart new <module>
+uv run stk inspect context --json
+uv run stk verify --json
+uv run stk smoke --json
+uv run stk new <module>
 ```
 
 ## Documentation

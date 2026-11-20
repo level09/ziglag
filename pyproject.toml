@@ -10,62 +10,26 @@ license = {text = "MIT"}
 requires-python = ">=3.11"
 
 dependencies = [
-    "alembic>=1.16.0",
-    "aiosmtplib>=5.0.0",
-    "aiosqlite>=0.20.0",
-    "authlib>=1.7.2,<2",
-    "bcrypt>=4.3.0",
-    "blinker>=1.9.0",
-    "click>=8.3.1",
-    "cryptography>=45.0.5",
-    "email-validator>=2.2.0",
-    "httpx>=0.27.0",
-    "jinja2>=3.1.6",
-    "joserfc>=1.7.1,<2",
-    "libpass>=1.9.0",
-    "orjson>=3.10.18",
-    "pillow>=12.3.0",
-    "psycopg2-binary>=2.9.10",
-    "python-dotenv>=1.1.1",
-    "qrcode>=8.2",
-    "quart>=0.20.0",
-    "quart-security>=2.0.1,<3",
-    "quart-session>=3.0.0",
-    "rich>=14.0.0",
-    "sqlalchemy[asyncio]>=2.0.41",
-    "uvicorn>=0.40.0",
-    "webauthn>=2.6.0",
-    "wtforms>=3.2.1",
+    "stkit>=17.15.1,<18",
     "fpdf2>=2.8.0",
 ]
 
 
-[project.scripts]
-stk = "stk.cli.main:main"
-
-[project.entry-points."quart.commands"]
-shell = "stk.cli:shell"
-
 [project.optional-dependencies]
-full = [
-    "asyncpg>=0.30.0",
-    "redis>=7.1.0",
-]
-dev = [
-    "ruff",
-    "pre-commit",
-    "playwright",
-]
-asgi = [
-    "hypercorn>=0.17.0",
-]
+full = ["stkit[full]"]  # PostgreSQL and Redis
+
+[dependency-groups]
+dev = ["stkit[dev]"]
+
+[tool.stk]
+app = "ziglag.app:app"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["stk"]
+packages = ["ziglag"]
 
 [tool.ruff]
 line-length = 88
@@ -89,10 +53,9 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
-"alembic/versions/*.py" = ["E402"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["stk"]
+known-first-party = ["ziglag"]
 
 [tool.ruff.format]
 quote-style = "double"

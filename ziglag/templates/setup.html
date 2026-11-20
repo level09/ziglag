@@ -1,0 +1,56 @@
+{% extends 'auth_layout.html' %}
+
+{% block css %}
+<style>
+    html, body { height: 100%; margin: 0; }
+    body { display: flex; align-items: center; justify-content: center; }
+    #app, .v-application, .v-application__wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+    .setup-title { font-family: 'Onest', system-ui, sans-serif; font-weight: 800; font-size: 16px; letter-spacing: -0.02em; white-space: normal; }
+</style>
+{% endblock %}
+
+{% from "_shapes.html" import iso_stack %}
+{% block content %}
+    <div id="app">
+        <v-card width="440" elevation="0" style="max-width: calc(100vw - 32px);" class="pa-2">
+            <v-card-title class="pb-0">
+                <div class="d-flex align-center mb-2" style="gap: 10px;">
+                    <img src="{{ url_for('static', filename='img/ziglag.svg') }}" alt="" height="32">
+                    <h1 class="setup-title">Set up ZigLag</h1>
+                </div>
+            </v-card-title>
+
+            <v-card-text>
+                <div class="mb-4">{{ iso_stack(96) }}</div>
+                <p class="mb-5" style="font-size: 14px; line-height: 1.5; text-wrap: pretty;">Create the admin account for this installation. You add your business details next.</p>
+
+                {% include "security/_messages.html" %}
+
+                <form action="/setup" method="post">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <v-text-field label="Name (optional)" name="name" type="text" autocomplete="name" autofocus density="compact" class="mb-1"></v-text-field>
+                    <v-text-field label="Email" name="email" type="email" autocomplete="username" required density="compact" class="mb-1"></v-text-field>
+                    <v-text-field label="Password" name="password" type="password" autocomplete="new-password" required minlength="{{ config.SECURITY_PASSWORD_LENGTH_MIN }}" hint="At least {{ config.SECURITY_PASSWORD_LENGTH_MIN }} characters" persistent-hint density="compact" class="mb-4"></v-text-field>
+
+                    <v-btn block color="primary" size="large" type="submit">Create account</v-btn>
+                </form>
+            </v-card-text>
+        </v-card>
+    </div>
+{% endblock %}
+
+{% block js %}
+    <script>
+        const {createApp} = Vue;
+        const {createVuetify} = Vuetify;
+        const vuetify = createVuetify(config.vuetifyConfig);
+
+        const app = createApp({
+            data() { return {}; },
+            delimiters: ['${', '}']
+        });
+
+        app.use(vuetify).mount('#app');
+    </script>
+{% endblock %}

@@ -1,12 +1,12 @@
 <p align="center">
-  <img src="stk/static/img/ziglag.svg" alt="ZigLag" height="80">
+  <img src="ziglag/static/img/ziglag.svg" alt="ZigLag" height="80">
 </p>
 
 <h1 align="center">ZigLag</h1>
 
 <p align="center">
   Self-hosted invoicing for freelancers and small businesses.<br>
-  Built on <a href="https://github.com/level09/stk">stk 16.0.0</a>. Open source. No document limits.
+  Built on <a href="https://github.com/level09/stk">stk 17</a>. Open source. No document limits.
 </p>
 
 ## Status
@@ -25,8 +25,8 @@ This is essential workflow parity, not full Invoice Simple feature parity. ZigLa
 git clone git@github.com:level09/ziglag.git
 cd ziglag
 ./setup.sh
-uv run quart create-db
-uv run quart run --port 5001
+uv run stk db upgrade
+uv run stk run --port 5001
 ```
 
 Open `http://localhost:5001`. The first visit creates the administrator account through `/setup`.
@@ -50,7 +50,7 @@ Drafts remain editable and deletable. Issuing or sending an invoice freezes its 
 | Layer | Technology |
 |-------|------------|
 | Backend | Python 3.11+, async Quart, SQLAlchemy 2 |
-| Framework | stk 16.0.0 |
+| Framework | stk 17 (`stkit` package) |
 | Frontend | Vue 3 and Vuetify 4, no build step |
 | Database | SQLite by default, PostgreSQL optional |
 | Auth | Sessions, TOTP, WebAuthn, OAuth, recovery codes |
@@ -60,18 +60,18 @@ Drafts remain editable and deletable. Issuing or sending an invoice freezes its 
 ## Commands
 
 ```bash
-uv sync --extra dev
-uv run quart create-db
-uv run quart run --port 5001
+uv sync
+uv run stk db upgrade
+uv run stk run --port 5001
 uv run ruff check .
 uv run ruff format --check .
 uv run python -m unittest discover -s tests -v
-uv run python checks.py
-uv run quart verify --json
-uv run quart inspect context --json
+uv run stk verify --json
+uv run stk smoke --json
+uv run stk inspect context --json
 ```
 
-Create a restorable local bundle with `uv run quart backup create`, verify it, then copy it to independent storage.
+Create a restorable local bundle with `uv run stk backup create`, verify it, then copy it to independent storage.
 
 ## Configuration
 
@@ -80,7 +80,6 @@ Create a restorable local bundle with `uv run quart backup create`, verify it, t
 ```bash
 SECRET_KEY=replace-me
 SECURITY_PASSWORD_SALT=replace-me
-SECURITY_TOTP_SECRETS=replace-me
 ```
 
 Production installations should use PostgreSQL and Redis:
@@ -90,22 +89,18 @@ SQLALCHEMY_DATABASE_URI=postgresql+asyncpg://user:password@localhost/ziglag
 REDIS_URL=redis://localhost:6379/1
 ```
 
-Back up both the database and `instance/invoices/`. The latter contains the immutable PDFs issued by the application.
+Back up the database, `instance/invoices/` and `ziglag/static/uploads/`. The invoices directory contains the immutable PDFs issued by the application; the uploads directory contains business logos.
 
 ## Database
 
 ```bash
-uv run quart db current
-uv run quart db upgrade
-uv run quart db revision -m "description"
-uv run quart db downgrade -1
+uv run stk db current
+uv run stk db upgrade
+uv run stk db revision -m "description"
+uv run stk db downgrade -1
 ```
 
-The current migration chain is linear:
-
-```text
-20260326_0001 -> cfa8efad03ed -> 228ac4e0ebf5 -> 20260712_0001
-```
+There are two migration lineages in one version table: stk's, shipped in the installed package, and ZigLag's in `ziglag/migrations/`. `uv run stk db upgrade` applies both. A database created by ZigLag on stk 16 needs the adoption step in [SECURITY.md](SECURITY.md) first.
 
 ## Deploy
 
@@ -116,7 +111,7 @@ wget -qO /tmp/deploy.sh https://raw.githubusercontent.com/level09/stk/master/dep
 sudo DOMAIN=invoices.example.com REPO=level09/ziglag DB=postgres bash /tmp/deploy.sh
 ```
 
-The script installs PostgreSQL, Redis, Caddy, systemd services, application dependencies, migrations, and TLS. Review [deployment documentation](docs/deployment.mdx) before using it on a server.
+The script installs PostgreSQL, Redis, Caddy, systemd services, application dependencies, migrations, and TLS. It does not install a Unicode font: run `apt-get install fonts-dejavu-core` on the server so PDF generation works. Review [deployment documentation](docs/deployment.mdx) before using it on a server.
 
 Docker remains available:
 
@@ -126,7 +121,7 @@ docker compose up --build
 
 ## Production Checklist
 
-- Run all tests and `quart verify` against the release commit.
+- Run all tests and `stk verify` against the release commit.
 - Use PostgreSQL, Redis, HTTPS, and secure cookie settings.
 - Back up the database and issued-PDF archive together.
 - Test restore procedures before relying on the installation.

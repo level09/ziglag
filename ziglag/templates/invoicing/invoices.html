@@ -1,0 +1,137 @@
+{% extends 'layout.html' %}
+{% block title %}Invoices | ZigLag{% endblock %}
+{% from "_shapes.html" import iso_stack %}
+{% block content %}
+<section class="workspace">
+    <header class="page-header"><div><h1>Invoices</h1><p>From first draft to final payment.</p></div><v-spacer></v-spacer><v-btn href="/invoices/new" color="primary">New invoice <i class="ti ti-plus ml-2"></i></v-btn></header>
+    <div class="invoice-filters">
+        <div class="filter-buttons" role="group" aria-label="Invoice status">
+            <v-btn v-for="filter in filters" :key="filter.value" :variant="statusFilter === filter.value ? 'tonal' : 'text'" :aria-pressed="statusFilter === filter.value" @click="changeFilter(filter.value)">${filter.label}</v-btn>
+        </div>
+        <v-text-field v-model="search" label="Search invoice or customer" prepend-inner-icon="ti ti-search" hide-details density="compact" class="invoice-search" @update:model-value="searchChanged"></v-text-field>
+    </div>
+    <div class="invoice-filters">
+        <v-text-field v-model="startDate" label="Invoice date from" type="date" hide-details density="compact" class="date-filter" @update:model-value="changeDates"></v-text-field>
+        <v-text-field v-model="endDate" label="Invoice date to" type="date" hide-details density="compact" class="date-filter" @update:model-value="changeDates"></v-text-field>
+        <v-btn variant="text" @click="setMonth(0)">This month</v-btn>
+        <v-btn variant="text" @click="setMonth(-1)">Last month</v-btn>
+        <v-btn v-if="startDate || endDate" variant="text" @click="clearDates">All dates</v-btn>
+    </div>
+    <v-alert v-if="error" type="warning" variant="tonal" class="mb-4" role="alert">${error}<v-btn variant="text" @click="refresh()">Retry</v-btn></v-alert>
+    <div v-if="loading" role="status" class="mb-3 text-medium-emphasis">${items.length ? 'Updating results. Previous results shown.' : 'Loading invoices…'}</div>
+    <v-card v-if="totals.length" class="pa-4 mb-4" :aria-busy="loading">
+        <h2 class="text-title-large">Totals for all ${total} matching ${total === 1 ? 'invoice' : 'invoices'}</h2>
+        <p class="text-body-small text-medium-emphasis mb-2">Invoice value includes any selected drafts and cancellations. Collectible balance excludes both and any overpayment credits.</p>
+        <div v-for="row in totals" :key="row.currency_code" class="d-flex flex-wrap ga-4 mb-1">
+            <span class="money">Invoice value: ${formatMoney(row.total, row.currency_code)}</span>
+            <span class="money">Collectible balance: ${formatMoney(row.balance, row.currency_code)}</span>
+        </div>
+    </v-card>
+    <v-card :aria-busy="loading">
+        <div v-if="!loading && !error && !items.length" class="empty-state">
+            {{ iso_stack() }}
+            <h2>${hasFilters ? 'No matching invoices' : 'No invoices yet'}</h2>
+            <p class="mb-5">${hasFilters ? 'Try another search or filter.' : 'Create a draft and review it before issuing.'}</p>
+            <v-btn v-if="hasFilters" variant="outlined" @click="clearFilters">Clear filters</v-btn>
+            <v-btn v-else color="primary" href="/invoices/new">Create invoice</v-btn>
+        </div>
+        <template v-else-if="isMobile">
+            <article v-for="item in items" :key="item.id" class="mobile-invoice">
+                <div class="invoice-line"><a :href="'/invoices/' + item.id">${item.invoice_number}</a><span class="money">${formatMoney(item.total, item.currency_code)}</span></div>
+                <div class="mb-2">${item.client_name || 'No customer yet'}</div>
+                <div class="invoice-line text-body-small"><span>${item.due_date ? 'Due ' + formatDate(item.due_date) : 'No due date'}</span><span class="status-pill" :class="'status-' + item.status">${statusLabel(item.status)}</span></div>
+                <div class="text-body-small money">Balance ${formatMoney(item.balance_due, item.currency_code)}</div>
+            </article>
+        </template>
+        <table v-else-if="items.length" class="workspace-table invoice-table">
+            <thead><tr><th scope="col">Invoice / customer</th><th scope="col">Date</th><th scope="col">Due</th><th scope="col">Total</th><th scope="col">Balance</th><th scope="col">Status</th></tr></thead>
+            <tbody><tr v-for="item in items" :key="item.id">
+                <td><a :href="'/invoices/' + item.id">${item.invoice_number}</a><div class="text-body-small text-medium-emphasis mt-1">${item.client_name || 'No customer yet'}</div></td>
+                <td>${formatDate(item.date)}</td><td>${formatDate(item.due_date) || 'No due date'}</td>
+                <td class="money">${formatMoney(item.total, item.currency_code)}</td><td class="money">${formatMoney(item.balance_due, item.currency_code)}</td><td><span class="status-pill" :class="'status-' + item.status">${statusLabel(item.status)}</span></td>
+            </tr></tbody>
+        </table>
+        <div v-if="total" class="d-flex align-center flex-wrap pa-3 ga-3">
+            <span class="text-body-small">${total} invoices</span><v-spacer></v-spacer>
+            <v-select :model-value="perPage" :items="[25, 50, 100]" label="Per page" density="compact" hide-details style="max-width: 120px;" @update:model-value="changePageSize"></v-select>
+            <v-pagination :model-value="page" :length="Math.ceil(total / perPage)" :total-visible="isMobile ? 3 : 5" density="comfortable" @update:model-value="changePage"></v-pagination>
+        </div>
+    </v-card>
+</section>
+{% endblock %}
+{% block js %}
+<script>
+const {createApp} = Vue;
+const vuetify = Vuetify.createVuetify(config.vuetifyConfig);
+window.app = createApp({
+    mixins: [layoutMixin], delimiters: config.delimiters,
+    data() { return {
+        search: '', statusFilter: 'all', startDate: '', endDate: '', page: 1, perPage: 25, items: [], total: 0, totals: [],
+        loading: true, error: '', requestId: 0,
+        filters: [{value:'all',label:'All'}, {value:'draft',label:'Drafts'}, {value:'outstanding',label:'Unpaid'}, {value:'overdue',label:'Overdue'}, {value:'paid',label:'Paid'}, {value:'cancelled',label:'Cancelled'}]
+    }; },
+    computed: {hasFilters() { return Boolean(this.search || this.statusFilter !== 'all' || this.startDate || this.endDate); }},
+    mounted() {
+        this.restoreUrl();
+        this._popstate = () => this.restoreUrl();
+        window.addEventListener('popstate', this._popstate);
+    },
+    beforeUnmount() { clearTimeout(this._searchTimer); window.removeEventListener('popstate', this._popstate); },
+    methods: {
+        restoreUrl() {
+            clearTimeout(this._searchTimer);
+            const params = new URLSearchParams(location.search);
+            this.search = params.get('search') || '';
+            this.startDate = params.get('start_date') || '';
+            this.endDate = params.get('end_date') || '';
+            this.statusFilter = this.filters.some(f => f.value === params.get('status')) ? params.get('status') : 'all';
+            this.page = Math.max(1, parseInt(params.get('page')) || 1);
+            this.perPage = [25, 50, 100].includes(Number(params.get('per_page'))) ? Number(params.get('per_page')) : 25;
+            this.refresh(false);
+        },
+        changeFilter(value) { this.statusFilter = value; this.page = 1; this.refresh(); },
+        changePage(value) { this.page = value; this.refresh(); },
+        changePageSize(value) { this.perPage = value; this.page = 1; this.refresh(); },
+        clearFilters() { this.search = ''; this.statusFilter = 'all'; this.startDate = ''; this.endDate = ''; this.page = 1; this.refresh(); },
+        changeDates() { this.page = 1; this.refresh(); },
+        clearDates() { this.startDate = ''; this.endDate = ''; this.changeDates(); },
+        setMonth(offset) {
+            const today = new Date();
+            const start = new Date(today.getFullYear(), today.getMonth() + offset, 1);
+            const end = new Date(start.getFullYear(), start.getMonth() + 1, 0);
+            const iso = date => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+            this.startDate = iso(start); this.endDate = iso(end); this.changeDates();
+        },
+        searchChanged() {
+            clearTimeout(this._searchTimer); ++this.requestId; this.loading = true; this.error = ''; this.page = 1;
+            this._searchTimer = setTimeout(() => this.refresh(), 300);
+        },
+        async refresh(updateHistory = true) {
+            clearTimeout(this._searchTimer);
+            const requestId = ++this.requestId;
+            const params = {page: this.page, per_page: this.perPage, status: this.statusFilter, search: this.search, start_date:this.startDate, end_date:this.endDate};
+            if (updateHistory) {
+                const url = location.pathname + '?' + new URLSearchParams(params);
+                if (url !== location.pathname + location.search) history.pushState(null, '', url);
+            }
+            this.loading = true; this.error = '';
+            try {
+                const response = await axios.get('/api/invoices', {params});
+                if (requestId !== this.requestId) return;
+                this.items = response.data.items; this.total = response.data.total;
+                this.totals = response.data.totals_by_currency;
+                const lastPage = Math.max(1, Math.ceil(this.total / this.perPage));
+                if (this.page > lastPage) { this.page = lastPage; return this.refresh(); }
+            } catch (error) {
+                if (requestId === this.requestId) this.error = error.response?.data?.message || 'Invoices could not be updated. Previous results may not match these filters.';
+            } finally { if (requestId === this.requestId) this.loading = false; }
+        },
+        _onWsMessage(msg) { if (msg.type === 'activity' && msg.action?.includes('Invoice')) this.refresh(false); },
+        statusLabel(status) { return {sent:'Issued', viewed:'Link opened'}[status] || status.charAt(0).toUpperCase() + status.slice(1); },
+        formatMoney(value, currency) { return new Intl.NumberFormat(navigator.language, {style:'currency', currency, currencyDisplay:'code'}).format(Number(value)); },
+        formatDate(value) { return value ? new Intl.DateTimeFormat(navigator.language).format(new Date(value + 'T00:00:00')) : ''; }
+    }
+});
+registerStkComponents(app); app.use(vuetify).mount('#app');
+</script>
+{% endblock %}

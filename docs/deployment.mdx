@@ -15,6 +15,8 @@ sudo DOMAIN=invoices.example.com REPO=level09/ziglag DB=postgres bash /tmp/deplo
 
 Run the command on the target server as root. Set `DOMAIN` to the final hostname before installation. Set `REPO` to the GitHub owner and repository. The production example selects PostgreSQL explicitly.
 
+The script is install-only: it deletes and re-clones the app directory, and the SQLite database, archived invoices, and uploaded logos live inside it, so never run it again on a live server. It does not install a Unicode font. Run `apt-get install fonts-dejavu-core` on the server, or set `INVOICE_FONT_PATH`, so PDF generation works. Nginx and Caddy pass `/static/` to the app, which serves the uploaded logos from `ziglag/static/uploads/`.
+
 The script prints generated credentials at the end and stores a copy on the server. Move the credentials to your password manager after installation.
 
 ## Required Production State
@@ -24,20 +26,20 @@ The script prints generated credentials at the end and stores a copy on the serv
 - Caddy terminates TLS and proxies WebSockets.
 - systemd runs uvicorn and restarts it after failure or reboot.
 - `QUART_DEBUG` is disabled.
-- `SECRET_KEY`, `SECURITY_PASSWORD_SALT`, and `SECURITY_TOTP_SECRETS` contain independent random values.
+- `SECRET_KEY` and `SECURITY_PASSWORD_SALT` contain independent random values.
 
 ## Invoice Archive
 
-ZigLag stores the exact PDF created when an invoice is issued under `instance/invoices/`. Back up that directory with the database. A database-only backup cannot restore issued invoices.
+ZigLag stores the exact PDF created when an invoice is issued under `instance/invoices/`. Back up that directory with the database. A database-only backup cannot restore issued invoices. Uploaded logos live in `ziglag/static/uploads/`; back that directory up too.
 
 Create and verify one recovery bundle containing a consistent database backup and the complete invoice tree:
 
 ```bash
-uv run quart backup create --output backups/ziglag-$(date +%Y%m%d).tar.gz
-uv run quart backup verify backups/ziglag-$(date +%Y%m%d).tar.gz
+uv run stk backup create --output backups/ziglag-$(date +%Y%m%d).tar.gz
+uv run stk backup verify backups/ziglag-$(date +%Y%m%d).tar.gz
 ```
 
-Test restoration into an empty staging installation with `uv run quart backup restore ARCHIVE`. Restore refuses non-empty SQLite targets unless `--force` is supplied; PostgreSQL restores always require `--force` because `pg_restore --clean` overwrites the target database. PostgreSQL requires compatible `pg_dump` and `pg_restore` executables. Back up `.env` separately as a secret.
+Test restoration into an empty staging installation with `uv run stk backup restore ARCHIVE`. Restore refuses non-empty SQLite targets unless `--force` is supplied; PostgreSQL restores always require `--force` because `pg_restore --clean` overwrites the target database. PostgreSQL requires compatible `pg_dump` and `pg_restore` executables. Back up `.env` separately as a secret.
 
 A bundle on the application server is not an offsite backup. Copy it to independent storage, monitor transfers, and test restoration periodically.
 
@@ -49,14 +51,14 @@ Pull a reviewed release commit, synchronize locked dependencies, apply migration
 cd /home/<app-user>/invoices.example.com
 sudo -u <app-user> git pull --ff-only
 sudo -u <app-user> uv sync --extra full --frozen
-sudo -u <app-user> uv run quart db upgrade
+sudo -u <app-user> uv run stk db upgrade
 sudo systemctl restart invoices.example.com.service
 ```
 
 Confirm the installation after each update:
 
 ```bash
-sudo -u <app-user> uv run quart verify --json
+sudo -u <app-user> uv run stk verify --json
 sudo systemctl status invoices.example.com.service
 curl -fsS https://invoices.example.com/health
 ```
@@ -69,7 +71,7 @@ For a container deployment:
 docker compose up --build -d
 ```
 
-Persist the PostgreSQL, Redis, and application instance volumes. The runtime image installs the Unicode font used for invoice PDFs.
+Persist the PostgreSQL, Redis, and application volumes: `invoice-data` holds `instance/` (archived invoices) and `logo-data` holds `ziglag/static/uploads/` (logos). The runtime image installs the Unicode font used for invoice PDFs.
 
 ## Before Issuing Production Invoices
 

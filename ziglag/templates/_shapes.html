@@ -1,0 +1,8 @@
+{# Decorative isometric shapes in the explain style. Fills are fixed pastels; outlines follow the theme. #}
+{% macro iso_stack(width=120) %}
+<svg class="iso-stack" width="{{ width }}" viewBox="0 0 120 100" aria-hidden="true">
+    <polygon points="60,44 100,64 60,84 20,64" fill="#d7d9df"/><polygon points="20,64 60,84 60,96 20,76" fill="#b9bcc6"/><polygon points="100,64 60,84 60,96 100,76" fill="#9ea2ae"/>
+    <polygon points="60,26 100,46 60,66 20,46" fill="#a9d6c0"/><polygon points="20,46 60,66 60,78 20,58" fill="#8fc4ab"/><polygon points="100,46 60,66 60,78 100,58" fill="#77b095"/>
+    <polygon points="60,8 100,28 60,48 20,28" fill="#f2cb72"/><polygon points="20,28 60,48 60,60 20,40" fill="#d9ad4f"/><polygon points="100,28 60,48 60,60 100,40" fill="#c39634"/>
+</svg>
+{% endmacro %}

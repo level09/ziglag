@@ -2,7 +2,7 @@
 
 ## Context
 
-Build a self-hosted, open-source invoicing app inspired by InvoiceSimple, using the stk framework (`/Users/level09/projects/stk`) as the foundation. The stk framework provides auth, async SQLAlchemy, Vuetify 3 frontend (no build step), Alembic migrations, email, WebSockets, and background tasks. We add domain-specific invoicing models, blueprints, and pages on top.
+Build a self-hosted, open-source invoicing app inspired by InvoiceSimple, using the stk framework as the foundation. The stk framework provides auth, async SQLAlchemy, Vuetify 3 frontend (no build step), Alembic migrations, email, WebSockets, and background tasks. We add domain-specific invoicing models, blueprints, and pages on top.
 
 Uses a neo-brutalist editorial design system (see `design-system/`).
 

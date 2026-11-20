@@ -11,3 +11,4 @@ instance
 *.md
 !README.md
 docs
+ziglag/static/uploads
